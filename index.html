@@ -12,62 +12,117 @@
 <body>
     <!-- HTML Structure -->
     <main class="hero">
+    <div class="ctaContainer">
+        <h1><span class="logo">Furnituria</span></h1>
+        <p>Your domain for high-quality home appliances.</p>
+        <div class="ctaButtons">
+        <button class="ctaButton"><a href="#products">View Our Products</button></a>
+        <button class="ctaButton"><a href="#account">Sign Up!</button></a>
+        </div>
+    </div>
     <nav class="navbar">
     <button class="hamburger-btn" alt="MenuButton" onclick="toggleMenu()">
     <img src="hamburger.png" alt="Menu" id="hamburger-icon">
     </button>
     <!-- Menu (collapses on mobile) -->
         <ul class="nav-menu">
-            <li><a href="#products">Products</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li><a href="#signup">Sign Up</a></li>
+            <li><a href="#products" class="nav-link">Products</a></li>
+            <li><a href="#about" class="nav-link">About</a></li>
+            <li><a href="#contact" class="nav-link">Contact</a></li>
+            <li><a href="#account" class="nav-link">Account</a></li>
         </ul>
     </nav>
-    <div class="ctaContainer">
-        <h1><span class="logo">Furnituria</h1></span>
-        <p>Your domain for high-quality home appliances.</p>
-        <div class="ctaButtons">
-        <button class="ctaButton"><a href="#products">View Our Products</a></button>
-        <button class="ctaButton"><a href="#signup">Sign Up!</a></button>
-        </div>
-    </div>
-        
-    </div>
 
     <!-- Overlays -->
+    <div class="overlayBackground">
     <section id="products-overlay" class="overlay">
         <div class="overlay-content">
-            <h1>HorsDung.</h1>
-            <p>Ay Ay Ay Oy Ay</p>
-        </div>
+            <div class="logoAndClose">
+            <h1 class="logoOverlay">Furnituria</h1>
+            <button class="closeOverlays" onclick="closeAllOverlays()">
+                <img src="close.png">
+            </button>
+            </div>
+            <div class="overlayBanner">
+            <ul class="bannerNav">
+                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+            </ul>
+            </div>
+            <div class="content"></div>
+            </div>
     </section>
-
     <section id="about-overlay" class="overlay">
         <div class="overlay-content">
-            <h1>HorsDung.</h1>
-            <p>Ay Ay Ay Oy Ay</p>
-        </div>
+            <div class="logoAndClose">
+            <h1 class="logoOverlay">Furnituria</h1>
+            <button class="closeOverlays" onclick="closeAllOverlays()">
+                <img src="close.png">
+            </button>
+            </div>
+            <div class="overlayBanner">
+            <ul class="bannerNav">
+                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+            </ul>
+            </div>
+            <div class="content"></div>
+            </div>
     </section>
-
     <section id="contact-overlay" class="overlay">
         <div class="overlay-content">
-            <h1>HorsDung.</h1>
-            <p>Ay Ay Ay Oy Ay</p>
-        </div>
+            <div class="logoAndClose">
+            <h1 class="logoOverlay">Furnituria</h1>
+            <button class="closeOverlays" onclick="closeAllOverlays()">
+                <img src="close.png">
+            </button>
+            </div>
+            <div class="overlayBanner">
+            <ul class="bannerNav">
+                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+            </ul>
+            </div>
+            <div class="content"></div>
+            </div>
     </section>
-
-    <section id="signup-overlay" class="overlay">
+    <section id="account-overlay" class="overlay">
         <div class="overlay-content">
-            <h1>HorsDung.</h1>
-            <p>Ay Ay Ay Oy Ay</p>
-        </div>
+            <div class="logoAndClose">
+            <h1 class="logoOverlay">Furnituria</h1>
+            <button class="closeOverlays" aria-label="Close Overlay" onclick="closeAllOverlays()">
+                <img src="close.png">
+            </button>
+            </div>
+            <div class="overlayBanner">
+            <ul class="bannerNav">
+                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+            </ul>
+            </div>
+            <div class="content"></div>
+            </div>
     </section>
-
+    </div>
 </main>
 <script src="script.js"></script>
 </body>
 </html>
 
-<!-- close.png - edt.im -->
+<!-- close.png - bharat icons -->
 <!-- hamburger.png - feen -->
+<!-- account.png - Maxim Basinski Premium -->
+<!-- cart.png - HideMaru -->
+<!-- cartItems.png - HideMaru -->
+<!-- cartAdd.png - HideMaru -->
+<!-- products.png - vectaicon -->
+<!-- about.png - flatart_icons-->
+<!-- contact.png - meaicon -->
