@@ -105,6 +105,7 @@ function injectOverlayContent(target, overlay) {
     }
 }
 
+/*
 document.querySelectorAll('.bannerNav a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -114,3 +115,27 @@ document.querySelectorAll('.bannerNav a').forEach(link => {
             injectOverlayContent(target, document.querySelector(`#${target}-overlay`));
         });
     });
+*/
+
+document.querySelectorAll('.bannerNav li').forEach(item => {
+    item.addEventListener('click', (e) => {
+        // Check if the clicked target is either an <a> or <img> tag
+        let targetLink = null;
+        if (e.target.tagName === 'A') {
+            targetLink = e.target;  // If it's an <a> tag, use it
+        } else if (e.target.tagName === 'IMG') {
+            // If it's an <img> tag, find the closest <a> in the same li
+            targetLink = e.target.closest('li').querySelector('a');
+        }
+        // If a valid target link is found (either <a> or an <img> leading to <a>)
+        if (targetLink) {
+            e.preventDefault();  // Prevent default behavior (for links)
+            // Get the target from the href attribute of the <a> tag
+            const target = targetLink.getAttribute('href').substring(1);  // Remove the '#' from href
+            // Call your overlay functions
+            closeAllOverlays();
+            openOverlay(target);
+            injectOverlayContent(target, document.querySelector(`#${target}-overlay`));
+        }
+    });
+});

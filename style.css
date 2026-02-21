@@ -34,7 +34,12 @@
     text-shadow: 5px 5px 10px black;
     font-size: 1.5rem;
     color: hsl(0, 0%, 0%);
+    transition: color .3s ease;
     display: inline;
+}
+
+.navbar a:hover {
+    color: lightslategray;
 }
 
 .nav-menu {
@@ -71,10 +76,12 @@
     justify-content: center;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: background-color .3s ease;
 }
 
 .hamburger-btn:hover {
     cursor: pointer;
+    background-color: lightgray;
 }
 
 .hamburger-btn img {
@@ -105,19 +112,27 @@
 
 .ctaButton {
     background-color: beige;
+    transition: background-color .3s ease;
     border: 3px solid black;
     font-size: 1rem;
     height: 3rem;
-    width: 10rem;
+    width: 12rem;
+}
+
+.ctaButton:hover {
+    background-color: lightgray;
 }
 
 .ctaButton a {
+    font-family: var(--nav-font);
     text-decoration: none;
     color: inherit;
     font-weight: 500;
     display: block;
     height: 100%;
     align-content: center;
+    justify-content: center;
+    padding: 5%;
 }
 
 /* OVERLAYS */
@@ -187,10 +202,12 @@
     border-radius: 50%;
     height: 48px;
     border: 3px solid black;
+    transition: background-color .3s ease;
 }
 
 .closeOverlays:hover {
     cursor: pointer;
+    background-color: lightgray;
 }
 
 .closeOverlays img {
@@ -211,8 +228,8 @@
 
 .bannerNav {
     display: flex;
-    width: 50%;
     z-index: 1700;
+    gap: 2rem;
     justify-content: center;
     align-items: center;
 }
@@ -225,7 +242,6 @@
     gap: 1rem;
     list-style-type: none;
     flex-direction: row;
-    width: 25%;
 }
 
 .bannerItems a {
@@ -234,6 +250,11 @@
     font-size: 1rem;
     color: inherit;
     font-family: var(--nav-font);
+    transition: color .3s ease;
+}
+
+.bannerItems a:hover {
+    color: gray;
 }
 
 .bannerItems img {
@@ -284,5 +305,25 @@
     }
     .ctaButton {
         font-size: .85rem;
+        width: 10rem;
+    }
+    .overlay-content {
+        padding: 5%;
+    }
+}
+
+@media (max-width: 740px) {
+    .bannerNav .bannerItems a {
+        display: none;
+    }
+    .bannerNav .bannerItems img {
+        cursor: pointer;
+    }
+    .bannerNav .bannerItems img:hover {
+        opacity: 0.7;
+        transition: opacity .3s ease-in-out;
+    }
+    .overlayBanner {
+        justify-content: center;
     }
 }
