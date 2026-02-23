@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Federant&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Federant&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:wght@100;300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- HTML Structure -->
@@ -16,8 +16,8 @@
         <h1><span class="logo">Furnituria</span></h1>
         <p>Your domain for high-quality home appliances.</p>
         <div class="ctaButtons">
-        <button class="ctaButton"><a href="#products">View Our Products</button></a>
-        <button class="ctaButton"><a href="#account">Sign Up!</button></a>
+        <button class="ctaButton"><a href="#products" data-target="products">View Our Products</button></a>
+        <button class="ctaButton"><a href="#account" data-target="account">Sign Up!</button></a>
         </div>
     </div>
     <nav class="navbar">
@@ -26,10 +26,11 @@
     </button>
     <!-- Menu (collapses on mobile) -->
         <ul class="nav-menu">
-            <li><a href="#products" class="nav-link">Products</a></li>
-            <li><a href="#about" class="nav-link">About</a></li>
-            <li><a href="#contact" class="nav-link">Contact</a></li>
-            <li><a href="#account" class="nav-link">Account</a></li>
+            <li><a href="#products" class="nav-link" data-target="products">Products</a></li>
+            <li><a href="#about" class="nav-link" data-target="about">About</a></li>
+            <li><a href="#contact" class="nav-link" data-target="contact">Contact</a></li>
+            <li><a href="#account" class="nav-link" data-target="account">Account</a></li>
+            <li><a href="#cart" class="nav-link" data-target="cart">Cart</a></li>
         </ul>
     </nav>
 
@@ -45,10 +46,11 @@
             </div>
             <div class="overlayBanner">
             <ul class="bannerNav">
-                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
-                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
-                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
-                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
             </ul>
             </div>
             <div class="content"></div>
@@ -64,10 +66,11 @@
             </div>
             <div class="overlayBanner">
             <ul class="bannerNav">
-                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
-                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
-                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
-                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
             </ul>
             </div>
             <div class="content"></div>
@@ -83,10 +86,11 @@
             </div>
             <div class="overlayBanner">
             <ul class="bannerNav">
-                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
-                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
-                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
-                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
             </ul>
             </div>
             <div class="content"></div>
@@ -102,10 +106,31 @@
             </div>
             <div class="overlayBanner">
             <ul class="bannerNav">
-                <li class="bannerItems"><img src="products.png"><a href="#products">Products</a></li>
-                <li class="bannerItems"><img src="account.png"><a href="#account">Account</a></li>
-                <li class="bannerItems"><img src="about.png"><a href="#about">About Us</a></li>
-                <li class="bannerItems"><img src="contact.png"><a href="#contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
+            </ul>
+            </div>
+            <div class="content"></div>
+            </div>
+    </section>
+    <section id="cart-overlay" class="overlay">
+        <div class="overlay-content">
+            <div class="logoAndClose">
+            <h1 class="logoOverlay">Furnituria</h1>
+            <button class="closeOverlays" aria-label="Close Overlay" onclick="closeAllOverlays()">
+                <img src="close.png">
+            </button>
+            </div>
+            <div class="overlayBanner">
+            <ul class="bannerNav">
+                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
             </ul>
             </div>
             <div class="content"></div>

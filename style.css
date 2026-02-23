@@ -1,6 +1,7 @@
 :root {
     --logo-heading: "Federant", serif;
     --nav-font: "Poppins";
+    --normal-font: "Roboto";
 }
 
 * {
@@ -263,8 +264,64 @@
 }
 
 .content {
-    height: 100%;
     z-index: 1600;
+    height: 80%;
+    font-family: var(--nav-font);
+    font-weight: 500;
+    overflow-y: auto;
+}
+
+.overlayHeader {
+    position: relative;
+    padding-top: 1%;
+}
+
+.staffContainer {
+    display: grid;
+    padding-top: 5%;
+    grid-template-columns: repeat(4, 1fr);
+    width: 95%;
+    gap: 2%;
+    align-content: center;
+    margin: 0 auto;
+    padding-bottom: 5%
+}
+
+.staffCard {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.staffCard img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 250px;
+}
+
+.staffCard p {
+    font-size: .85rem;
+    text-shadow: none;
+    font-family: var(--nav-font);
+}
+
+.contactStaff {
+    width: 250px;
+    height: 50px;
+    margin: 0 auto;
+    background-color: beige;
+    border: 3px solid black
+}
+
+.contactStaff:hover {
+    background-color: lightgray;
+    cursor: pointer
+}
+
+.contactStaff a {
+    font-family: var(--nav-font);
 }
 
 .navbar.hidden {
@@ -278,6 +335,9 @@
     }
     .nav-menu.show {
         width: 25%;
+    }
+    .staffContainer {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -310,9 +370,39 @@
     .overlay-content {
         padding: 5%;
     }
+    .bannerNav .bannerItems a {
+        display: none;
+    }
+    .bannerNav .bannerItems img {
+        cursor: pointer;
+    }
+    .bannerNav .bannerItems img:hover {
+        opacity: 0.7;
+        transition: opacity .3s ease-in-out;
+    }
+    .staffContainer {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .overlayBanner {
+        justify-content: center;
+    }
+    .staffCard h2 {
+        font-size: .85rem;
+    }
+    .staffCard p {
+        font-size: .75rem;
+    }
 }
 
-@media (max-width: 740px) {
+@media (max-width: 650px) {
+    .staffContainer {
+        grid-template-columns: 1fr;
+        padding-top: 20%;
+        padding-bottom: 25%;
+    }
+}
+
+/*@media (max-width: 740px) {
     .bannerNav .bannerItems a {
         display: none;
     }
@@ -326,4 +416,4 @@
     .overlayBanner {
         justify-content: center;
     }
-}
+}*/
