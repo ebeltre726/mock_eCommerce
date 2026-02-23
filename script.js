@@ -14,12 +14,13 @@ const bannerItems = document.querySelectorAll('.bannerNav li')
 
 // Cache templates to avoid redundant network requests
 let templateCache = {};
+let isMenuOpen = false;
 
 function toggleMenu() {
-    const menu = document.querySelector('.nav-menu');
-    menu.classList.toggle('show');
-    if (menu.classList.contains('show')) {
+    navMenu.classList.toggle('show');
+    if (navMenu.classList.contains('show')) {
         hamburgericon.src = 'close.png';
+        isMenuOpen = !isMenuOpen
     } else {
         hamburgericon.src = 'hamburger.png';
     }
@@ -28,6 +29,7 @@ function toggleMenu() {
 function closeMenu() {
     navMenu.classList.remove('show');
     hamburgericon.src = 'hamburger.png'
+    isMenuOpen = !isMenuOpen
 }
 
 // Function to initialize all event listeners
@@ -70,7 +72,6 @@ function initializeEventListeners() {
 
 // Function to load template and open the overlay
 function loadTemplateAndOpenOverlay(target, event) {
-    console.log("loadTemplateAndOpenOverlay")
     event.preventDefault(); // Prevent default anchor behavior (e.g., page refresh)
     
     closeAllOverlays();
@@ -84,12 +85,14 @@ function loadTemplateAndOpenOverlay(target, event) {
 
     // Open the overlay (show it)
     overlay.classList.add('active');
-    document.querySelector('.overlayBackground').classList.add('active');
+    overlayBackground.classList.add('active');
 }
 
 // Function to load an external template and inject it
 function loadTemplate(target, overlay) {
-    console.log("loadTemplate");
+    if (isMenuOpen) {
+        closeMenu();
+    }
     fetch(`templates/${target}.html`) // Assuming templates are named based on the target (e.g., "products.html")
         .then(response => response.text())
         .then(html => {
@@ -104,11 +107,10 @@ function loadTemplate(target, overlay) {
 
 // Function to close all overlays
 function closeAllOverlays() {
-    console.log("closeAllOverlays")
-    document.querySelectorAll('.overlay').forEach(overlay => {
+    overlays.forEach(overlay => {
         overlay.classList.remove('active');
     });
-    document.querySelector('.overlayBackground').classList.remove('active');
+    overlayBackground.classList.remove('active');
 }
 
 // Initialize all event listeners when the page is ready

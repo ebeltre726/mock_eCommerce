@@ -11,7 +11,7 @@
 }
 
 .hero {
-    background-image: url('hero2.jpg');
+    background-image: url('hero.jpg');
     background-size: cover;
     background-position: center;
     min-height: 500px;
@@ -276,15 +276,29 @@
     padding-top: 1%;
 }
 
+/* ABOUT OVERLAY */
+#aboutDescription {
+    font-size: .75rem;
+    padding-top: 2%;
+    padding-bottom: 2%;
+    width: 60%;
+    margin: auto;
+}
+
+#styleDesc {
+    font-family: var(--logo-heading);
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
 .staffContainer {
     display: grid;
-    padding-top: 5%;
     grid-template-columns: repeat(4, 1fr);
     width: 95%;
     gap: 2%;
     align-content: center;
     margin: 0 auto;
-    padding-bottom: 5%
+    padding-bottom: 5%;
 }
 
 .staffCard {
@@ -292,6 +306,7 @@
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
+    padding-top: 10%;
 }
 
 .staffCard img {
@@ -324,6 +339,80 @@
     font-family: var(--nav-font);
 }
 
+/* CONTACT OVERLAY */
+.contactContainer h2 {
+    font-family: var(--normal-font);
+    font-size: 1.5rem;
+    padding-top: 2.5%;
+}
+
+#contactDesc {
+    width: 60%;
+    padding-top: 2.5%;
+    padding-bottom: 5%;
+    margin: 0 auto;
+}
+
+.contactContainer {
+    max-width: 600px;
+    margin: auto;
+    background-color: beige;
+    height: 95%;
+    border: 3px solid black;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: .75rem;
+}
+
+#contactForm {
+    display: flex;
+    padding-left: 5%;
+    padding-right: 5%;
+    flex-direction: column;
+    padding-bottom: 1%;
+    gap: .5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    font-size: 1rem;
+}
+
+.form-group input {
+    width: 50%;
+    margin: auto;
+    font-family: var(--nav-font);
+}
+
+.form-group textarea {
+    font-family: var(--nav-font);
+    font-size: .80rem;
+}
+
+#emailMessage {
+    width: 70%;
+    margin: 0 auto;
+}
+
+.submit-button {
+    width: 35%;
+    height: 2.5rem;
+    background-color: beige;
+    transition: background-color .3s ease;
+    font-family: var(--nav-font);
+    align-self: center;
+}
+
+.submit-button:hover {
+    background-color: tan;
+    cursor: pointer;
+}
+
 .navbar.hidden {
     display: none;
 }
@@ -337,7 +426,10 @@
         width: 25%;
     }
     .staffContainer {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .form-group input {
+        width: 70%;
     }
 }
 
@@ -380,6 +472,9 @@
         opacity: 0.7;
         transition: opacity .3s ease-in-out;
     }
+    #aboutDescription {
+        padding-bottom: 5%;
+    }
     .staffContainer {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -392,6 +487,15 @@
     .staffCard p {
         font-size: .75rem;
     }
+    #contactDesc {
+        font-size: .7rem;
+    }
+    .contactContainer {
+        width: 80%;
+    }
+    .submit-button {
+        width: 50%;
+    }
 }
 
 @media (max-width: 650px) {
@@ -399,6 +503,16 @@
         grid-template-columns: 1fr;
         padding-top: 20%;
         padding-bottom: 25%;
+    }
+    #aboutDescription {
+        padding-top: 10%;
+        padding-bottom: 15%;
+    }
+    .contactContainer {
+        width: 100%;
+    }
+    .form-group textarea {
+        font-size: .75rem;
     }
 }
 
