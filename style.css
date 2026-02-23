@@ -386,6 +386,7 @@
 .form-group input {
     width: 50%;
     margin: auto;
+    padding: 1%;
     font-family: var(--nav-font);
 }
 
@@ -400,8 +401,7 @@
 }
 
 .submit-button {
-    width: 35%;
-    height: 2.5rem;
+    width: 50%;
     background-color: beige;
     transition: background-color .3s ease;
     font-family: var(--nav-font);
@@ -417,6 +417,83 @@
     display: none;
 }
 
+/* LOGIN OVERLAY */
+#dividingLine {
+    width: 2.5px;
+    background-color: black;
+    position: absolute;
+    margin: 0 auto;
+    padding: 0;
+    gap: 0;
+    height: 400px;
+}
+.signin-wrapper {
+    max-width: 600px;
+    height: 100%;
+    display: flex;
+    background-color: beige;
+    justify-content: center;
+    border: 3px solid black;
+    align-items: center;
+    border-radius: 10px;
+    padding: 1%;
+    margin: auto;
+}
+
+.signin-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 50%;
+}
+
+#signin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#signin-form input {
+    width: 75%;
+    align-self: center;
+    height: 25px;
+    font-family: var(--normal-font);
+    padding: 2%;
+}
+
+#signin-form button {
+    width: 50%;
+    align-self: center;
+    height: 35px;
+    background-color: beige;
+    border: 3px solid black;
+    font-family: var(--nav-font);
+}
+
+.extras {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    gap: 3.5rem;
+}
+
+.extrasSubchild {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.extrasSubchild button {
+    width: 75%;
+    align-self: center;
+    height: 35px;
+    background-color: beige;
+    border: 3px solid black;
+    font-family: var(--nav-font);
+}
+
 /* MEDIA QUERIES */
 @media (max-width: 1200px) {
     .logo {
@@ -425,7 +502,7 @@
     .nav-menu.show {
         width: 25%;
     }
-    .staffContainer {
+.staffContainer {
         grid-template-columns: repeat(2, 1fr);
     }
     .form-group input {
@@ -496,6 +573,9 @@
     .submit-button {
         width: 50%;
     }
+    #dividingLine {
+        display: none;
+    }
 }
 
 @media (max-width: 650px) {
@@ -513,6 +593,41 @@
     }
     .form-group textarea {
         font-size: .75rem;
+    }
+    .signin-wrapper {
+        flex-direction: column;
+        gap: 0;
+    }
+    .signin-modal {
+        gap: 2rem;
+    }
+    #signin-form {
+        gap: .75rem;
+    }
+    .extras {
+        font-size: .95rem;
+        padding-top: .75rem;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    .extrasSubchild {
+        gap: .75rem;
+    }
+    .extrasSubchild p {
+        display: none;
+    }
+    .extrasSubchild button {
+        width: 125px;
+    }
+    .extras {
+        flex-grow: 0;
+    }
+}
+
+@media (max-width: 450px){
+    .extras {
+        flex-direction: column;
+        gap: .75rem;
     }
 }
 
