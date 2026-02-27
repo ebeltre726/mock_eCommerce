@@ -2,19 +2,58 @@
 <html>
     <head>
         <body>
-            <div class="product-list">
-                <h2>Our Products</h2>
-                <div class="product-item" data-product-id="1">
-                    <h3>Product 1</h3>
-                    <p>Description for product 1.</p>
-                    <button class="view-details" data-target="product1">View Details</button>
+            <section class="productList">
+                <div class="productContents">
+                    <div class="productHeader">
+                        <h2>Our Products</h2>
+                        <form action="/search" method="get">
+                            <img class="searchIcon" src="search.png">
+                            <input class="searchProducts" type="text" name="q" placeholder="Search products...">
+                            <button class="searchBtn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <hr>
+                    <div class="productsContainer">
+                    <div class="cartProduct">
+                            <label class="itemTitle">Four-legged Fancy Chair</label>
+                            <div class="imgContnr">
+                                <img class="info" src="info.png">
+                                <img class="cartImage" src="chair.jpg">
+                            </div>
+                            <button class="addToCart">
+                                Add to Cart
+                            </button>
+                        <label class="cartProdPrice">
+                            $39.99
+                        </label>
+                    </div>
+                    <div class="cartProduct">
+                            <label class="itemTitle">Four-legged Fancy Chair</label>
+                            <div class="imgContnr">
+                                <img class="info" src="info.png">
+                                <img class="cartImage" src="chair.jpg">
+                            </div>
+                            <button class="addToCart">
+                                Add to Cart
+                            </button>
+                        <label class="cartProdPrice">
+                            $39.99
+                        </label>
+                    </div>
+                    <div class="cartProduct">
+                            <label class="itemTitle">Four-legged Fancy Chair</label>
+                            <div class="imgContnr">
+                                <img class="info" src="info.png">
+                                <img class="cartImage" src="chair.jpg">
+                            </div>
+                            <button class="addToCart">
+                                Add to Cart
+                            </button>
+                        <label class="cartProdPrice">
+                            $39.99
+                        </label>
+                    </div>
                 </div>
-                <div class="product-item" data-product-id="2">
-                    <h3>Product 2</h3>
-                    <p>Description for product 2.</p>
-                    <button class="view-details" data-target="product2">View Details</button>
-                </div>
-                <!-- More product items can go here -->
-            </div>
+            </section>
         </body>
 </html>

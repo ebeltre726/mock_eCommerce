@@ -156,7 +156,7 @@
     display: none;
     position: fixed;
     top: 5%;
-    width: 85%;
+    width: 95%;
     height: 92.5%;
     margin: auto;
     background-color: beige;
@@ -343,7 +343,6 @@
 .contactContainer h2 {
     font-family: var(--normal-font);
     font-size: 1.5rem;
-    padding-top: 2.5%;
 }
 
 #contactDesc {
@@ -357,13 +356,11 @@
     max-width: 600px;
     margin: auto;
     background-color: beige;
-    height: 95%;
     border: 3px solid black;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    padding: 2%;
     font-size: .75rem;
 }
 
@@ -461,13 +458,22 @@
     padding: 2%;
 }
 
-#signin-form button {
+.signin-btn {
     width: 50%;
     align-self: center;
     height: 35px;
     background-color: beige;
     border: 3px solid black;
     font-family: var(--nav-font);
+}
+
+.signin-btn:hover {
+    background-color: lightgray;
+    cursor: pointer;
+}
+
+.signin-options {
+    display: block;
 }
 
 .extras {
@@ -485,13 +491,266 @@
     gap: 1.5rem;
 }
 
-.extrasSubchild button {
+.extraButton {
     width: 75%;
     align-self: center;
     height: 35px;
     background-color: beige;
+    transition: background-color .3s ease;
     border: 3px solid black;
     font-family: var(--nav-font);
+}
+
+.extraButton:hover {
+    background-color: lightgray;
+    cursor: pointer;
+}
+
+/* CART OVERLAY */
+.cartContainer {
+    display: flex;
+    flex-direction: column;
+    background-color: beige;
+    border: 3px solid black;
+    border-radius: 10px;
+    box-shadow: 5px 5px 10px rgba(0,0,0,0.25);
+    height: 97.5%;
+    margin: auto;
+    max-width: 1500px;
+    justify-content: center;
+    align-items: center;
+}
+
+.cartHeader {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    padding-right: 2%;
+    height: 20%;
+}
+
+.cartHeader h2 {
+    font-family: var(--nav-font);
+    font-size: 1.75rem;
+    padding-left: 3%;
+}
+
+.checkoutBtn {
+    background-color: tan;
+    width: 200px;
+    height: 50px;
+    border: 3px solid black;
+    transition: background-color .3s ease;
+    font-size: 1.25rem;
+    font-family: var(--nav-font);
+}
+
+.checkoutBtn:hover {
+    background-color: beige;
+    cursor: pointer;
+}
+
+.cartHR {
+    height: 3px;
+    background-color: black;
+    width: 94%;
+    margin: 0 auto;
+}
+
+.cartContents {
+    background-color: tan;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;;
+    margin-top: 2%;
+    margin-left: 3%;
+    margin-right: 3%;
+    margin-bottom: 3%;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 250px);
+    justify-content: center;
+    overflow-y: scroll;
+    height: 100%;
+    width: 90%;
+    gap: 50px;
+    align-items: center;
+}
+
+.itemTitle {
+    font-size: 1rem;
+}
+
+.cartProduct {
+    display: flex;
+    height: 350px;
+    flex-direction: column;
+    border: 3px solid black;
+    overflow: hidden;
+    background-color: white;
+}
+
+.imgContnr {
+    width: 250px;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.info {
+    width: 35px;
+    height: 35px;
+    position: absolute;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.cartImage {
+    width: 250px;
+    height: 100%;
+    object-fit: cover;
+    object-position: bottom;
+    align-self: center;
+}
+
+.rmvCart {
+    height: 60px;
+    font-size: 1rem;
+    width: 100%;
+    background-color: red;
+    transition: background-color .3s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-bottom: 3px solid black;
+    border-top: 3px solid black;
+    font-family: var(--nav-font)
+}
+
+.rmvCart:hover {
+    background-color: darkred;
+    cursor: pointer;
+}
+
+.cartProdPrice {
+    font-size: 1.5rem;
+    text-shadow: none;
+}
+
+
+/* PRODUCTS OVERLAY */
+.productList {
+    background-color: tan;
+    margin-left: auto;
+    margin-right: auto;
+    border: 3px solid black;
+    border-radius: 10px;
+    padding: 2%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.productContents {
+    display: flex;
+    flex-direction: column;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.productHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 10%;
+}
+
+.productContents h2 {
+    padding-left: 3%;
+}
+
+.productContents hr {
+    height: 3px;
+    background-color: black;
+    width: 97%;
+    margin: 0 auto;
+}
+
+.productContents form {
+    padding-right: 5%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .5rem;
+}
+
+.searchIcon {
+    width: 35px;
+}
+
+.searchProducts {
+    width: 250px;
+    height: 35px;
+    margin-top: 3%;
+    margin-bottom: 3%;
+    border-radius: 20px;
+    border: 2px solid black;
+    padding-left: 2%;
+}
+
+.searchBtn {
+    height: 100%;
+    background-color: beige;
+    border: 3px solid black;
+    transition: background-color .3s ease;
+    font-family: var(--nav-font);
+    font-size: 1rem;
+    height: 35px;
+    width: 80px;
+}
+
+.searchBtn:hover {
+    background-color: lightgray;
+    cursor: pointer;
+}
+
+.productsContainer {
+    background-color: beige;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;;
+    margin: 15px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 250px);
+    justify-content: center;
+    overflow-y: scroll;
+    height: 100%;
+    width: 90%;
+    gap: 50px;
+}
+
+.addToCart {
+    background-color: beige;
+    transition: background-color .3s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-bottom: 3px solid black;
+    border-top: 3px solid black;
+    font-family: var(--nav-font);
+    font-size: 1rem;
+    height: 60px;
+
+}
+
+.addToCart:hover {
+    background-color: lightgray;
+    cursor: pointer;
 }
 
 /* MEDIA QUERIES */
@@ -573,9 +832,6 @@
     .submit-button {
         width: 50%;
     }
-    #dividingLine {
-        display: none;
-    }
 }
 
 @media (max-width: 650px) {
@@ -621,6 +877,9 @@
     }
     .extras {
         flex-grow: 0;
+    }
+    #dividingLine {
+        display: none;
     }
 }
 
