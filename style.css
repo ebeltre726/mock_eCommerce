@@ -430,6 +430,7 @@
     gap: 0;
     height: 400px;
 }
+
 .signin-wrapper {
     max-width: 600px;
     height: 100%;
@@ -732,14 +733,20 @@
 .productHeader {
     display: flex;
     justify-content: space-between;
+    background-color: beige;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     align-items: center;
     width: 100%;
     height: 10%;
     margin-bottom: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 .productContents h2 {
     font-size: 1.75rem;
+    padding-left: 5%;
 }
 
 .productContents hr {
@@ -780,7 +787,7 @@
 
 .searchBtn {
     height: 100%;
-    background-color: beige;
+    background-color: tan;
     border: 3px solid black;
     transition: background-color .3s ease;
     font-family: var(--nav-font);
@@ -790,7 +797,7 @@
 }
 
 .searchBtn:hover {
-    background-color: lightgray;
+    background-color: beige;
     cursor: pointer;
 }
 
@@ -910,6 +917,133 @@
     cursor: pointer;
 }
 
+.addedMessage {
+    text-shadow: none;
+}
+
+/* ACCOUNT OVERVIEW */
+.accountOverview {
+    display: flex;
+    background-color: beige;
+    border: 3px solid black;
+    border-radius: 10px;
+    margin: auto;
+    height: 100%;
+    width: 97.5%;
+}
+
+.navPanel {
+    display: flex;
+    flex-direction: column;
+    background-color: tan;
+    width: 275px;
+    gap: 2px;
+    border-right: 3px solid black;
+    padding-top: 10px;
+}
+
+.navPanel button {
+    height: 30px;
+    font-family: var(--nav-font);
+    background-color: inherit;
+    transition: background-color .2s ease;
+    border: none;
+    text-align: left;
+    padding-left: 10px;
+}
+
+.navPanel button:hover {
+    background-color: beige;
+    cursor: pointer;
+}
+
+.contentPane {
+}
+
+/* SIGNUP OVERLAY */
+.signup-modal {
+    display: flex;
+    flex-direction: column;
+    border: 3px solid black;
+    border-radius: 10px;
+    background-color: tan;
+    margin: 0 auto;
+    padding: 1%;
+    max-width: 500px;
+}
+
+.signup-modal h2 {
+    font-size: 2rem;
+    padding-bottom: 2%;
+}
+
+#signup-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2%;
+    background-color: beige;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    gap: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 3%;
+    gap: 1.5rem;
+}
+
+.form-grid input {
+    padding: 2%;
+    border: 3px solid black;
+    font-family: var(--nav-font);
+    width: 100%;
+}
+
+.signup-btn {
+    width: 45%;
+    margin: auto;
+    background-color: tan;
+    transition: background-color .3s ease;
+    border: 3px solid black;
+    font-family: var(--nav-font);
+    font-size: 1rem;
+}
+
+.signup-btn:hover {
+    background-color: beige;
+    cursor: pointer;
+}
+
+.terms {
+    display: flex;
+    gap: .5rem;
+}
+
+.login-link button {
+    padding: 1%;
+    background-color: tan;
+    transition: background-color .3s ease;
+    border: 3px solid black;
+    font-family: var(--nav-font);
+}
+
+.login-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 1rem;
+}
+
+.login-link button:hover {
+    background-color: beige;
+    cursor: pointer;
+}
+
 /* MEDIA QUERIES */
 @media (max-width: 1200px) {
     .logo {
@@ -996,11 +1130,12 @@
     }
     .productHeader h2 {
         font-size: 1.5rem;
+        padding: 0;
     }
     .searchContainer {
         display: flex;
         flex-direction: column;
-        gap: .5rem;
+        gap: 1rem;
         justify-items: center; /* centers items in their cells */
         padding: 0;
     }
@@ -1023,6 +1158,9 @@
         height: 25px;
         font-size: .85rem;
         margin: auto;
+    }
+    .signup-modal h2 {
+        font-size: 1.5rem;
     }
 }
 

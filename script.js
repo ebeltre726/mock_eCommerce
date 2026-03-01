@@ -163,7 +163,7 @@ function initializeEventListeners() {
       
           changeCartIcon();
       
-          restoreAddButton(controls);
+          showAddedMessage(controls);
         }
       });
 
@@ -212,6 +212,19 @@ function restoreAddButton(qtyControls) {
   
     qtyControls.replaceWith(newButton);
 }
+
+function showAddedMessage(controls) {
+    const message = document.createElement("div");
+    message.classList.add("addedMessage");
+    message.textContent = "Items Added!";
+  
+    controls.innerHTML = "";           // clear existing buttons
+    controls.appendChild(message);     // show confirmation
+  
+    setTimeout(() => {
+      restoreAddButton(controls);      // restore original button after delay
+    }, 1500); // 1.5 seconds
+  }
 
 // Function to load an external template and inject it
 function loadTemplate(target, overlay) {
