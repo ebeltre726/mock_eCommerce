@@ -32,6 +32,10 @@ function closeMenu() {
     isMenuOpen = !isMenuOpen
 }
 
+function itsworking() {
+    console.log("Dude, it's working.");
+}
+
 // Function to initialize all event listeners
 function initializeEventListeners() {
     // Event listeners for CTA Buttons
@@ -49,6 +53,119 @@ function initializeEventListeners() {
             loadTemplateAndOpenOverlay(target, e);
         });
     });
+    
+    document.addEventListener("click", function (e) {
+
+        // ---------------------------
+        // OPEN QUANTITY CONTROLS
+        // ---------------------------
+        if (e.target.classList.contains("addToCart")) {
+      
+          const button = e.target;
+          const productContainer = button.closest(".cartProduct"); // make sure your product wrapper has this class
+          const productId = productContainer.dataset.productId;
+      
+          const qtyControls = document.createElement("div");
+          qtyControls.classList.add("qtyControls");
+          qtyControls.innerHTML = `
+            <button class="closeQty">x</button>
+            <button class="decreaseQty">-</button>
+            <span class="qtyValue">1</span>
+            <button class="increaseQty">+</button>
+            <button class="confirmQty">✔</button>
+          `;
+      
+          button.replaceWith(qtyControls);
+      
+          qtyControls.dataset.productId = productId;
+          qtyControls.dataset.timerId = autoCloseTimer;
+        }
+      
+        // ---------------------------
+        // INCREASE QUANTITY
+        // ---------------------------
+        if (e.target.classList.contains("increaseQty")) {
+          const qtySpan = e.target.parentElement.querySelector(".qtyValue");
+          let qty = parseInt(qtySpan.textContent);
+      
+          if (qty < 5) {
+            qtySpan.textContent = qty + 1;
+          }
+        }
+
+        document.addEventListener("click", function (e) {
+
+            // 1️⃣ Click the info icon
+            if (e.target.classList.contains("info")) {
+              const container = e.target.closest(".imgContnr");
+              const desc = container.querySelector(".productDesc");
+              const closeBtn = container.querySelector(".closeProd"); // your close button
+              const cartImage = container.querySelector(".cartImage");
+          
+              // show description and close button
+              e.target.classList.add("hidden");       // hide info icon
+              desc.classList.add("active");           // show description
+              if (closeBtn) closeBtn.classList.remove("hidden"); // show close button
+              if (cartImage) cartImage.classList.add("blur");
+            }
+          
+            // 3️⃣ Click the close button
+            if (e.target.classList.contains("closeProd")) {
+              const container = e.target.closest(".imgContnr");
+              const infoIcon = container.querySelector(".info");
+              const desc = container.querySelector(".productDesc");
+              const cartImage = container.querySelector(".cartImage");
+          
+              // hide description and close button, show info icon
+              if (desc) desc.classList.remove("active");
+              if (infoIcon) infoIcon.classList.remove("hidden");
+              if (cartImage) cartImage.classList.remove("blur");
+              e.target.classList.add("hidden");  // hide the close button itself
+            }
+          
+          });
+      
+        // ---------------------------
+        // DECREASE QUANTITY
+        // ---------------------------
+        if (e.target.classList.contains("decreaseQty")) {
+          const qtySpan = e.target.parentElement.querySelector(".qtyValue");
+          let qty = parseInt(qtySpan.textContent);
+      
+          if (qty > 1) {
+            qtySpan.textContent = qty - 1;
+          }
+        }
+      
+        // ---------------------------
+        // CLOSE BUTTON
+        // ---------------------------
+        if (e.target.classList.contains("closeQty")) {
+          const controls = e.target.closest(".qtyControls");
+          clearTimeout(controls.dataset.timerId);
+          restoreAddButton(controls);
+        }
+      
+        // ---------------------------
+        // CONFIRM BUTTON
+        // ---------------------------
+        if (e.target.classList.contains("confirmQty")) {
+      
+          const controls = e.target.closest(".qtyControls");
+          clearTimeout(controls.dataset.timerId);
+      
+          const productId = controls.dataset.productId;
+          const quantity = parseInt(
+            controls.querySelector(".qtyValue").textContent
+          );
+      
+          addItemToCart(productId, quantity);
+      
+          changeCartIcon();
+      
+          restoreAddButton(controls);
+        }
+      });
 
     // Event listeners for Banner Nav (both img and text)
     bannerItems.forEach(item => {
@@ -88,6 +205,14 @@ function loadTemplateAndOpenOverlay(target, event) {
     overlayBackground.classList.add('active');
 }
 
+function restoreAddButton(qtyControls) {
+    const newButton = document.createElement("button");
+    newButton.classList.add("addToCart");
+    newButton.textContent = "Add to Cart";
+  
+    qtyControls.replaceWith(newButton);
+}
+
 // Function to load an external template and inject it
 function loadTemplate(target, overlay) {
     if (isMenuOpen) {
@@ -112,6 +237,54 @@ function closeAllOverlays() {
     });
     overlayBackground.classList.remove('active');
 }
+
+function addItemToCart(productId, quantity) {
+
+    const token = localStorage.getItem("token");
+  
+    if (token) {
+      // Logged in → call API
+      fetch("http://localhost:3000/api/cart/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ productId, quantity })
+      })
+      .then(res => res.json())
+      .then(data => console.log("Cart updated:", data))
+      .catch(err => console.error(err));
+  
+    } else {
+      // Not logged in → use localStorage
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  
+      const existing = cart.find(item => item.productId === productId);
+  
+      if (existing) {
+        existing.quantity = Math.min(existing.quantity + quantity, 5);
+      } else {
+        cart.push({
+          productId,
+          quantity: Math.min(quantity, 5)
+        });
+      }
+  
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+}
+
+function changeCartIcon() {
+
+    const cartImg = document.querySelector(
+      '.bannerNav li:last-child img'
+    );
+  
+    if (cartImg) {
+      cartImg.src = "cartAdd.png";
+    }
+  }
 
 // Initialize all event listeners when the page is ready
 document.addEventListener('DOMContentLoaded', initializeEventListeners);
