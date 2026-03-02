@@ -216,7 +216,7 @@ function restoreAddButton(qtyControls) {
 function showAddedMessage(controls) {
     const message = document.createElement("div");
     message.classList.add("addedMessage");
-    message.textContent = "Items Added!";
+    message.textContent = "Item(s) Added!";
   
     controls.innerHTML = "";           // clear existing buttons
     controls.appendChild(message);     // show confirmation

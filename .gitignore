@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Env files
+.env
+
+# Logs
+*.log
+
+# Build folders
+dist/
+build/
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+
+# MacOS system files
+.DS_Store

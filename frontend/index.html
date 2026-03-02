@@ -16,12 +16,12 @@
         <h1><span class="logo">Furnituria</span></h1>
         <p>Your domain for high-quality home appliances.</p>
         <div class="ctaButtons">
-        <button class="ctaButton"><a href="#products" data-target="products">View Our Products</button></a>
-        <button class="ctaButton"><a href="#account" data-target="account">Sign Up!</button></a>
+        <button class="ctaButton" data-target="products">View Our Products</button>
+        <button class="ctaButton" data-target="account">Sign Up!</button>
         </div>
     </div>
     <nav class="navbar">
-    <button class="hamburger-btn" alt="MenuButton" onclick="toggleMenu()">
+    <button class="hamburger-btn" alt="MenuButton">
     <img src="hamburger.png" alt="Menu" id="hamburger-icon">
     </button>
     <!-- Menu (collapses on mobile) -->
@@ -33,34 +33,34 @@
             <li><a href="#cart" class="nav-link" data-target="cart">Cart</a></li>
         </ul>
     </nav>
-
     <!-- Overlays -->
     <div class="overlayBackground">
-    <section id="products-overlay" class="overlay">
+    <section id="overlay" class="overlay">
         <div class="overlay-content">
             <div class="logoAndClose">
-            <h1 class="logoOverlay">Furnituria</h1>
-            <button class="closeOverlays" onclick="closeAllOverlays()">
-                <img src="close.png">
+                <h1 class="logoOverlay">Furnituria</h1>
+                <button class="closeOverlays">
+                    <img src="close.png">
             </button>
             </div>
             <div class="overlayBanner">
-            <ul class="bannerNav">
-                <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
-                <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
-                <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
-                <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
-                <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
-            </ul>
+                <ul class="bannerNav">
+                    <li class="bannerItems"><img src="products.png"><a href="#products" data-target="products">Products</a></li>
+                    <li class="bannerItems"><img src="account.png"><a href="#account" data-target="account">Account</a></li>
+                    <li class="bannerItems"><img src="about.png"><a href="#about" data-target="about">About Us</a></li>
+                    <li class="bannerItems"><img src="contact.png"><a href="#contact" data-target="contact">Contact Us</a></li>
+                    <li class="bannerItems"><img src="cart.png"><a href="#cart" data-target="cart">Cart</a></li>
+                </ul>
             </div>
             <div class="content"></div>
-            </div>
+        </div>
     </section>
+    <!--
     <section id="about-overlay" class="overlay">
         <div class="overlay-content">
             <div class="logoAndClose">
             <h1 class="logoOverlay">Furnituria</h1>
-            <button class="closeOverlays" onclick="closeAllOverlays()">
+            <button class="closeOverlays">
                 <img src="close.png">
             </button>
             </div>
@@ -80,7 +80,7 @@
         <div class="overlay-content">
             <div class="logoAndClose">
             <h1 class="logoOverlay">Furnituria</h1>
-            <button class="closeOverlays" onclick="closeAllOverlays()">
+            <button class="closeOverlays">
                 <img src="close.png">
             </button>
             </div>
@@ -100,7 +100,7 @@
         <div class="overlay-content">
             <div class="logoAndClose">
             <h1 class="logoOverlay">Furnituria</h1>
-            <button class="closeOverlays" aria-label="Close Overlay" onclick="closeAllOverlays()">
+            <button class="closeOverlays" aria-label="Close Overlay">
                 <img src="close.png">
             </button>
             </div>
@@ -120,7 +120,7 @@
         <div class="overlay-content">
             <div class="logoAndClose">
             <h1 class="logoOverlay">Furnituria</h1>
-            <button class="closeOverlays" aria-label="Close Overlay" onclick="closeAllOverlays()">
+            <button class="closeOverlays" aria-label="Close Overlay">
                 <img src="close.png">
             </button>
             </div>
@@ -135,10 +135,10 @@
             </div>
             <div class="content"></div>
             </div>
-    </section>
+    </section>-->
     </div>
 </main>
-<script src="script.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
 

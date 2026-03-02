@@ -118,22 +118,15 @@
     font-size: 1rem;
     height: 3rem;
     width: 12rem;
+    font-family: var(--nav-font);
 }
 
 .ctaButton:hover {
     background-color: lightgray;
+    cursor: pointer;
 }
 
 .ctaButton a {
-    font-family: var(--nav-font);
-    text-decoration: none;
-    color: inherit;
-    font-weight: 500;
-    display: block;
-    height: 100%;
-    align-content: center;
-    justify-content: center;
-    padding: 5%;
 }
 
 /* OVERLAYS */
@@ -609,6 +602,9 @@
     display: flex;
     max-height: 375px;
     flex-direction: column;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity .4s ease, transition .4s ease;
     border: 3px solid black;
     overflow: hidden;
     background-color: white;
@@ -616,7 +612,8 @@
 }
 
 .cartProduct.active {
-    
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .imgContnr {
@@ -665,6 +662,20 @@
 
 .closeProd:hover {
     cursor: pointer;
+}
+
+.cartQtyBadge {
+    z-index: 502;
+    position: absolute;
+    font-family: var(--nav-font);
+    font-size: 2rem;
+    font-weight: 600;
+    bottom: 5px;
+    left: 10px;
+}
+
+.cartQtyBadge.hidden {
+    display: none;
 }
 
 .cartImage {
@@ -919,6 +930,12 @@
 
 .addedMessage {
     text-shadow: none;
+}
+
+#productMarker {
+    height: 1px;
+    width: 1px;
+    visibility: hidden;
 }
 
 /* ACCOUNT OVERVIEW */
