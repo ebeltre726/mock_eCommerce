@@ -2,14 +2,24 @@
 <html>
     <head>
         <body>
-            <section class="cartContainer">
-                <div class="cartHeader">
-                    <h2>Your Cart</h2>
-                    <button class="checkoutBtn">Checkout</button>
-                </div>
-                <hr class="cartHR">
-                <div class="cartContents">
-                    <div id="productMarker"></div>
+            <section class="checkoutWrapper">
+                <div class="checkoutContainer">
+                    <div class="checkoutHeader">
+                        <h2 class="checkoutTitle">Enter Your Payment Information</h2>
+                        <div class="checkoutContent">
+                            <label>Enter your First and Last name</label>
+                            <input type="text" placeholder="Full Name">
+                            <label>Enter your Shipping Address</label>
+                            <input type="text" placeholder="Shipping Address">
+                            <label>Enter your Card Number</label>
+                            <input type="text" placeholder="Card Number">
+                            <input type="text" placeholder="MM/YY">
+                            <input type="text" placeholder="CVV">
+
+                            <button class="submitOrder">Place Order</button>
+                            <button class="closeCheckout">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </section>
         </body>

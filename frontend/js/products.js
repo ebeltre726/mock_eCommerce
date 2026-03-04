@@ -41,7 +41,7 @@ function renderProduct(p) {
     div.innerHTML = `
       <label class="itemTitle">${p.name}</label>
       <div class="imgContnr">
-        <img class="info" src="${p.infoImageUrl || "info.png"}">
+        <img class="info" src="info.png">
         <label class="productDesc">${p.description || ""}</label>
         <img class="closeProd hidden" src="close.png">
         <img class="cartImage" src="http://localhost:3000${p.imageUrl || ""}">
