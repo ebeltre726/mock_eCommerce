@@ -1,20 +1,27 @@
 // seed.js
-import { DynamoDBClient, CreateTableCommand, DescribeTableCommand, DeleteTableCommand } 
-  from "@aws-sdk/client-dynamodb";
 
-import { DynamoDBDocumentClient, PutCommand, ScanCommand } 
-  from "@aws-sdk/lib-dynamodb";
+import {
+DynamoDBClient,
+CreateTableCommand,
+DescribeTableCommand
+} from "@aws-sdk/client-dynamodb";
 
-const TABLE_NAME = "Products";
+import {
+DynamoDBDocumentClient,
+PutCommand
+} from "@aws-sdk/lib-dynamodb";
+
+const PRODUCTS_TABLE = "Products";
+const CART_TABLE = "Cart";
 
 // Connect to DynamoDB Local
 const client = new DynamoDBClient({
-  region: "us-east-1",
-  endpoint: "http://localhost:8000",
+region: "us-east-1",
+endpoint: "http://localhost:8000"
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-
+  
 // 🔹 Your Custom Product Data
 const products = [
   {
@@ -103,81 +110,97 @@ const products = [
   }
 ];
 
-// 🔹 Create table if it doesn't exist
-async function ensureTableExists() {
+async function ensureTableExists(tableName, params) {
   try {
-    await client.send(new DescribeTableCommand({ TableName: TABLE_NAME }));
-    console.log("Table already exists.");
+    await client.send(
+      new DescribeTableCommand({ TableName: tableName })
+    );
+
+    console.log(`${tableName} table already exists`);
+
   } catch (err) {
+
     if (err.name === "ResourceNotFoundException") {
-      console.log("Creating Products table...");
+
+      console.log(`Creating ${tableName} table...`);
 
       await client.send(
-        new CreateTableCommand({
-          TableName: TABLE_NAME,
-          AttributeDefinitions: [
-            { AttributeName: "id", AttributeType: "S" }
-          ],
-          KeySchema: [
-            { AttributeName: "id", KeyType: "HASH" }
-          ],
-          BillingMode: "PAY_PER_REQUEST"
-        })
+        new CreateTableCommand(params)
       );
 
-      console.log("Table created.");
+      console.log(`${tableName} table created`);
+
     } else {
       throw err;
     }
   }
 }
 
-// 🔹 Clear existing items (dev convenience)
-async function clearTable() {
-  const data = await docClient.send(
-    new ScanCommand({ TableName: TABLE_NAME })
-  );
+const productsTableConfig = {
+  TableName: PRODUCTS_TABLE,
+  AttributeDefinitions: [
+    { AttributeName: "id", AttributeType: "S" }
+  ],
+  KeySchema: [
+    { AttributeName: "id", KeyType: "HASH" }
+  ],
+  BillingMode: "PAY_PER_REQUEST"
+};
 
-  if (!data.Items || data.Items.length === 0) {
-    return;
-  }
+const cartTableConfig = {
+  TableName: CART_TABLE,
+  AttributeDefinitions: [
+    { AttributeName: "userId", AttributeType: "S" },
+    { AttributeName: "productId", AttributeType: "S" }
+  ],
+  KeySchema: [
+    { AttributeName: "userId", KeyType: "HASH" },
+    { AttributeName: "productId", KeyType: "RANGE" }
+  ],
+  BillingMode: "PAY_PER_REQUEST"
+};
 
-  console.log("Clearing existing products...");
-
-  for (const item of data.Items) {
-    await docClient.send(
-      new PutCommand({
-        TableName: TABLE_NAME,
-        Item: item,
-        ConditionExpression: "attribute_not_exists(id)"
-      })
-    );
-  }
-}
-
-// 🔹 Insert products
 async function insertProducts() {
+
   for (const product of products) {
+
     await docClient.send(
       new PutCommand({
-        TableName: TABLE_NAME,
+        TableName: PRODUCTS_TABLE,
         Item: product
       })
     );
+
     console.log(`Inserted: ${product.name}`);
   }
 }
 
-// 🔹 Run Seeder
 async function seed() {
+
   try {
-    await ensureTableExists();
+
+    await ensureTableExists(
+      PRODUCTS_TABLE,
+      productsTableConfig
+    );
+
+    await ensureTableExists(
+      CART_TABLE,
+      cartTableConfig
+    );
+
     await insertProducts();
-    console.log("Seeding complete.");
+
+    console.log("Seeding complete");
+
   } catch (err) {
+
     console.error("Error seeding:", err);
+
   } finally {
+
     process.exit(0);
+
   }
 }
 
