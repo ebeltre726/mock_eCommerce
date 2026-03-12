@@ -1,0 +1,50 @@
+  <div class="panel-header">
+    <h2>Settings</h2>
+  </div>
+  <div class="panel-settings">
+  <section class="settings-section">
+    <h3>Privacy</h3>
+    <label class="toggle-label">
+      <input type="checkbox" id="setting-share-data">
+      <span class="toggle-track"></span>
+      Share usage data with partners
+    </label>
+  </section>
+  <section class="settings-section">
+    <h3>Alerts & Notifications</h3>
+    <label class="toggle-label">
+      <input type="checkbox" id="setting-email-updates">
+      <span class="toggle-track"></span>
+      Email order updates
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" id="setting-sms">
+      <span class="toggle-track"></span>
+      SMS notifications
+    </label>
+  </section>
+  <section class="settings-section">
+    <h3>Password</h3>
+    <div class="form-group">
+      <label>Current Password</label>
+      <input type="password" id="current-password" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="new-password" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="confirm-password" placeholder="••••••••">
+    </div>
+    <div class="pwUpdate">
+    <button class="btn-primary" id="change-password-btn">Update Password</button>
+    <p class="save-confirmation hidden" id="password-saved">&#10003; Password updated.</p>
+    </div>
+  </section>
+  <section class="settings-section danger-zone">
+    <h3>Danger Zone</h3>
+    <p>Deleting your account is permanent and cannot be undone.</p>
+    <button class="btn-danger" id="delete-account-btn">Delete Account</button>
+  </section>
+</div>

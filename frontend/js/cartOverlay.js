@@ -64,13 +64,13 @@ function loadNextCartBatch() {
 
 function setupObserver() {
   const sentinel = document.getElementById("productMarker");
-  const container = document.querySelector(".productsContainer");
+  const container = document.querySelector(".cartContents");
   if (!sentinel || !container) return;
 
   observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        const nextItems = products.slice(index, index + BATCH_SIZE);
+        const nextItems = products.slice(cartIndex, cartIndex + BATCH_SIZE);
         nextItems.forEach(p => {
           const div = document.createElement("div");
           div.classList.add("cartProduct");
@@ -88,7 +88,7 @@ function setupObserver() {
             <label class="cartProdPrice">$${p.price || 0}</label>
           `;
 
-          container.insertBefore(div, sentinel);
+          container.insertBefore(div, sentinelObserver);
 
           // Trigger fade/translate animation in next tick
           requestAnimationFrame(() => {
@@ -96,10 +96,10 @@ function setupObserver() {
           });
         });
 
-        index += BATCH_SIZE;
+        cartIndex += BATCH_SIZE;
 
-        if (index >= products.length && observer) {
-          observer.disconnect();
+        if (cartIndex >= cartItems.length && sentinelObserver) {
+          sentinelObserver.disconnect();
         }
       }
     });

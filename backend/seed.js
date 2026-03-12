@@ -16,8 +16,12 @@ const CART_TABLE = "Cart";
 
 // Connect to DynamoDB Local
 const client = new DynamoDBClient({
-region: "us-east-1",
-endpoint: "http://localhost:8000"
+  region: "us-east-1",
+  endpoint: "http://localhost:8000",
+  credentials: {
+    accessKeyId: "dummy",
+    secretAccessKey: "dummy"
+  }
 });
 
 const docClient = DynamoDBDocumentClient.from(client);

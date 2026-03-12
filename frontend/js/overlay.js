@@ -23,6 +23,16 @@ export const overlayModule = (() => {
             import('./products.js').then(({ initProducts }) => initProducts());
           });
         }
+        if (target === 'checkout') {
+          requestAnimationFrame(() => {
+            import('./checkout.js').then(({ initCheckout }) => initCheckout());
+          })
+        }
+        if (target === 'account') {
+          requestAnimationFrame(() => {
+            import('./account.js').then(({ initAccount }) => initAccount());
+          });
+        }
         return;
       }
   
@@ -43,6 +53,11 @@ export const overlayModule = (() => {
               import('./products.js').then(({ initProducts }) => initProducts());
             });
           }
+           if (target === 'account') {
+          requestAnimationFrame(() => {
+            import('./account.js').then(({ initAccount }) => initAccount());
+          });
+        }
         })
         .catch(err => {
           console.error(err);

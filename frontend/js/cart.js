@@ -1,6 +1,7 @@
 // cart.js
 import { menuModule } from './menu.js';
 
+
 export const cartModule = (() => {
     const MAX_QTY = 5;
 
@@ -42,6 +43,24 @@ export const cartModule = (() => {
           const cartItems = await res.json();
           console.log(cartItems);
         }
+    }
+
+    async function removeItemFromCart(productId) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch(`/api/cart/remove`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ productId })
+        });
+      } else {
+        let cart = JSON.parse(localStorage.getItem("cart")) || [];
+        cart = cart.filter(i => i.productId !== productId);
+        localStorage.setItem("cart", JSON.stringify(cart));
+      }
     }
 
     function changeCartIcon() {
@@ -130,5 +149,5 @@ export const cartModule = (() => {
         document.addEventListener("click", handleClick);
     }
 
-    return { init };
+    return { init, removeItemFromCart };
 })();

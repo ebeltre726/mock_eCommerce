@@ -9,9 +9,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function doWork() {
+  console.log("Oh so we're going to take it there?");
+}
+
 // Routes
 app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/users", doWork)
 
 // Health check (nice touch for AWS later)
 app.get("/health", (req, res) => {
