@@ -15,8 +15,18 @@ export const accountNavModule = (() => {
             });
         }
 
-        // Close nav when a panel button is clicked (on small screens)
-
+        // Close nav when a panel button is clicked
+        document.querySelectorAll('.navPanel button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const isAbsolute = getComputedStyle(navPanel).position === 'absolute';
+                if (isAbsolute) {
+                    navPanel.classList.remove('show');
+                    toggleBtn.classList.remove('active');
+                    navOpen = false;
+                    toggleIcon.src = 'hamburger.png';
+                }
+            });
+        });
     }
 
     return { init };

@@ -1956,7 +1956,7 @@
     .nav-menu.show {
         width: 25%;
     }
-.staffContainer {
+    .staffContainer {
         grid-template-columns: repeat(2, 1fr);
     }
     .contactContainer input {
