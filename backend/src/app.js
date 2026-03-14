@@ -3,20 +3,18 @@ import cors from "cors";
 
 import cartRoutes from "./routes/cart.routes.js";
 import productRoutes from "./routes/products.routes.js";
+import sendContactMessage from "./routes/contact.routes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-function doWork() {
-  console.log("Oh so we're going to take it there?");
-}
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/users", doWork)
+app.use("/api/contact", sendContactMessage);
 
 // Health check (nice touch for AWS later)
 app.get("/health", (req, res) => {
