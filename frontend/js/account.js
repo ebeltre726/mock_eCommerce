@@ -2,106 +2,92 @@ import { accountNavModule } from "./navbarModule.js";
 import { overlayModule } from "./overlay.js";
 
 export async function initAccount() {
-  /*
   const token = localStorage.getItem('token');
+
   if (!token) {
-    await loadTemplate('signup');
-    return;
-  }
-  try {
-    const res = await fetch('api/auth/me', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.status === 401) {
-      localStorage.removeItem('token');
-      await loadTemplate('login');
+      overlayModule.loadTemplate('signup');
       return;
-    }
-    
-    if (!res.ok) throw new Error('Server error');
-
-    await loadAccountPanel('overview');
-  } catch (err) {
-    console.error('Session check failed: ', err);
-    await loadTemplate('login');
   }
-  */
-  accountNavModule.init();
-  const container = document.querySelector('.accountOverview');
-  const navPanel = container.querySelector('.navPanel');
-  const contentPane = container.querySelector('.contentPane');
-  const panelCache = {};
 
-  // ============================================================
-  // PANEL ROUTER
-  // Maps data-panel values to their render functions.
-  // When your Node.js API is ready, only the render functions
-  // need to change — this router stays exactly the same.
-  // ============================================================
+  try {
+      const res = await fetch('http://localhost:3000/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 401) {
+          localStorage.removeItem('token');
+          overlayModule.loadTemplate('login');
+          return;
+      }
+
+      if (!res.ok) throw new Error('Server error');
+
+      const navPanel = document.querySelector('.navPanel');
+      const contentPane = document.querySelector('.contentPane');
+
+      accountNavModule.init();
+      await setupAccountUI(navPanel, contentPane);
+
+  } catch (err) {
+      console.error('Session check failed:', err);
+      overlayModule.loadTemplate('login');
+  }
+
+async function setupAccountUI(navPanel, contentPane) {
+  const panelCache = {};  // moved here — scoped to this setup
+
   const panelRenderers = {
-    'overview':         renderOverview,
-    'payment-methods':  renderPaymentMethods,
-    'order-history':    renderOrderHistory,
-    'addresses':        renderAddresses,
-    'wishlist':         renderWishlist,
-    'returns':          renderReturns,
-    'rewards':          renderRewards,
-    'newsletter':       renderNewsletter,
-    'settings':         renderSettings,
-    'admin':            renderAdmin,
+      'overview':        renderOverview,
+      'payment-methods': renderPaymentMethods,
+      'order-history':   renderOrderHistory,
+      'addresses':       renderAddresses,
+      'wishlist':        renderWishlist,
+      'returns':         renderReturns,
+      'rewards':         renderRewards,
+      'newsletter':      renderNewsletter,
+      'settings':        renderSettings,
+      'admin':           renderAdmin,
   };
 
-  // ============================================================
-  // PANEL LOADER
-  // 1. Marks the clicked nav button active
-  // 2. Shows a loading state immediately
-  // 3. Fetches the HTML template (cached after first load)
-  // 4. Injects the template into .contentPane
-  // 5. Calls the render function which fetches + populates data
-  //
-  // HOW DATA GETS IN:
-  // Each render function calls mockFetch() which returns fake data.
-  // When your Node.js API exists, replace mockFetch('key') with
-  // fetch('/api/account/key').then(res => res.json())
-  // The rest of the render function stays the same.
-  // ============================================================
   async function loadPanel(panelName) {
-     const currentActive = navPanel.querySelector('button.active');
-    if (currentActive && currentActive.dataset.panel === panelName) return;
-    if (!panelRenderers[panelName]) {
-      contentPane.innerHTML = '<p class="panel-error">Panel not found.</p>';
-      return;
-    }
-
-    // Mark active nav button
-    navPanel.querySelectorAll('button').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.panel === panelName);
-    });
-
-    // Show loading state while template + data fetch
-    contentPane.innerHTML = '<div class="panel-loading"><span class="loading-spinner"></span> Loading...</div>';
-
-    // Fetch HTML template, use cache after first load
-    if (!panelCache[panelName]) {
-      try {
-        const res = await fetch(`templates/account/${panelName}.html`);
-        if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
-        panelCache[panelName] = await res.text();
-      } catch (err) {
-        console.error(err);
-        contentPane.innerHTML = '<p class="panel-error">Failed to load panel.</p>';
-        return;
+      const currentActive = navPanel.querySelector('button.active');
+      if (currentActive && currentActive.dataset.panel === panelName) return;
+      if (!panelRenderers[panelName]) {
+          contentPane.innerHTML = '<p class="panel-error">Panel not found.</p>';
+          return;
       }
-    }
 
-    // Inject template HTML into the content pane
-    contentPane.innerHTML = panelCache[panelName];
+      navPanel.querySelectorAll('button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.panel === panelName);
+      });
 
-    // Run the render function for this panel
-    // This is where data fetching and DOM population happens
-    await panelRenderers[panelName]();
+      contentPane.innerHTML = '<div class="panel-loading"><span class="loading-spinner"></span> Loading...</div>';
+
+      if (!panelCache[panelName]) {
+          try {
+              const res = await fetch(`templates/account/${panelName}.html`);
+              if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
+              panelCache[panelName] = await res.text();
+          } catch (err) {
+              console.error(err);
+              contentPane.innerHTML = '<p class="panel-error">Failed to load panel.</p>';
+              return;
+          }
+      }
+
+      contentPane.innerHTML = panelCache[panelName];
+      await panelRenderers[panelName]();
   }
+
+  // Wire nav buttons
+  navPanel.addEventListener('click', e => {
+      const btn = e.target.closest('[data-panel]');
+      if (btn) loadPanel(btn.dataset.panel);
+  });
+
+  // Load default panel
+  await loadPanel('overview');
+}
 
   // ============================================================
   // PANEL RENDERERS

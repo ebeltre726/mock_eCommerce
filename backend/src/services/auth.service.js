@@ -1,8 +1,8 @@
 // Local dev mock — in production these calls go to AWS Cognito User Pools.
 // Cognito SDK calls would replace this entire file.
 
-import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import docClient from '../db/dynamoClient.js';
+import { GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { dynamo } from '../db/dynamoClient.js';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
@@ -10,7 +10,7 @@ import bcrypt from 'bcrypt';
 const JWT_SECRET = process.env.JWT_SECRET || 'local-dev-secret';
 
 export async function loginUser(email, password) {
-    const result = await docClient.send(new GetCommand({
+    const result = await dynamo.send(new GetCommand({
         TableName: 'Users',
         Key: { email },
     }));
@@ -37,16 +37,19 @@ export async function loginUser(email, password) {
 
 
 export async function signupUser({ firstName, lastName, email, password, termsConditions }) {
-    const existing = await docClient.send(new GetCommand({
+    const existing = await dynamo.send(new QueryCommand({
         TableName: 'Users',
-        Key: { email },
+        IndexName: 'EmailIndex', // matches seed.js
+        KeyConditionExpression: 'email = :email',
+        ExpressionAttributeValues: { ':email': email },
     }));
 
-    if (existing.Item) {
+    if (existing.Items && existing.Items.length > 0) {
         throw new Error('Email already in use');
     }
 
     const userId = uuidv4();
+    console.log('generated userId:', userId);
 
     // HASH the password
     const hashedPassword = await bcrypt.hash(password, 10); // 10 = salt rounds
@@ -62,7 +65,7 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
         avatar: null,
     };
 
-    await docClient.send(new PutCommand({ TableName: 'Users', Item: newUser }));
+    await dynamo.send(new PutCommand({ TableName: 'Users', Item: newUser }));
 
     const token = jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
     return { token, userId, email, firstName };
