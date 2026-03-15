@@ -12,6 +12,7 @@ PutCommand
 } from "@aws-sdk/lib-dynamodb";
 
 const PRODUCTS_TABLE = "Products";
+const USERS_TABLE = "Users";
 const CART_TABLE = "Cart";
 
 // Connect to DynamoDB Local
@@ -164,6 +165,26 @@ const cartTableConfig = {
   BillingMode: "PAY_PER_REQUEST"
 };
 
+const usersTableConfig = {
+  TableName: USERS_TABLE,
+  AttributeDefinitions: [
+    { AttributeName: "userId", AttributeType: "S" },
+    { AttributeName: "email", AttributeType: "S" }
+  ],
+  KeySchema: [
+    { AttributeName: "userId", KeyType: "HASH" }
+  ],
+  BillingMode: "PAY_PER_REQUEST",
+  GlobalSecondaryIndexes: [
+    {
+      IndexName: "EmailIndex",
+      KeySchema: [{ AttributeName: "email", KeyType: "HASH" }],
+      Projection: { ProjectionType: "ALL" },
+      ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 }
+    }
+  ]
+};
+
 async function insertProducts() {
 
   for (const product of products) {
@@ -191,6 +212,11 @@ async function seed() {
     await ensureTableExists(
       CART_TABLE,
       cartTableConfig
+    );
+
+    await ensureTableExists(
+      USERS_TABLE,
+      usersTableConfig
     );
 
     await insertProducts();

@@ -1,6 +1,32 @@
 import { accountNavModule } from "./navbarModule.js";
+import { overlayModule } from "./overlay.js";
 
-export function initAccount() {
+export async function initAccount() {
+  /*
+  const token = localStorage.getItem('token');
+  if (!token) {
+    await loadTemplate('signup');
+    return;
+  }
+  try {
+    const res = await fetch('api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      await loadTemplate('login');
+      return;
+    }
+    
+    if (!res.ok) throw new Error('Server error');
+
+    await loadAccountPanel('overview');
+  } catch (err) {
+    console.error('Session check failed: ', err);
+    await loadTemplate('login');
+  }
+  */
   accountNavModule.init();
   const container = document.querySelector('.accountOverview');
   const navPanel = container.querySelector('.navPanel');
