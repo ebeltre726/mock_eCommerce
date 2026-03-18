@@ -1,4 +1,5 @@
 import { loginUser, signupUser } from '../services/auth.service.js';
+import { fetchOverview } from '../services/account.service.js';
 
 export async function login(req, res) {
     try {
@@ -34,7 +35,15 @@ export async function logout(req, res) {
     res.json({ success: true, message: 'Logged out' });
 }
 
-export async function getSession(req, res) {
-    // req.user is set by requireAuth middleware
-    res.json({ user: req.user });
+// auth.controller.js
+export async function getMe(req, res) {
+    try {
+        // req.user.userId comes from the verified JWT
+        const user = await fetchOverview(req.user.userId);
+        res.json(user);
+    } catch (err) {
+        // User doesn't exist in DB — token is valid but orphaned
+        console.error('getMe error:', err);
+        res.status(401).json({ error: 'Account not found' });
+    }
 }

@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, signup, logout, getSession } from '../controllers/auth.controller.js';
+import { login, signup, logout, getMe } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -14,6 +14,6 @@ router.post('/signup', signup);
 router.post('/logout', logout);
 
 // GET  /api/auth/me
-router.get('/me', requireAuth, getSession);
+router.get('/me', requireAuth, getMe);
 
 export default router;

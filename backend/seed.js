@@ -326,6 +326,12 @@ async function seedUsers() {
           avatar: 'avatar.png',
           dateCreated: '2023-01-15',
           termsConditions: true,
+          stats: {
+            orders: 0,
+            wishlist: 0,
+            points: 0,
+            returns: 0,
+          },
       },
   }));
   console.log(`  Inserted user: ${MOCK_EMAIL}`);

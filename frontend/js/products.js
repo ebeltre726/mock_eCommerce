@@ -50,7 +50,7 @@ function renderProduct(p) {
       <label class="cartProdPrice">$${p.price || 0}</label>
     `;
   
-    container.insertBefore(div, sentinel);
+    container.append(div);
   
     // fade in animation
     requestAnimationFrame(() => div.classList.add("active"));
@@ -87,7 +87,7 @@ function setupObserver() {
         }
       });
     }, {
-      root: container,
+      root: null,
       threshold: 0.1
     });
   

@@ -10,17 +10,19 @@ import bcrypt from 'bcrypt';
 const JWT_SECRET = process.env.JWT_SECRET || 'local-dev-secret';
 
 export async function loginUser(email, password) {
-    const result = await dynamo.send(new GetCommand({
+    // Use the GSI to look up by email, same as signupUser does
+    const result = await dynamo.send(new QueryCommand({
         TableName: 'Users',
-        Key: { email },
+        IndexName: 'EmailIndex',
+        KeyConditionExpression: 'email = :email',
+        ExpressionAttributeValues: { ':email': email },
     }));
 
-    const user = result.Item;
+    const user = result.Items?.[0];
     if (!user) {
         throw new Error('Invalid credentials');
     }
 
-    // Compare password with hash
     const passwordMatches = await bcrypt.compare(password, user.password);
     if (!passwordMatches) {
         throw new Error('Invalid credentials');
@@ -63,6 +65,12 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
         termsConditions,
         dateCreated: new Date().toISOString(),
         avatar: null,
+        stats: {
+            orders: 0,
+            wishlist: 0,
+            points: 0,
+            returns: 0,
+        },
     };
 
     await dynamo.send(new PutCommand({ TableName: 'Users', Item: newUser }));

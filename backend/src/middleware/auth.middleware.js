@@ -1,4 +1,3 @@
-import { dynamo as docClient } from '../db/dynamoClient.js';
 import { verifyToken } from '../services/auth.service.js';
 
 export function requireAuth(req, res, next) {

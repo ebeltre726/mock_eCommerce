@@ -619,7 +619,7 @@
     flex-direction: column;
     opacity: 0;
     transform: translateY(0);
-    transition: opacity .8s ease, transition .8s ease;
+    transition: opacity .8s ease, transform .8s ease;
     border: 3px solid black;
     overflow: hidden;
     background-color: white;
@@ -830,15 +830,15 @@
 .productsContainer {
     background-color: beige;
     border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;;
+    border-bottom-right-radius: 10px;
     margin: 20px;
     padding: 20px;
     display: grid;
     grid-template-columns: repeat(auto-fill, 250px);
+    grid-auto-rows: 410px;
     justify-content: center;
-    height: 100%;
     width: 90%;
-    gap: 50px;
+    gap: 10px;
 }
 
 .productDesc {

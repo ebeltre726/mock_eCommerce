@@ -3,7 +3,8 @@ import cors from "cors";
 
 import cartRoutes from "./routes/cart.routes.js";
 import productRoutes from "./routes/products.routes.js";
-import sendContactMessage from "./routes/contact.routes.js";
+import contactRouter from "./routes/contact.routes.js";
+import accountRouter from "./routes/account.routes.js";
 import authRouter from './routes/auth.routes.js';
 
 const app = express();
@@ -15,8 +16,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/contact", sendContactMessage);
+app.use("/api/contact", contactRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/account', accountRouter);
 
 // Health check (nice touch for AWS later)
 app.get("/health", (req, res) => {
