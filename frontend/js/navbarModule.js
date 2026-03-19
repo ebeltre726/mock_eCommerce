@@ -6,14 +6,16 @@ export const accountNavModule = (() => {
         const navPanel = document.querySelector('.navPanel');
         const toggleIcon = document.getElementById('nav-toggle-icon');
 
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                navPanel.classList.toggle('show');
-                toggleBtn.classList.toggle('active');
-                navOpen = !navOpen;
-                toggleIcon.src = navOpen ? 'close.png' : 'hamburger.png';
-            });
+        function updateIcon() {
+            const isOpen = navPanel.classList.contains('show');
+            toggleIcon.src = isOpen ? 'close.png' : 'hamburger.png';
         }
+
+        toggleBtn.addEventListener('click', () => {
+            navPanel.classList.toggle('show');
+            toggleBtn.classList.toggle('active');
+            updateIcon();
+        });
 
         // Close nav when a panel button is clicked
         document.querySelectorAll('.navPanel button').forEach(btn => {

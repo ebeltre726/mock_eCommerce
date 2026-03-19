@@ -5,9 +5,8 @@ import { cartModule } from './cart.js';
 import { productInfoModule } from './productInfo.js';
 import { bannerModule } from './banner.js';
 import { initProducts } from "./products.js";
-import { initCartOverlay } from "./cartOverlay.js";
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     menuModule.init();
     overlayModule.init();
 
@@ -18,9 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    initProducts();
-    initCartOverlay();
-    cartModule.init();   // ✅ This is your cart init
+    await initProducts();    // ← wait for products to render first
+    cartModule.init();       // ← then init cart so badges find the divs
     productInfoModule.init();
     bannerModule.init();
 });

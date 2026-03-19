@@ -11,6 +11,11 @@ export const overlayModule = (() => {
       account:  () => import('./account.js').then(m => m.initAccount()),
       login:    () => import('./login.js').then(m => m.initLogin()),
       signup:   () => import('./signup.js').then(m => m.initSignup()),
+      cart:     () => import('./cart.js').then(m => {
+        const container = document.querySelector('.cartContents');
+        if (!container) return;
+        m.cartModule.renderCartProducts(container);
+      }),
   };
 
   function close() {

@@ -2,89 +2,15 @@
 <html>
     <head>
         <body>
-          <section class="checkoutWrapper" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
-            <!-- Status overlay -->
-            <div class="statusOverlay" id="statusOverlay" role="status" aria-live="polite">
-              <div class="statusIcon" id="statusIcon"></div>
-              <div class="statusTitle" id="statusTitle"></div>
-              <div class="statusMessage" id="statusMessage"></div>
-              <button class="statusDismiss" id="statusDismiss">Close</button>
-            </div>
-            <div class="checkoutContainer">
-              <!-- Header -->
-              <div class="checkoutHeader">
-                <h2 class="checkoutTitle" id="checkoutTitle">Payment</h2>
-                <button type="button" class="backButton" onclick="history.back()">← Back</button>
-              </div>
-              <!-- Scrollable body -->
-              <div class="checkoutBody">
-                <form class="checkoutContent" id="checkoutForm" novalidate>
-                  <!-- Shipping -->
-                  <div class="fieldGroup">
-                    <label for="fullName">Full Name</label>
-                    <input id="fullName" name="fullName" type="text" placeholder="Jane Smith"
-                           autocomplete="name" required>
-                  </div>
-                  <div class="fieldGroup">
-                    <label for="shippingAddress">Shipping Address</label>
-                    <input id="shippingAddress" name="shippingAddress" type="text"
-                           placeholder="123 Main St, City, State, ZIP"
-                           autocomplete="shipping street-address" required>
-                  </div>
-                  <div class="divider"></div>
-                  <!-- Card details -->
-                  <div class="sectionLabel">Card Details</div>
-                  <div class="fieldGroup">
-                    <label for="cardNumber">Card Number</label>
-                    <input id="cardNumber" name="cardNumber" type="text"
-                           placeholder="1234 5678 9012 3456"
-                           inputmode="numeric" autocomplete="cc-number"
-                           maxlength="19" required>
-                  </div>
-                  <div class="cardRow">
-                    <div class="fieldGroup">
-                      <label for="cardExpiry">Expiry</label>
-                      <input id="cardExpiry" name="cardExpiry" type="text"
-                             placeholder="MM/YY"
-                             inputmode="numeric" autocomplete="cc-exp"
-                             maxlength="5" required>
-                    </div>
-                    <div class="fieldGroup">
-                      <label for="cardCvv">CVV</label>
-                      <input id="cardCvv" name="cardCvv" type="text"
-                             placeholder="•••"
-                             inputmode="numeric" autocomplete="cc-csc"
-                             maxlength="4" required>
-                    </div>
-                  </div>
-                  <div class="divider"></div>
-                  <!-- Cart preview (collapsed by default) -->
-                  <div class="cartPreview" id="cartPreview" aria-expanded="false">
-                    <div class="cartPreviewInner">
-                      <div class="cartPreviewContent">
-                        <div class="cartPreviewHeader">Your Cart</div>
-                        <div class="cartGrid" id="cartGrid">
-                          <div class="emptyCart">No items in cart.</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <!-- Actions -->
-                  <div class="paymentNav">
-                    <button type="button" class="viewCartBtn" id="viewCartBtn">
-                      <span id="viewCartLabel">View Cart</span>
-                      <span class="chevron" id="cartChevron">▼</span>
-                    </button>
-                    <button type="submit" class="submitOrder" id="submitOrder">Place Order</button>
-                  </div>
-                </form>
-              </div>
-              <!-- Sticky total -->
-              <div class="totalBar">
-                <span class="totalLabel">Total</span>
-                <span class="totalAmount" id="totalAmount">$0.00</span>
-              </div>
-            </div>
-          </section>
+            <section class="cartContainer">
+                <div class="cartHeader">
+                    <h2>Your Cart</h2>
+                    <button class="checkoutBtn" data-target="checkout">Checkout</button>
+                </div>
+                <hr class="cartHR">
+                <div class="cartContents">
+                </div>
+                    <div id="productMarker"></div>
+            </section>
         </body>
-</html>      
+</html>     

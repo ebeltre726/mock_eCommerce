@@ -12,6 +12,7 @@ import {
   CreateTableCommand,
   DescribeTableCommand,
   DeleteTableCommand,
+  QueryCommand,
 } from '@aws-sdk/client-dynamodb';
 
 import {
@@ -277,20 +278,6 @@ const MOCK_PASSWORD = 'password123';
 // recreateTable     — deletes and recreates (full reset)
 // ============================================================
 
-async function ensureTableExists(tableName, config) {
-  try {
-      await client.send(new DescribeTableCommand({ TableName: tableName }));
-      console.log(`  ${tableName} already exists — skipping`);
-  } catch (err) {
-      if (err.name === 'ResourceNotFoundException') {
-          await client.send(new CreateTableCommand(config));
-          console.log(`  ${tableName} created`);
-      } else {
-          throw err;
-      }
-  }
-}
-
 async function recreateTable(tableName, config) {
   try {
       await client.send(new DeleteTableCommand({ TableName: tableName }));
@@ -300,6 +287,21 @@ async function recreateTable(tableName, config) {
   }
   await client.send(new CreateTableCommand(config));
   console.log(`  Created ${tableName}`);
+}
+
+async function ensureTableExists(tableName, config) {
+  try {
+      await client.send(new DescribeTableCommand({ TableName: tableName }));
+      console.log(`  ${tableName} already exists — skipping`);
+  } catch (err) {
+      if (err.name === 'ResourceNotFoundException') {
+          console.log(`  Creating ${tableName}...`);
+          await client.send(new CreateTableCommand(config));
+          console.log(`  Created ${tableName}`);
+      } else {
+          throw err;
+      }
+  }
 }
 
 // ============================================================
@@ -456,6 +458,37 @@ async function seedSettings() {
   console.log(`  Inserted settings`);
 }
 
+async function getUserIdByEmail(email) {
+  const result = await docClient.send(new QueryCommand({
+      TableName: USERS_TABLE,
+      IndexName: 'EmailIndex',
+      KeyConditionExpression: 'email = :email',
+      ExpressionAttributeValues: { ':email': email },
+  }));
+
+  const userId = result.Items?.[0]?.userId;
+
+  if (!userId) throw new Error(`User not found for email: ${email}`);
+
+  return userId;
+}
+
+async function insertCartItems(userId) {
+  const cartItems = [
+      { userId, productId: 'chair-7', quantity: 2 },
+      { userId, productId: 'chair-8', quantity: 1 },
+      { userId, productId: 'chair-9', quantity: 3 },
+  ];
+
+  for (const item of cartItems) {
+      await docClient.send(new PutCommand({
+          TableName: CART_TABLE,
+          Item: item
+      }));
+      console.log(`Inserted cart item: ${item.productId} x${item.quantity} for user ${userId}`);
+  }
+}
+
 // ============================================================
 // MAIN
 // Uses ensureTableExists by default — tables are only created
@@ -481,7 +514,8 @@ async function seed() {
 
       console.log('\nSeeding data...');
       await seedProducts();
-      await seedUsers();
+      await seedUsers();           // ← Jane is written first
+      await insertCartItems(USER_ID); // ← USER_ID is 'u001', no lookup needed
       await seedOrders();
       await seedAddresses();
       await seedPaymentMethods();

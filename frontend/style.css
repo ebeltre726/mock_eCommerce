@@ -558,7 +558,13 @@
     justify-content: space-between;
     width: 100%;
     align-items: center;
+    position: sticky;
+    background-color: beige;
+    z-index: 600;
+    top: 0;
     padding-left: 5%;
+    padding-top: 10px;
+    padding-bottom: 10px;
     padding-right: 5%;
     height: 20%;
 }
@@ -683,9 +689,9 @@
     z-index: 502;
     position: absolute;
     font-family: var(--nav-font);
-    font-size: 2rem;
+    font-size: 1.7rem;
     font-weight: 600;
-    bottom: 5px;
+    bottom: 0;
     left: 10px;
 }
 
@@ -945,7 +951,22 @@
 }
 
 .addedMessage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-shadow: none;
+    background-color: tan;
+    transition: background-color .3s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-bottom: 3px solid black;
+    border-top: 3px solid black;
+    font-family: var(--nav-font);
+    font-size: 1rem;
+    flex-shrink: 0;
+    height: 55px;
+
 }
 
 #productMarker {
@@ -2494,6 +2515,7 @@
     #dividingLine {
         display: none;
     }
+
     .cartHeader h2 {
         font-size: 1.5rem;
     }

@@ -36,7 +36,7 @@ function renderProduct(p) {
   
     const div = document.createElement("div");
     div.classList.add("cartProduct");
-    div.dataset.productId = p.productId;
+    div.dataset.productId = p.id;
   
     div.innerHTML = `
       <label class="itemTitle">${p.name}</label>

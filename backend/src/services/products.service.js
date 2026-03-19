@@ -9,9 +9,9 @@ export async function fetchAllProducts() {
   return data.Items || [];
 }
 
-export async function fetchProductById(productId) {
+export async function fetchProductById(id) {
   const data = await dynamo.send(
-    new GetCommand({ TableName: TABLE_NAME, Key: { productId } })
+    new GetCommand({ TableName: TABLE_NAME, Key: { id } })
   );
   return data.Item || null;
 }

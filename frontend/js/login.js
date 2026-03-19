@@ -1,4 +1,5 @@
 import { overlayModule } from './overlay.js';
+import { cartModule } from './cart.js';
 
 export function initLogin() {
     const form = document.getElementById('signin-form');
@@ -19,29 +20,28 @@ export function initLogin() {
         };
 
         try {
-            const res = await fetch("http://localhost:3000/api/auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+            const res = await fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
             const result = await res.json();
 
             if (!res.ok) {
-                document.getElementById("signin-error").textContent = result.message || "Login failed";
+                document.getElementById('signin-error').textContent = result.message || 'Login failed';
                 return;
             }
 
-            // ✅ Store token
             localStorage.setItem('token', result.token);
 
-            // ✅ Load account UI (or redirect)
+            // Merge any guest cart items with the server cart
+            await cartModule.mergeCartsOnLogin();
+
             overlayModule.open('account');
 
         } catch (err) {
-            document.getElementById("signin-error").textContent = "Something went wrong.";
+            document.getElementById('signin-error').textContent = 'Something went wrong.';
             console.error(err);
         }
     });
