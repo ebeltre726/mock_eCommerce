@@ -1971,6 +1971,7 @@
 .fieldGroup {
     display: flex;
     flex-direction: column;
+    align-content: center;
     gap: 0.35rem;
 }
 
@@ -2001,11 +2002,23 @@
     box-shadow: 0 0 0 3px rgba(224,92,92,0.15)
 }
 
-/* Card Row(expiry + CVV) */
-.cardRow {
+.fieldRow {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: end;
+    gap: 1rem;
+}
+
+.demoNotice {
+    font-size: .65rem;
+}
+
+/* Stripe Styling */
+.stripeWrapper {
+    background-color: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
 }
 
 /* Divider */

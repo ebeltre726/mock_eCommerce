@@ -38,3 +38,13 @@ export async function removeItem(req, res) {
         res.status(500).json({ error: 'Failed to remove item from cart' });
     }
 }
+
+export async function clearCart(req, res) {
+  try {
+      await cartService.clearCart(req.user.userId);
+      res.json({ success: true });
+  } catch (err) {
+      console.error('clearCart error:', err);
+      res.status(500).json({ error: 'Failed to clear cart' });
+  }
+}

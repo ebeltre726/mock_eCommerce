@@ -6,7 +6,13 @@ export const cartModule = (() => {
     // CART STATE
     // ============================================================
 
+    function getCartState() {
+        return cartState;
+    }
     
+    function clearCartState() {
+        cartState = [];
+    }
 
     async function loadCart() {
         const token = localStorage.getItem('token');
@@ -14,6 +20,12 @@ export const cartModule = (() => {
             const res = await fetch('http://localhost:3000/api/cart', {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            if (!res.ok) {
+                // Token expired or invalid — clear it and fall back to localStorage
+                if (res.status === 401) localStorage.removeItem('token');
+                cartState = [];
+                return;
+            }
             cartState = await res.json();
         } else {
             cartState = JSON.parse(localStorage.getItem('cart')) || [];
@@ -90,6 +102,16 @@ export const cartModule = (() => {
     }
 
     async function removeItemFromCart(productId, quantity) {
+        
+        const existing = cartState.find(i => i.productId === productId);
+        
+        if (existing) {
+            existing.quantity -= quantity;
+            if (existing.quantity <= 0) {
+                cartState = cartState.filter(i => i.productId !== productId);
+            }
+        }
+
         const token = localStorage.getItem('token');
 
         if (token) {
@@ -113,7 +135,7 @@ export const cartModule = (() => {
             localStorage.setItem('cart', JSON.stringify(cart));
         }
 
-        await updateProductBadge(productId);
+        updateProductBadge(productId);
     }
 
     // ============================================================
@@ -127,12 +149,12 @@ export const cartModule = (() => {
         if (!container) return;
         const badge = container.querySelector('.cartQtyBadge');
         if (!badge) return;
-        badge.textContent = quantity;
+        badge.textContent = `x${quantity}`;
         badge.classList.toggle('hidden', quantity === 0);
     }
     
     function updateAllBadges() {
-        // no await needed
+        if (!Array.isArray(cartState)) return; // guard against bad state
         cartState.forEach(item => updateProductBadge(item.productId));
     }
 
@@ -146,6 +168,7 @@ export const cartModule = (() => {
         console.log('renderCartProducts called, container:', container);
         
         await loadCart(); // populates cartState
+        console.log('cartState:', JSON.stringify(cartState));
         
         console.log('cartState in renderCartProducts:', cartState.length, 'items');
     
@@ -155,7 +178,9 @@ export const cartModule = (() => {
         }
     
         const products = await Promise.all(
-            cartState.map(item => fetchProductDetails(item.productId))
+            cartState
+                .filter(item => item.productId) // ← skip items with no productId
+                .map(item => fetchProductDetails(item.productId))
         );
     
         const sentinel = container.querySelector('#productMarker');
@@ -328,7 +353,16 @@ export const cartModule = (() => {
                 showAddedMessage(parent);
             } else {
                 await removeItemFromCart(productId, quantity);
-                restoreButton(parent);
+                
+                const remaining = getItemQuantityInCart(productId);
+                
+                if (remaining <= 0) {
+                    // Remove the entire cartProduct div from the cart overlay
+                    const productContainer = parent.closest('.cartProduct');
+                    if (productContainer) productContainer.remove();
+                } else {
+                    restoreButton(parent);
+                }
             }
         }
     }
@@ -352,5 +386,5 @@ export const cartModule = (() => {
         updateAllBadges(); // populate badges on page load for logged-in users
     }
 
-    return { init, removeItemFromCart, updateAllBadges, renderCartProducts, mergeCartsOnLogin };
+    return { init, loadCart, removeItemFromCart, updateAllBadges, renderCartProducts, mergeCartsOnLogin, addItemToCart, getCartState, clearCartState };
 })();

@@ -489,6 +489,24 @@ async function insertCartItems(userId) {
   }
 }
 
+async function cleanCartData() {
+  const result = await docClient.send(new QueryCommand({
+      TableName: CART_TABLE,
+      KeyConditionExpression: 'userId = :uid',
+      ExpressionAttributeValues: { ':uid': USER_ID },
+  }));
+
+  for (const item of result.Items || []) {
+      if (!item.productId || item.productId === 'undefined') {
+          await docClient.send(new DeleteCommand({
+              TableName: CART_TABLE,
+              Key: { userId: item.userId, productId: item.productId },
+          }));
+          console.log(`  Removed bad cart item: productId="${item.productId}"`);
+      }
+  }
+}
+
 // ============================================================
 // MAIN
 // Uses ensureTableExists by default — tables are only created
@@ -501,7 +519,7 @@ async function seed() {
   try {
       console.log('\nEnsuring tables exist...');
       await ensureTableExists(PRODUCTS_TABLE,   productsTableConfig);
-      await ensureTableExists(CART_TABLE,        cartTableConfig);
+      await recreateTable(CART_TABLE,           cartTableConfig);  // ← wipe cart on every seed
       await ensureTableExists(USERS_TABLE,       usersTableConfig);
       await ensureTableExists(ORDERS_TABLE,      ordersTableConfig);
       await ensureTableExists(ADDRESSES_TABLE,   addressesTableConfig);
@@ -514,8 +532,9 @@ async function seed() {
 
       console.log('\nSeeding data...');
       await seedProducts();
-      await seedUsers();           // ← Jane is written first
-      await insertCartItems(USER_ID); // ← USER_ID is 'u001', no lookup needed
+      await seedUsers();
+      // No cleanCartData needed — cart was just recreated fresh
+      await insertCartItems(USER_ID);
       await seedOrders();
       await seedAddresses();
       await seedPaymentMethods();

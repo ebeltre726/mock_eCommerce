@@ -1,7 +1,3 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <body>
           <section class="checkoutWrapper" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
             <!-- Status overlay -->
             <div class="statusOverlay" id="statusOverlay" role="status" aria-live="polite">
@@ -14,7 +10,7 @@
               <!-- Header -->
               <div class="checkoutHeader">
                 <h2 class="checkoutTitle" id="checkoutTitle">Payment</h2>
-                <button type="button" class="backButton" onclick="history.back()">← Back</button>
+                <button type="button" class="backButton" data-target="cart">← Back</button>
               </div>
               <!-- Scrollable body -->
               <div class="checkoutBody">
@@ -23,40 +19,58 @@
                   <div class="fieldGroup">
                     <label for="fullName">Full Name</label>
                     <input id="fullName" name="fullName" type="text" placeholder="Jane Smith"
-                           autocomplete="name" required>
+                          autocomplete="name" required>
                   </div>
                   <div class="fieldGroup">
-                    <label for="shippingAddress">Shipping Address</label>
-                    <input id="shippingAddress" name="shippingAddress" type="text"
-                           placeholder="123 Main St, City, State, ZIP"
-                           autocomplete="shipping street-address" required>
+                    <label for="streetAddress">Street Address</label>
+                    <input id="streetAddress" name="streetAddress" type="text"
+                          placeholder="123 Main St" autocomplete="street-address" required>
+                  </div>
+                  <div class="fieldGroup">
+                      <label for="city">City</label>
+                      <input id="city" name="city" type="text"
+                          placeholder="New York" autocomplete="address-level2" required>
+                  </div>
+                  <div class="fieldRow">
+                  <div class="fieldGroup">
+                      <label for="aptUnit">Apt / Unit (optional)</label>
+                      <input id="aptUnit" name="aptUnit" type="text"
+                          placeholder="Apt 4B" autocomplete="address-line2">
+                  </div>
+                  <div class="fieldGroup">
+                      <label for="state">State</label>
+                      <input id="state" name="state" type="text"
+                          placeholder="NY" maxlength="2" autocomplete="address-level1" required>
+                  </div>
                   </div>
                   <div class="divider"></div>
                   <!-- Card details -->
                   <div class="sectionLabel">Card Details</div>
                   <div class="fieldGroup">
-                    <label for="cardNumber">Card Number</label>
-                    <input id="cardNumber" name="cardNumber" type="text"
-                           placeholder="1234 5678 9012 3456"
-                           inputmode="numeric" autocomplete="cc-number"
-                           maxlength="19" required>
-                  </div>
-                  <div class="cardRow">
+                    <label>Card Number</label>
+                    <p class="demoNotice">
+                      ⚠️  This is a demo store. No real charges will be made.
+                      <br>
+                      Use card <strong>4242 4242 4242 4242</strong> to test.
+                    </p>
+                    <div class="stripeWrapper">
+                        <div id="card-number" class="stripeElement"></div>
+                    </div>
+                </div>
+                <div class="fieldRow">
                     <div class="fieldGroup">
-                      <label for="cardExpiry">Expiry</label>
-                      <input id="cardExpiry" name="cardExpiry" type="text"
-                             placeholder="MM/YY"
-                             inputmode="numeric" autocomplete="cc-exp"
-                             maxlength="5" required>
+                        <label>Expiry</label>
+                        <div class="stripeWrapper">
+                            <div id="card-expiry" class="stripeElement"></div>
+                        </div>
                     </div>
                     <div class="fieldGroup">
-                      <label for="cardCvv">CVV</label>
-                      <input id="cardCvv" name="cardCvv" type="text"
-                             placeholder="•••"
-                             inputmode="numeric" autocomplete="cc-csc"
-                             maxlength="4" required>
+                        <label>CVV</label>
+                        <div class="stripeWrapper">
+                            <div id="card-cvc" class="stripeElement"></div>
+                        </div>
                     </div>
-                  </div>
+                </div>
                   <div class="divider"></div>
                   <!-- Cart preview (collapsed by default) -->
                   <div class="cartPreview" id="cartPreview" aria-expanded="false">
@@ -86,5 +100,3 @@
               </div>
             </div>
           </section>
-        </body>
-</html>      

@@ -56,3 +56,14 @@ export async function removeFromCart(userId, productId, quantity) {
 
     return { productId, quantity: newQty };
 }
+
+export async function clearCart(userId) {
+  const cart = await getCart(userId);
+  
+  await Promise.all(cart.map(item =>
+      dynamo.send(new DeleteCommand({
+          TableName: TABLE_NAME,
+          Key: { userId, productId: item.productId },
+      }))
+  ));
+}

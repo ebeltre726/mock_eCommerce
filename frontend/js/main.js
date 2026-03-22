@@ -10,11 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     menuModule.init();
     overlayModule.init();
 
-    document.querySelectorAll('.ctaButton').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.target;
-            overlayModule.open(target);
-        });
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('[data-target]');
+        if (btn) overlayModule.open(btn.dataset.target);
     });
 
     await initProducts();    // ← wait for products to render first
