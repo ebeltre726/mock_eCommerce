@@ -95,19 +95,26 @@ function setupObserver() {
 }
 
 function setupEventDelegation() {
-    const container = document.querySelector(".productsContainer");
-    if (!container) return; // safety check
-  
-    container.addEventListener("click", e => {
-      const target = e.target;
-      if (target.classList.contains("addToCart")) {
-        const productDiv = target.closest(".cartProduct");
-        const productId = productDiv.dataset.productId;
-        const quantity = 1;
-  
-        import('./cart.js').then(({ cartModule }) => {
-          cartModule.addItemToCart?.(productId, quantity);
-        });
-      }
+    const container = document.querySelector('.productsContainer');
+    if (!container) return;
+
+    container.addEventListener('click', e => {
+        const target = e.target;
+
+        // Info button handling only — cart clicks handled by cart.js handleClick
+        if (target.classList.contains('info')) {
+            const productDiv = target.closest('.cartProduct');
+            const desc = productDiv?.querySelector('.productDesc');
+            const closeBtn = productDiv?.querySelector('.closeProd');
+            if (desc) desc.classList.toggle('hidden');
+            if (closeBtn) closeBtn.classList.toggle('hidden');
+        }
+
+        if (target.classList.contains('closeProd')) {
+            const productDiv = target.closest('.cartProduct');
+            const desc = productDiv?.querySelector('.productDesc');
+            target.classList.add('hidden');
+            if (desc) desc.classList.add('hidden');
+        }
     });
-  }
+}

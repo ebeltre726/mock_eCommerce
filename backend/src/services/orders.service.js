@@ -10,11 +10,23 @@ function getStripeKey() {
     return key;
 }
 
-function calculateTotal(items) {
-    // Returns amount in cents for Stripe
-    return Math.round(
-        items.reduce((sum, item) => sum + (item.price * item.quantity), 0) * 100
+async function getProductPrice(productId) {
+    const result = await dynamo.send(new GetCommand({
+        TableName: 'Products',
+        Key: { id: productId },
+    }));
+    return result.Item?.price || 0;
+}
+
+async function calculateTotal(items) {
+    const prices = await Promise.all(
+        items.map(item => getProductPrice(item.productId))
     );
+    const total = items.reduce((sum, item, i) => {
+        return sum + (prices[i] * item.quantity);
+    }, 0);
+    // Convert to cents for Stripe
+    return Math.round(total * 100);
 }
 
 export async function fetchOrders(userId) {
@@ -23,7 +35,30 @@ export async function fetchOrders(userId) {
         KeyConditionExpression: 'userId = :uid',
         ExpressionAttributeValues: { ':uid': userId },
     }));
-    return result.Items || [];
+
+    const orders = result.Items || [];
+
+    const enriched = await Promise.all(orders.map(async order => {
+        const enrichedItems = await Promise.all(
+            (order.items || []).map(async item => {
+                const product = await dynamo.send(new GetCommand({
+                    TableName: 'Products',
+                    Key: { id: item.productId },
+                }));
+                const p = product.Item;
+                return {
+                    productId: item.productId,
+                    name:      p?.name     || item.name  || 'Unknown',
+                    image:     p?.imageUrl || item.image || '',
+                    qty:       item.quantity ?? item.qty ?? 1,
+                    price:     p?.price    || item.price || 0,
+                };
+            })
+        );
+        return { ...order, items: enrichedItems };
+    }));
+
+    return enriched;
 }
 
 export async function fetchOrder(userId, orderId) {
@@ -45,9 +80,11 @@ export async function createOrder(userId, orderData) {
         try {
             const stripeKey = getStripeKey();
             const stripe = new Stripe(stripeKey);
+            
+            console.log('Attempting Stripe charge with paymentMethodId:', orderData.paymentMethodId);
 
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: calculateTotal(orderData.items),
+                amount: await calculateTotal(orderData.items), // ← await now
                 currency: 'usd',
                 payment_method: orderData.paymentMethodId,
                 confirm: true,
@@ -58,6 +95,8 @@ export async function createOrder(userId, orderData) {
             }, {
                 idempotencyKey: orderId,
             });
+
+            console.log('Stripe paymentIntent status:', paymentIntent.status);
 
             stripePaymentIntentId = paymentIntent.id;
             paymentMethod = 'stripe_test';

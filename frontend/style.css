@@ -260,6 +260,7 @@
 
 .bannerItems a:hover {
     color: gray;
+    cursor: pointer;
 }
 
 .bannerItems img {
@@ -1451,6 +1452,13 @@
     font-family: var(--nav-font);
 }
 
+.address-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
 .checkbox-group input {
     margin-right: 5px;
 }
@@ -1565,6 +1573,7 @@
     margin: auto;
     justify-content: center;
     align-items: center;
+    padding-bottom: 3%;
 }
 
 .return-form .form-group {
@@ -1575,7 +1584,7 @@
     align-items: start;
 }
 
-#return-order-select {
+#return-order-select, #return-item-select {
     padding-left: 5%;
     font-family: var(--nav-font);
     width: 100%;
@@ -1730,6 +1739,10 @@
 #change-password-btn {
     height: 30px;
     padding: 0 5%;
+}
+
+#password-saved.hidden {
+    display: none;
 }
 
 .danger-zone {
@@ -2256,6 +2269,13 @@
     .navPanel {
         position: absolute;
     }
+    .address-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: .5rem;
+    }
 }
 
 @media (max-width: 915px) {
@@ -2421,6 +2441,9 @@
         justify-content: center;
         gap: .5rem;
     }
+    .address-actions {
+        flex-direction: row;
+    }
     #save-address-btn, #cancel-address-btn {
         padding: 0 5%;
         height: 50px;
@@ -2559,6 +2582,9 @@
     }
     #return-notes {
         width: 15rem;
+    }
+    .address-actions {
+        flex-direction: column;
     }
 }
 

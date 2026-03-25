@@ -1,5 +1,6 @@
 import { fetchReturns, createReturn } from '../services/returns.service.js';
 import { fetchOrders } from '../services/orders.service.js';
+import { dynamo } from '../db/dynamoClient.js';
 
 export async function getReturns(req, res) {
     try {

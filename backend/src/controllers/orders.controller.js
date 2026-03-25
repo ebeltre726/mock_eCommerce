@@ -2,6 +2,7 @@
 import { fetchOrders, fetchOrder, createOrder as createOrderService } from '../services/orders.service.js';
 
 export async function getOrders(req, res) {
+    console.log('req.user:', req.user);
     try {
         const data = await fetchOrders(req.user.userId);
         res.json(data);

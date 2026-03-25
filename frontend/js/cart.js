@@ -67,6 +67,9 @@ export const cartModule = (() => {
     // ============================================================
 
     async function addItemToCart(productId, quantity) {
+        
+        await loadCart();
+
         const currentQty = getItemQuantityInCart(productId); // sync, no fetch
         const allowedQty = Math.min(quantity, MAX_QTY - currentQty);
         if (allowedQty <= 0) {
@@ -165,13 +168,8 @@ export const cartModule = (() => {
     }
 
     async function renderCartProducts(container) {
-        console.log('renderCartProducts called, container:', container);
-        
         await loadCart(); // populates cartState
-        console.log('cartState:', JSON.stringify(cartState));
-        
-        console.log('cartState in renderCartProducts:', cartState.length, 'items');
-    
+
         if (!cartState.length) {
             container.innerHTML = '<p class="empty-cart">Your cart is empty.</p>';
             return;
@@ -302,11 +300,9 @@ export const cartModule = (() => {
 
         // REMOVE flow
         if (target.classList.contains('rmvCart')) {
-            console.log('rmvCart clicked');
             const productContainer = target.closest('.cartProduct');
             const productId = productContainer.dataset.productId;
             const currentQty = await getItemQuantityInCart(productId);
-            console.log('currentQty for remove:', currentQty);
 
             if (currentQty <= 0) {
                 const btn = target;

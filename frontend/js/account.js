@@ -38,10 +38,6 @@ export async function initAccount() {
         return;
     }
 
-    console.log('overlay content:', document.querySelector('.content')?.innerHTML);
-    console.log('navPanel:', document.querySelector('.navPanel'));
-    console.log('contentPane:', document.querySelector('.contentPane'));
-
     const navPanel = document.querySelector('.navPanel');
     const contentPane = document.querySelector('.contentPane');
 
@@ -74,7 +70,10 @@ function setupAccountUI(navPanel, contentPane, user) {
     const initialisedPanels = new Set();
 
     async function loadPanel(panelName, prefetchedData = null) {
-        console.log('loadPanel called with:', panelName);
+        if (!panelName) {
+            console.error('loadPanel called with invalid panelName:', panelName);
+            return;
+        }
         const currentActive = navPanel.querySelector('button.active');
         if (currentActive?.dataset.panel === panelName) return;
 
@@ -123,6 +122,10 @@ function setupAccountUI(navPanel, contentPane, user) {
 
 // fetchTemplate lives outside — it only needs panelTemplateCache
 async function fetchTemplate(panelName) {
+    if (!panelName) {
+        console.error('fetchTemplate called with null/undefined:', panelName);
+        return '';
+    }
     if (panelTemplateCache[panelName]) return panelTemplateCache[panelName];
     const res = await fetch(`templates/account/${panelName}.html`);
     if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
@@ -232,15 +235,15 @@ async function renderAddresses(contentPane, addresses) {
     function renderList(addrs) {
         const list = contentPane.querySelector('#address-list');
         list.innerHTML = addrs.length ? addrs.map(addr => `
-            <li class="address-item" data-id="${addr.id}">
+            <li class="address-item" data-id="${addr.addressId}">
                 <div class="address-label">${addr.label} ${addr.isDefault ? '<span class="badge-default">Default</span>' : ''}</div>
                 <div class="address-text">
                     ${addr.line1}${addr.line2 ? ', ' + addr.line2 : ''}<br>
                     ${addr.city}, ${addr.state} ${addr.zip}, ${addr.country}
                 </div>
                 <div class="address-actions">
-                    <button class="btn-ghost edit-address" data-id="${addr.id}">Edit</button>
-                    <button class="btn-ghost remove-address" data-id="${addr.id}">Remove</button>
+                    <button class="btn-ghost edit-address" data-id="${addr.addressId}">Edit</button>
+                    <button class="btn-ghost remove-address" data-id="${addr.addressId}">Remove</button>
                 </div>
             </li>
         `).join('') : '<li class="empty-state">No saved addresses.</li>';
@@ -266,7 +269,7 @@ async function renderAddresses(contentPane, addresses) {
 }
 
 async function renderReturns(contentPane, { returns, orders }) {
-    const list = contentPane.querySelector('#returns-list');
+    const list        = contentPane.querySelector('#returns-list');
     const orderSelect = contentPane.querySelector('#return-order-select');
 
     list.innerHTML = returns.length ? returns.map(ret => `
@@ -291,6 +294,25 @@ async function renderReturns(contentPane, { returns, orders }) {
         orderSelect.appendChild(option);
     });
 
+    // ← When order is selected, populate item dropdown
+    orderSelect.addEventListener('change', e => {
+        const selectedOrderId = e.target.value;
+        const order = orders.find(o => o.orderId === selectedOrderId);
+        const itemSelect = contentPane.querySelector('#return-item-select');
+
+        itemSelect.innerHTML = '<option value="">-- Select item --</option>';
+
+        if (order) {
+            order.items.forEach(item => {
+                const option = document.createElement('option');
+                option.value          = item.name;
+                option.dataset.itemId = item.itemId || item.productId;
+                option.textContent    = item.name;
+                itemSelect.appendChild(option);
+            });
+        }
+    });
+
     contentPane.querySelector('.initiate-return-btn')
         .addEventListener('click', () => toggleForm(contentPane, 'return-form'));
 
@@ -298,7 +320,7 @@ async function renderReturns(contentPane, { returns, orders }) {
         .addEventListener('click', () => toggleForm(contentPane, 'return-form', false));
 
     contentPane.querySelector('#submit-return-btn')
-        .addEventListener('click', () => submitReturn(contentPane));
+        .addEventListener('click', () => submitReturn(contentPane, orders));
 }
 
 async function renderRewards(contentPane, rewards) {
@@ -386,13 +408,18 @@ async function renderSettings(contentPane, settings) {
 
         try {
             await apiFetch('account/password', {
-                method: 'PUT',
+                method: 'PATCH',
                 body: JSON.stringify({ current, password: next }),
             });
             contentPane.querySelector('#password-saved').classList.remove('hidden');
             setTimeout(() => contentPane.querySelector('#password-saved').classList.add('hidden'), 3000);
         } catch (err) {
-            console.error('Failed to update password:', err);
+            console.log('password error:', err.message);
+            if (err.message.includes('Invalid current password')) {
+                showInlineError(contentPane, 'change-password-btn', 'Current password is incorrect.');
+            } else {
+                showInlineError(contentPane, 'change-password-btn', 'Failed to update password.');
+            }
         }
     });
 
@@ -478,15 +505,16 @@ function showAddAddressForm(contentPane) {
         .forEach(id => { contentPane.querySelector(`#${id}`).value = ''; });
     contentPane.querySelector('#addr-country').value = 'US';
     contentPane.querySelector('#addr-default').checked = false;
-    toggleForm(contentPane, 'address-form');
+    toggleForm(contentPane, 'addressContainer');
 }
 
 function showEditAddressForm(id, addresses, contentPane) {
-    const addr = addresses.find(a => a.id === id);
+    const addr = addresses.find(a => a.addressId === id);
+    console.log('showEditAddressForm id:', id, 'found:', addr);
     if (!addr) return;
 
     contentPane.querySelector('#address-form-title').textContent = 'Edit Address';
-    contentPane.querySelector('#address-id').value   = addr.id;
+    contentPane.querySelector('#address-id').value   = addr.addressId; // ← addressId
     contentPane.querySelector('#addr-label').value   = addr.label;
     contentPane.querySelector('#addr-line1').value   = addr.line1;
     contentPane.querySelector('#addr-line2').value   = addr.line2 || '';
@@ -495,13 +523,15 @@ function showEditAddressForm(id, addresses, contentPane) {
     contentPane.querySelector('#addr-zip').value     = addr.zip;
     contentPane.querySelector('#addr-country').value = addr.country;
     contentPane.querySelector('#addr-default').checked = addr.isDefault;
-    toggleForm(contentPane, 'address-form');
+    toggleForm(contentPane, 'addressContainer');
 }
 
 function saveAddress(addresses, renderList, contentPane) {
     const id = contentPane.querySelector('#address-id').value;
+    console.log('saveAddress id:', id);
+    console.log('addresses array:', JSON.stringify(addresses));
     const updated = {
-        id: id || String(Date.now()),
+        addressId: id || String(Date.now()),
         label:     contentPane.querySelector('#addr-label').value.trim(),
         line1:     contentPane.querySelector('#addr-line1').value.trim(),
         line2:     contentPane.querySelector('#addr-line2').value.trim(),
@@ -517,18 +547,18 @@ function saveAddress(addresses, renderList, contentPane) {
         return;
     }
 
-    const method = id ? 'PUT' : 'POST';
-    const endpoint = id ? `account/addresses/${id}` : 'account/addresses';
+    const method = id ? 'PATCH' : 'POST';
+    const endpoint = id ? `account/address/${id}` : 'account/address';
 
     apiFetch(endpoint, { method, body: JSON.stringify(updated) })
         .then(() => {
             if (id) {
-                const idx = addresses.findIndex(a => a.id === id);
+                const idx = addresses.findIndex(a => a.addressId === id);
                 if (idx > -1) addresses[idx] = updated;
             } else {
                 addresses.push(updated);
             }
-            toggleForm(contentPane, 'address-form', false);
+            toggleForm(contentPane, 'addressContainer', false);
             renderList(addresses);
         })
         .catch(err => console.error('Failed to save address:', err));
@@ -537,7 +567,7 @@ function saveAddress(addresses, renderList, contentPane) {
 function removeAddress(id, addresses, renderList, contentPane) {
     if (!window.confirm('Remove this address?')) return;
 
-    apiFetch(`account/addresses/${id}`, { method: 'DELETE' })
+    apiFetch(`account/address/${id}`, { method: 'DELETE' })
         .then(() => {
             const idx = addresses.findIndex(a => a.id === id);
             if (idx > -1) addresses.splice(idx, 1);
@@ -561,23 +591,36 @@ function removeWishlistItem(id, contentPane) {
         .catch(err => console.error('Failed to remove wishlist item:', err));
 }
 
-function submitReturn(contentPane) {
-    const orderId = contentPane.querySelector('#return-order-select').value;
-    const reason  = contentPane.querySelector('#return-reason').value.trim();
-    const notes   = contentPane.querySelector('#return-notes').value.trim();
+function submitReturn(contentPane, orders) {
+    const orderId    = contentPane.querySelector('#return-order-select').value;
+    const itemSelect = contentPane.querySelector('#return-item-select');
+    const item       = itemSelect?.value;
+    const itemId     = itemSelect?.selectedOptions[0]?.dataset.itemId;
+    const reason     = contentPane.querySelector('#return-reason').value;
+    const notes      = contentPane.querySelector('#return-notes').value.trim();
 
-    if (!orderId || !reason) {
-        showInlineError(contentPane, 'submit-return-btn', 'Please select an order and provide a reason.');
+    console.log('submitReturn:', { orderId, item, itemId, reason, notes });
+
+    if (!orderId || !item || !reason) {
+        showInlineError(contentPane, 'submit-return-btn', 'Please select an order, item, and reason.');
         return;
     }
 
+    const order = orders.find(o => o.orderId === orderId);
+
     apiFetch('account/returns', {
         method: 'POST',
-        body: JSON.stringify({ orderId, reason, notes }),
+        body: JSON.stringify({
+            orderId,
+            orderNumber: order?.orderNumber,
+            itemId,
+            item,
+            reason,
+            notes,
+        }),
     })
         .then(() => {
             toggleForm(contentPane, 'return-form', false);
-            // Replace with a custom success notification when available
             window.alert('Return request submitted.');
         })
         .catch(err => console.error('Failed to submit return:', err));

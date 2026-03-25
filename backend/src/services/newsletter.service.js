@@ -1,13 +1,16 @@
 import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo as docClient } from '../db/dynamoClient.js';
+import { dynamo } from '../db/dynamoClient.js';
 
 export async function fetchNewsletter(userId) {
-    const result = await docClient.send(new GetCommand({
+    const result = await dynamo.send(new GetCommand({
         TableName: 'Newsletter',
         Key: { userId },
     }));
-    if (!result.Item) throw new Error('Newsletter preferences not found');
-    return result.Item;
+    return result.Item ?? {
+        userId,
+        subscribed: false,
+        topics: [],
+    };
 }
 
 export async function patchNewsletter(userId, { subscribed, topics }) {

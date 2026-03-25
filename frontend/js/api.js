@@ -45,7 +45,13 @@ export async function apiFetch(endpoint, options = {}) {
     }
 
     if (!res.ok) {
-        throw new Error(`API error: ${res.status}`);
+        // Try to parse the error message from the response body
+        let message = `API error: ${res.status}`;
+        try {
+            const body = await res.json();
+            if (body.error) message = `API error: ${res.status} — ${body.error}`;
+        } catch (_) {}
+        throw new Error(message);
     }
 
     return res.json();

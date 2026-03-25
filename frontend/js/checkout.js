@@ -5,7 +5,6 @@ import { mountStripeElement, submitStripePayment } from './stripe.js';
 import { apiFetch } from './api.js';
 
 export function initCheckout() {
-    console.log('initCheckout called.');
     mountStripeElement();
     renderCart();
     setupCartToggle();

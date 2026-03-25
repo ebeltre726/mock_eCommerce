@@ -73,7 +73,26 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
         },
     };
 
-    await dynamo.send(new PutCommand({ TableName: 'Users', Item: newUser }));
+    await Promise.all([
+        dynamo.send(new PutCommand({ TableName: 'Users', Item: newUser })),
+        dynamo.send(new PutCommand({ TableName: 'Settings', Item: {
+            userId,
+            shareData: false,
+            emailUpdates: false,
+            smsNotifications: false,
+        }})),
+        dynamo.send(new PutCommand({ TableName: 'Rewards', Item: {
+            userId,
+            points: 0,
+            tier: 'Bronze',
+            deals: [],
+        }})),
+        dynamo.send(new PutCommand({ TableName: 'Newsletter', Item: {
+            userId,
+            subscribed: false,
+            topics: [],
+        }})),
+    ]);
 
     const token = jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
     return { token, userId, email, firstName };

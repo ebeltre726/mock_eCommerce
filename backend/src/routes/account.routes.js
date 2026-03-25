@@ -9,7 +9,7 @@ import { getWishlist, addToWishlist, deleteWishlistItem } from '../controllers/w
 import { getReturns, initiateReturn } from '../controllers/returns.controller.js';
 import { getRewards } from '../controllers/rewards.controller.js';
 import { getNewsletter, updateNewsletter } from '../controllers/newsletter.controller.js';
-import { getSettings, updateSettings } from '../controllers/settings.controller.js';
+import { getSettings, updateSettings, changePassword, deleteAccount } from '../controllers/settings.controller.js';
 
 const router = express.Router();
 
@@ -68,5 +68,10 @@ router.patch('/newsletter', updateNewsletter);
 // PATCH /api/account/settings
 router.get('/settings', getSettings);
 router.patch('/settings', updateSettings);
+
+// PATCH /api/account/password
+// DELETE /api/account
+router.patch('/password', changePassword);
+router.delete('/', deleteAccount);
 
 export default router;

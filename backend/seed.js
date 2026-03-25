@@ -347,9 +347,17 @@ async function seedOrders() {
           orderNumber: '10021',
           orderDate: '2024-11-01',
           orderStatus: 'delivered',
+          fullName: 'Jane Doe',
+          shippingAddress: {
+              street: '123 Main St',
+              city: 'Brooklyn',
+              state: 'NY',
+              zip: '11201',
+          },
+          paymentMethod: 'stripe_test',
           items: [
-              { itemId: 'i1', name: 'Oak Dining Table', qty: 1, price: '799.00', image: 'products.png' },
-              { itemId: 'i2', name: 'Chair Set', qty: 4, price: '199.00', image: 'products.png' },
+              { productId: 'chair-1', quantity: 1 },
+              { productId: 'chair-2', quantity: 2 },
           ],
       },
       {
@@ -358,8 +366,16 @@ async function seedOrders() {
           orderNumber: '10034',
           orderDate: '2025-01-20',
           orderStatus: 'processing',
+          fullName: 'Jane Doe',
+          shippingAddress: {
+              street: '123 Main St',
+              city: 'Brooklyn',
+              state: 'NY',
+              zip: '11201',
+          },
+          paymentMethod: 'demo',
           items: [
-              { itemId: 'i3', name: 'Velvet Sofa', qty: 1, price: '1299.00', image: 'products.png' },
+              { productId: 'chair-3', quantity: 1 },
           ],
       },
   ];

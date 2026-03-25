@@ -1,11 +1,16 @@
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo as docClient } from '../db/dynamoClient.js';
+import { dynamo } from '../db/dynamoClient.js';
 
 export async function fetchRewards(userId) {
-    const result = await docClient.send(new GetCommand({
+    const result = await dynamo.send(new GetCommand({
         TableName: 'Rewards',
         Key: { userId },
     }));
-    if (!result.Item) throw new Error('Rewards not found');
-    return result.Item;
+    // Return defaults instead of throwing
+    return result.Item ?? {
+        userId,
+        points: 0,
+        tier: 'Bronze',
+        deals: [],
+    };
 }
