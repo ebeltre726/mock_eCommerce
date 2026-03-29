@@ -1,20 +1,33 @@
-import { QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo as docClient } from '../db/dynamoClient.js';
+// address.service.js
+import { GetCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { dynamo } from '../db/dynamoClient.js';
 import { v4 as uuidv4 } from 'uuid';
 
+const TABLE = 'Furnituria';
+
 export async function fetchAddresses(userId) {
-    const result = await docClient.send(new QueryCommand({
-        TableName: 'Addresses',
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
+    const result = await dynamo.send(new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: {
+            ':pk': `USER#${userId}`,
+            ':sk': 'ADDRESS#',
+        },
     }));
     return result.Items || [];
 }
 
-export async function addAddress(userId, fields) {
+export async function addAddress(userId, addressData) {
     const addressId = uuidv4();
-    const item = { userId, addressId, ...fields };
-    await docClient.send(new PutCommand({ TableName: 'Addresses', Item: item }));
+    const item = {
+        PK: `USER#${userId}`,
+        SK: `ADDRESS#${addressId}`,
+        entityType: 'ADDRESS',
+        userId,
+        addressId,
+        ...addressData,
+    };
+    await dynamo.send(new PutCommand({ TableName: TABLE, Item: item }));
     return item;
 }
 
@@ -27,9 +40,12 @@ export async function patchAddress(userId, addressId, fields) {
     const ExpressionAttributeNames = Object.fromEntries(updates.map(k => [`#${k}`, k]));
     const ExpressionAttributeValues = Object.fromEntries(updates.map(k => [`:${k}`, fields[k]]));
 
-    const result = await docClient.send(new UpdateCommand({
-        TableName: 'Addresses',
-        Key: { userId, addressId },
+    const result = await dynamo.send(new UpdateCommand({
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `ADDRESS#${addressId}`,
+        },
         UpdateExpression,
         ExpressionAttributeNames,
         ExpressionAttributeValues,
@@ -39,8 +55,11 @@ export async function patchAddress(userId, addressId, fields) {
 }
 
 export async function removeAddress(userId, addressId) {
-    await docClient.send(new DeleteCommand({
-        TableName: 'Addresses',
-        Key: { userId, addressId },
+    await dynamo.send(new DeleteCommand({
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `ADDRESS#${addressId}`,
+        },
     }));
 }

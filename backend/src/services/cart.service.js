@@ -6,12 +6,15 @@ const TABLE_NAME = 'Cart';
 const MAX_PER_ITEM = 5; // matches frontend
 
 export async function getCart(userId) {
-    const result = await dynamo.send(new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: { ':userId': userId },
-    }));
-    return result.Items || [];
+  const result = await dynamo.send(new QueryCommand({
+      TableName: 'Furnituria',
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+      ExpressionAttributeValues: {
+          ':pk': `USER#${userId}`,
+          ':sk': 'CART#',
+      },
+  }));
+  return result.Items || [];
 }
 
 export async function addToCart(userId, productId, quantity) {

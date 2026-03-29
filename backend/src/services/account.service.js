@@ -1,14 +1,16 @@
 import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo as docClient } from '../db/dynamoClient.js';
+import { dynamo } from '../db/dynamoClient.js';
 
 export async function fetchOverview(userId) {
-    const result = await docClient.send(new GetCommand({
-        TableName: 'Users',
-        Key: { userId },
+    const result = await dynamo.send(new GetCommand({
+        TableName: 'Furnituria',
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `USER#${userId}`,
+        },
     }));
     if (!result.Item) throw new Error('User not found');
-    const { userId: id, firstName, lastName, email, avatar, dateCreated, stats } = result.Item;
-    return { userId: id, firstName, lastName, email, avatar, dateCreated, stats };
+    return result.Item;
 }
 
 export async function patchOverview(userId, fields) {
@@ -20,7 +22,7 @@ export async function patchOverview(userId, fields) {
     const ExpressionAttributeNames = Object.fromEntries(updates.map(k => [`#${k}`, k]));
     const ExpressionAttributeValues = Object.fromEntries(updates.map(k => [`:${k}`, fields[k]]));
 
-    const result = await docClient.send(new UpdateCommand({
+    const result = await dynamo.send(new UpdateCommand({
         TableName: 'Users',
         Key: { userId },
         UpdateExpression,
@@ -32,7 +34,7 @@ export async function patchOverview(userId, fields) {
 }
 
 export async function incrementStat(userId, statName, amount = 1) {
-    await docClient.send(new UpdateCommand({
+    await dynamo.send(new UpdateCommand({
         TableName: 'Users',
         Key: { userId },
         UpdateExpression: 'ADD stats.#stat :amount',

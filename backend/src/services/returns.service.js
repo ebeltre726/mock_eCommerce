@@ -1,47 +1,57 @@
+// returns.service.js
 import { QueryCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 import { incrementStat } from './account.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
+const TABLE = 'Furnituria';
+
 export async function fetchReturns(userId) {
     const result = await dynamo.send(new QueryCommand({
-        TableName: 'Returns',
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
+        TableName: TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: {
+            ':pk': `USER#${userId}`,
+            ':sk': 'RETURN#',
+        },
     }));
     return result.Items || [];
 }
 
-// returns.service.js
 export async function createReturn(userId, returnData) {
     const returnId = uuidv4();
 
-    // Write the return
     await dynamo.send(new PutCommand({
-        TableName: 'Returns',
+        TableName: TABLE,
         Item: {
+            PK: `USER#${userId}`,
+            SK: `RETURN#${returnId}`,
+            entityType: 'RETURN',
             userId,
             returnId,
             orderId:       returnData.orderId,
+            orderNumber:   returnData.orderNumber,
             itemId:        returnData.itemId,
             item:          returnData.item,
             reason:        returnData.reason,
             notes:         returnData.notes,
             status:        'Pending',
             dateInitiated: new Date().toISOString(),
-            refundAmount:  '0.00', // set when approved
+            refundAmount:  '0.00',
         },
     }));
 
-    // Update order status to reflect return initiated
+    // Update order status
     await dynamo.send(new UpdateCommand({
-        TableName: 'Orders',
-        Key: { userId, orderId: returnData.orderId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `ORDER#${returnData.orderId}`,
+        },
         UpdateExpression: 'SET orderStatus = :status',
         ExpressionAttributeValues: { ':status': 'return_initiated' },
     }));
 
-    // Increment user's return stat
     await incrementStat(userId, 'returns');
 
     return { returnId };

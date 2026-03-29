@@ -54,5 +54,9 @@ export async function apiFetch(endpoint, options = {}) {
         throw new Error(message);
     }
 
+    const contentType = res.headers.get('content-type');
+    
+    if (!contentType || !contentType.includes('application/json')) return null;
+
     return res.json();
 }

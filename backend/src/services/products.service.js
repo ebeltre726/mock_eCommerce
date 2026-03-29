@@ -1,17 +1,25 @@
-// services/products.service.js
-import { dynamo } from "../db/dynamoClient.js";
-import { ScanCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+// products.service.js
+import { ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { dynamo } from '../db/dynamoClient.js';
 
-const TABLE_NAME = "Products";
+const TABLE = 'Furnituria';
 
 export async function fetchAllProducts() {
-  const data = await dynamo.send(new ScanCommand({ TableName: TABLE_NAME }));
-  return data.Items || [];
+    const result = await dynamo.send(new ScanCommand({
+        TableName: TABLE,
+        FilterExpression: 'entityType = :type',
+        ExpressionAttributeValues: { ':type': 'PRODUCT' },
+    }));
+    return result.Items || [];
 }
 
 export async function fetchProductById(id) {
-  const data = await dynamo.send(
-    new GetCommand({ TableName: TABLE_NAME, Key: { id } })
-  );
-  return data.Item || null;
+    const result = await dynamo.send(new GetCommand({
+        TableName: TABLE,
+        Key: {
+            PK: `PRODUCT#${id}`,
+            SK: `PRODUCT#${id}`,
+        },
+    }));
+    return result.Item || null;
 }

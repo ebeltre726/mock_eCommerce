@@ -1,12 +1,17 @@
 // settings.service.js
-import { GetCommand, UpdateCommand, DeleteCommand, QueryCommand} from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 import bcrypt from 'bcrypt';
 
+const TABLE = 'Furnituria';
+
 export async function fetchSettings(userId) {
     const result = await dynamo.send(new GetCommand({
-        TableName: 'Settings',
-        Key: { userId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: 'SETTINGS',
+        },
     }));
     return result.Item ?? {
         userId,
@@ -26,8 +31,11 @@ export async function patchSettings(userId, fields) {
     const ExpressionAttributeValues = Object.fromEntries(updates.map(k => [`:${k}`, fields[k]]));
 
     const result = await dynamo.send(new UpdateCommand({
-        TableName: 'Settings',
-        Key: { userId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: 'SETTINGS',
+        },
         UpdateExpression,
         ExpressionAttributeNames,
         ExpressionAttributeValues,
@@ -37,10 +45,12 @@ export async function patchSettings(userId, fields) {
 }
 
 export async function updatePassword(userId, currentPassword, newPassword) {
-    // Fetch current user to verify existing password
     const result = await dynamo.send(new GetCommand({
-        TableName: 'Users',
-        Key: { userId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `USER#${userId}`,
+        },
     }));
 
     if (!result.Item) throw new Error('User not found');
@@ -51,66 +61,36 @@ export async function updatePassword(userId, currentPassword, newPassword) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await dynamo.send(new UpdateCommand({
-        TableName: 'Users',
-        Key: { userId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `USER#${userId}`,
+        },
         UpdateExpression: 'SET password = :password',
         ExpressionAttributeValues: { ':password': hashedPassword },
     }));
 }
 
-export async function removeAccount(userId) {
-    await dynamo.send(new DeleteCommand({
-        TableName: 'Users',
-        Key: { userId },
-    }));
-}
-
 export async function removeAllUserData(userId) {
-    // Tables with userId as partition key — single DeleteCommand each
-    const singleKeyTables = [
-        'Users',
-        'Rewards',
-        'Newsletter',
-        'Settings',
-    ];
+    // Query all items for this user
+    const result = await dynamo.send(new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+    }));
 
+    // Delete all user items in parallel
     await Promise.all(
-        singleKeyTables.map(table =>
+        (result.Items || []).map(item =>
             dynamo.send(new DeleteCommand({
-                TableName: table,
-                Key: { userId },
+                TableName: TABLE,
+                Key: { PK: item.PK, SK: item.SK },
             }))
         )
     );
+}
 
-    // Tables with userId + sort key — need to query first then delete each item
-    const compositeKeyTables = [
-        { table: 'Cart',           sortKey: 'productId' },
-        { table: 'Orders',         sortKey: 'orderId' },
-        { table: 'Addresses',      sortKey: 'addressId' },
-        { table: 'PaymentMethods', sortKey: 'paymentId' },
-        { table: 'Wishlist',       sortKey: 'wishlistId' },
-        { table: 'Returns',        sortKey: 'returnId' },
-    ];
-
-    await Promise.all(
-        compositeKeyTables.map(async ({ table, sortKey }) => {
-            const result = await dynamo.send(new QueryCommand({
-                TableName: table,
-                KeyConditionExpression: 'userId = :uid',
-                ExpressionAttributeValues: { ':uid': userId },
-            }));
-
-            if (!result.Items?.length) return;
-
-            await Promise.all(
-                result.Items.map(item =>
-                    dynamo.send(new DeleteCommand({
-                        TableName: table,
-                        Key: { userId, [sortKey]: item[sortKey] },
-                    }))
-                )
-            );
-        })
-    );
+export async function removeAccount(userId) {
+    // TODO: In production also revoke Stripe customer, cancel subscriptions etc.
+    await removeAllUserData(userId);
 }

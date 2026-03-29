@@ -1,31 +1,47 @@
-import { QueryCommand, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo as docClient } from '../db/dynamoClient.js';
+// wishlist.service.js
+import { GetCommand, PutCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { dynamo } from '../db/dynamoClient.js';
+import { incrementStat } from './account.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
+const TABLE = 'Furnituria';
+
 export async function fetchWishlist(userId) {
-    const result = await docClient.send(new QueryCommand({
-        TableName: 'Wishlist',
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
+    const result = await dynamo.send(new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: {
+            ':pk': `USER#${userId}`,
+            ':sk': 'WISHLIST#',
+        },
     }));
     return result.Items || [];
 }
 
-export async function addWishlistItem(userId, itemId) {
-    await docClient.send(new PutCommand({
-        TableName: 'Wishlist',
-        Item: { userId, itemId },
+export async function addWishlistItem(userId, itemData) {
+    const wishlistId = uuidv4();
+    await dynamo.send(new PutCommand({
+        TableName: TABLE,
+        Item: {
+            PK: `USER#${userId}`,
+            SK: `WISHLIST#${wishlistId}`,
+            entityType: 'WISHLIST',
+            userId,
+            wishlistId,
+            ...itemData,
+        },
     }));
-
     await incrementStat(userId, 'wishlist');
+    return { wishlistId };
 }
 
-// When an item is removed, decrement by passing -1
-export async function removeWishlistItem(userId, itemId) {
-    await docClient.send(new DeleteCommand({
-        TableName: 'Wishlist',
-        Key: { userId, itemId },
+export async function removeWishlistItem(userId, wishlistId) {
+    await dynamo.send(new DeleteCommand({
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: `WISHLIST#${wishlistId}`,
+        },
     }));
-
     await incrementStat(userId, 'wishlist', -1);
 }

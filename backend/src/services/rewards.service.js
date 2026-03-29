@@ -1,12 +1,17 @@
+// rewards.service.js
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 
+const TABLE = 'Furnituria';
+
 export async function fetchRewards(userId) {
     const result = await dynamo.send(new GetCommand({
-        TableName: 'Rewards',
-        Key: { userId },
+        TableName: TABLE,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: 'REWARDS',
+        },
     }));
-    // Return defaults instead of throwing
     return result.Item ?? {
         userId,
         points: 0,
