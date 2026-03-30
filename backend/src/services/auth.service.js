@@ -27,7 +27,10 @@ export async function loginUser(email, password) {
     },
   }));
 
-  const user = result.Items?.find(item => item.SK === 'PROFILE');
+  console.log('GSI1 query results:', JSON.stringify(result.Items));
+
+  const user = result.Items?.[0];
+  console.log('user found:', user?.PK, user?.SK, 'has password:', !!user?.password);
 
   if (!user) {
     throw new Error('Invalid credentials');

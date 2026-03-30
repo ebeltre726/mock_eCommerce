@@ -1,18 +1,26 @@
 import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 
-export async function fetchOverview(userId) {
-    const result = await dynamo.send(new GetCommand({
-        TableName: 'Furnituria',
-        Key: {
-            PK: `USER#${userId}`,
-            SK: `USER#${userId}`,
-        },
-    }));
-    if (!result.Item) throw new Error('User not found');
-    return result.Item;
-}
+const TABLE_NAME = 'Furnituria';
 
+export async function fetchOverview(userId) {
+  console.log('fetchOverview userId:', userId);
+  console.log('PK used:', `USER#${userId}`);
+
+  const result = await dynamo.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      PK: `USER#${userId}`,  // ✅ THIS IS THE FIX
+      SK: 'PROFILE',         // ✅ REQUIRED
+    },
+  }));
+
+  if (!result.Item) {
+    throw new Error('User not found');
+  }
+
+  return result.Item;
+}
 export async function patchOverview(userId, fields) {
     const allowed = ['firstName', 'lastName', 'avatar'];
     const updates = Object.keys(fields).filter(k => allowed.includes(k));

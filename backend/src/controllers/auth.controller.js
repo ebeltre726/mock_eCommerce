@@ -35,7 +35,6 @@ export async function logout(req, res) {
     res.json({ success: true, message: 'Logged out' });
 }
 
-// auth.controller.js
 export async function getMe(req, res) {
     try {
         // req.user.userId comes from the verified JWT

@@ -1,4 +1,3 @@
-// seed.js — Single-table design
 import {
   DynamoDBClient,
   CreateTableCommand,
@@ -10,13 +9,12 @@ import {
   DynamoDBDocumentClient,
   PutCommand,
   QueryCommand,
-  DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 import bcrypt from 'bcrypt';
 
 const TABLE_NAME = 'Furnituria';
-const USER_ID    = 'u001';
+const USER_ID = 'u001';
 const MOCK_EMAIL = 'jane.doe@email.com';
 const MOCK_PASSWORD = 'password123';
 
@@ -31,108 +29,32 @@ const docClient = DynamoDBDocumentClient.from(client);
 const tableConfig = {
   TableName: TABLE_NAME,
   AttributeDefinitions: [
-      { AttributeName: 'PK', AttributeType: 'S' },
-      { AttributeName: 'SK', AttributeType: 'S' },
-      { AttributeName: 'GSI1PK', AttributeType: 'S' },
-      { AttributeName: 'GSI1SK', AttributeType: 'S' },
+    { AttributeName: 'PK', AttributeType: 'S' },
+    { AttributeName: 'SK', AttributeType: 'S' },
+    { AttributeName: 'GSI1PK', AttributeType: 'S' },
+    { AttributeName: 'GSI1SK', AttributeType: 'S' },
   ],
   KeySchema: [
-      { AttributeName: 'PK', KeyType: 'HASH' },
-      { AttributeName: 'SK', KeyType: 'RANGE' },
+    { AttributeName: 'PK', KeyType: 'HASH' },
+    { AttributeName: 'SK', KeyType: 'RANGE' },
   ],
   GlobalSecondaryIndexes: [{
-      IndexName: 'GSI1',
-      KeySchema: [
-          { AttributeName: 'GSI1PK', KeyType: 'HASH' },
-          { AttributeName: 'GSI1SK', KeyType: 'RANGE' },
-      ],
-      Projection: { ProjectionType: 'ALL' },
+    IndexName: 'GSI1',
+    KeySchema: [
+      { AttributeName: 'GSI1PK', KeyType: 'HASH' },
+      { AttributeName: 'GSI1SK', KeyType: 'RANGE' },
+    ],
+    Projection: { ProjectionType: 'ALL' },
   }],
   BillingMode: 'PAY_PER_REQUEST',
 };
 
-async function recreateTable() {
-  try {
-      await client.send(new DeleteTableCommand({ TableName: TABLE_NAME }));
-      console.log(`  Deleted ${TABLE_NAME}`);
-      await new Promise(r => setTimeout(r, 500)); // wait for deletion
-  } catch (err) {
-      if (err.name !== 'ResourceNotFoundException') throw err;
-  }
-  await client.send(new CreateTableCommand(tableConfig));
-  console.log(`  Created ${TABLE_NAME}`);
-}
+// run with: RUN_SEED=true node seed.js
 
-// Helper to write any item
-async function put(item) {
-  await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-}
+export async function seedProducts() {
+  console.log('\n📦 Seeding products...');
 
-async function seedUser() {
-  const hashedPassword = await bcrypt.hash(MOCK_PASSWORD, 10);
-
-  // User record
-  await put({
-      PK: `USER#${USER_ID}`,
-      SK: `USER#${USER_ID}`,
-      GSI1PK: `EMAIL#${MOCK_EMAIL}`,
-      GSI1SK: `USER#${USER_ID}`,
-      entityType: 'USER',
-      userId:    USER_ID,
-      email:     MOCK_EMAIL,
-      firstName: 'Jane',
-      lastName:  'Doe',
-      password:  hashedPassword,
-      avatar:    '/images/avatar.png',
-      dateCreated: '2023-01-15',
-      termsConditions: true,
-      stats: { orders: 0, wishlist: 0, points: 0, returns: 0 },
-  });
-
-  // Settings
-  await put({
-      PK: `USER#${USER_ID}`,
-      SK: 'SETTINGS',
-      entityType: 'SETTINGS',
-      userId: USER_ID,
-      shareData: false,
-      emailUpdates: true,
-      smsNotifications: false,
-  });
-
-  // Newsletter
-  await put({
-      PK: `USER#${USER_ID}`,
-      SK: 'NEWSLETTER',
-      entityType: 'NEWSLETTER',
-      userId: USER_ID,
-      subscribed: true,
-      topics: [
-          { topicId: 't1', name: 'New Arrivals', selected: true },
-          { topicId: 't2', name: 'Sales & Promotions', selected: false },
-          { topicId: 't3', name: 'Design Tips & Inspiration', selected: true },
-          { topicId: 't4', name: 'Exclusive Member Offers', selected: false },
-      ],
-  });
-
-  // Rewards
-  await put({
-      PK: `USER#${USER_ID}`,
-      SK: 'REWARDS',
-      entityType: 'REWARDS',
-      userId: USER_ID,
-      points: 1240,
-      tier: 'Silver',
-      deals: [
-          { dealId: 'd1', description: '10% off your next order', discount: 'REWARD10', expiry: '2025-06-01' },
-          { dealId: 'd2', description: 'Free standard shipping', discount: 'SHIPFREE', expiry: '2025-04-30' },
-      ],
-  });
-
-  console.log(`  Inserted user: ${MOCK_EMAIL}`);
-}
-
-async function seedProducts() {
+  // 👉 PASTE YOUR PRODUCTS HERE
   const products = [
       { id: 'chair-1', name: 'Cushioned Blue Fabric Chair', description: 'A comfortable, blue chair with the highest quality fabric, and four sturdy wooden legs.', imageUrl: '/images/comfychair.jpg', price: 39.99 },
       { id: 'chair-2', name: 'Cushioned Black Stool Chair', description: 'A black stool chair with a backrest, padded cushion, and three durable wooden legs that move outwards.', imageUrl: '/images/blackchair.jpg', price: 14.99 },
@@ -147,175 +69,181 @@ async function seedProducts() {
       { id: 'chair-11', name: 'Old-Fashioned Wood Chair', description: 'A sturdy, old-fashioned wood chair with traditional design and leg supports.', imageUrl: '/images/woodchair.jpg', price: 19.99 },
   ];
 
-  for (const p of products) {
-      await put({
-          PK: `PRODUCT#${p.id}`,
-          SK: `PRODUCT#${p.id}`,
-          entityType: 'PRODUCT',
-          ...p,
-      });
-      console.log(`  Inserted product: ${p.name}`);
+  if (!Array.isArray(products) || products.length === 0) {
+    console.warn('⚠️ No products to seed');
+    return;
+  }
+
+  for (const product of products) {
+    try {
+      if (!product.id) {
+        console.warn('⚠️ Skipping product with no id:', product);
+        continue;
+      }
+
+      const item = {
+        PK: `PRODUCT#${product.id}`,
+        SK: `PRODUCT#${product.id}`,
+        entityType: 'PRODUCT',
+
+        ...product,
+      };
+
+      console.log('➡️ Writing product:', item.PK);
+
+      await put(item);
+
+    } catch (err) {
+      console.error('❌ Failed to insert product:', product.id, err);
+    }
+  }
+
+  console.log(`✅ Inserted ${products.length} products`);
+}
+
+async function waitForTableDeletion() {
+  let exists = true;
+  while (exists) {
+    try {
+      await client.send(new DescribeTableCommand({ TableName: TABLE_NAME }));
+      console.log('⏳ Waiting for table deletion...');
+      await new Promise(r => setTimeout(r, 500));
+    } catch (err) {
+      if (err.name === 'ResourceNotFoundException') {
+        exists = false;
+      } else {
+        throw err;
+      }
+    }
   }
 }
 
-async function seedOrders() {
-  const orders = [
-      {
-          orderId: 'o001',
-          orderNumber: '10021',
-          orderDate: '2024-11-01',
-          orderStatus: 'delivered',
-          fullName: 'Jane Doe',
-          shippingAddress: { street: '123 Main St', city: 'Brooklyn', state: 'NY', zip: '11201' },
-          paymentMethod: 'stripe_test',
-          items: [
-              { productId: 'chair-1', quantity: 1 },
-              { productId: 'chair-2', quantity: 2 },
-          ],
-      },
-      {
-          orderId: 'o002',
-          orderNumber: '10034',
-          orderDate: '2025-01-20',
-          orderStatus: 'processing',
-          fullName: 'Jane Doe',
-          shippingAddress: { street: '123 Main St', city: 'Brooklyn', state: 'NY', zip: '11201' },
-          paymentMethod: 'demo',
-          items: [
-              { productId: 'chair-3', quantity: 1 },
-          ],
-      },
-  ];
-
-  for (const order of orders) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `ORDER#${order.orderId}`,
-          entityType: 'ORDER',
-          userId: USER_ID,
-          ...order,
-      });
+export async function recreateTable() {
+  try {
+    await client.send(new DeleteTableCommand({ TableName: TABLE_NAME }));
+    console.log(`🗑 Deleted ${TABLE_NAME}`);
+    await waitForTableDeletion();
+  } catch (err) {
+    if (err.name !== 'ResourceNotFoundException') throw err;
   }
-  console.log(`  Inserted ${orders.length} orders`);
+
+  await client.send(new CreateTableCommand(tableConfig));
+  console.log(`✅ Created ${TABLE_NAME}`);
 }
 
-async function seedAddresses() {
-  const addresses = [
-      { addressId: 'a1', label: 'Home', line1: '123 Main St', line2: '', city: 'Brooklyn', state: 'NY', zip: '11201', country: 'US', isDefault: true },
-      { addressId: 'a2', label: 'Work', line1: '456 Office Ave', line2: 'Suite 200', city: 'New York', state: 'NY', zip: '10001', country: 'US', isDefault: false },
-  ];
-
-  for (const addr of addresses) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `ADDRESS#${addr.addressId}`,
-          entityType: 'ADDRESS',
-          userId: USER_ID,
-          ...addr,
-      });
-  }
-  console.log(`  Inserted ${addresses.length} addresses`);
+async function put(item) {
+  await docClient.send(new PutCommand({
+    TableName: TABLE_NAME,
+    Item: item,
+  }));
 }
 
-async function seedPaymentMethods() {
-  const methods = [
-      { paymentId: 'pm1', brand: 'Visa', last4: '4242', expiry: '12/26', isDefault: true },
-      { paymentId: 'pm2', brand: 'Mastercard', last4: '5555', expiry: '08/25', isDefault: false },
-  ];
+export async function seedUser(user = {}) {
+  console.log('\n🔧 Seeding USER (PROFILE)...');
 
-  for (const method of methods) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `PAYMENT#${method.paymentId}`,
-          entityType: 'PAYMENT',
-          userId: USER_ID,
-          ...method,
-      });
-  }
-  console.log(`  Inserted ${methods.length} payment methods`);
-}
+  const userId = user.userId || USER_ID;
+  const email = user.email || MOCK_EMAIL;
+  const plainPassword = user.password || MOCK_PASSWORD;
+  const firstName = user.firstName || 'Jane';
+  const lastName = user.lastName || 'Doe';
 
-async function seedWishlist() {
-  const items = [
-      { wishlistId: 'w1', name: 'Marble Coffee Table', price: '349.99', image: '/images/products.png', dateAdded: '2024-09-10' },
-      { wishlistId: 'w2', name: 'Linen Armchair', price: '549.00', image: '/images/products.png', dateAdded: '2024-10-22' },
-  ];
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  for (const item of items) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `WISHLIST#${item.wishlistId}`,
-          entityType: 'WISHLIST',
-          userId: USER_ID,
-          ...item,
-      });
-  }
-  console.log(`  Inserted ${items.length} wishlist items`);
-}
+  const userItem = {
+    PK: `USER#${userId}`,
+    SK: 'PROFILE',
 
-async function seedReturns() {
-  const returns = [
-      { returnId: 'r1', orderId: 'o001', orderNumber: '10021', item: 'Chair Set', reason: 'Defective', status: 'Refund Issued', refundAmount: '199.00', dateInitiated: '2024-11-15' },
-  ];
+    GSI1PK: `EMAIL#${email}`,
+    GSI1SK: `USER#${userId}`,
 
-  for (const ret of returns) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `RETURN#${ret.returnId}`,
-          entityType: 'RETURN',
-          userId: USER_ID,
-          ...ret,
-      });
-  }
-  console.log(`  Inserted ${returns.length} returns`);
-}
+    userId,
+    email,
+    firstName,
+    lastName,
+    password: hashedPassword,
+    termsConditions: true,
+    dateCreated: new Date().toISOString(),
+    avatar: '/images/avatar.png',
 
-async function seedCart() {
-  const cartItems = [
-      { productId: 'chair-7', quantity: 2 },
-      { productId: 'chair-8', quantity: 1 },
-      { productId: 'chair-9', quantity: 3 },
-  ];
+    stats: {
+      orders: 0,
+      wishlist: 0,
+      points: 0,
+      returns: 0,
+    },
+  };
 
-  for (const item of cartItems) {
-      await put({
-          PK: `USER#${USER_ID}`,
-          SK: `CART#${item.productId}`,
-          entityType: 'CART',
-          userId: USER_ID,
-          ...item,
-      });
-  }
-  console.log(`  Inserted ${cartItems.length} cart items`);
+  console.log('➡️ Writing user item:', userItem);
+
+  await put(userItem);
+
+  await put({
+    PK: `USER#${userId}`,
+    SK: 'SETTINGS',
+    shareData: false,
+    emailUpdates: true,
+    smsNotifications: false,
+  });
+
+  await put({
+    PK: `USER#${userId}`,
+    SK: 'REWARDS',
+    points: 1240,
+    tier: 'Silver',
+    deals: [],
+  });
+
+  await put({
+    PK: `USER#${userId}`,
+    SK: 'NEWSLETTER',
+    subscribed: true,
+    topics: [],
+  });
+
+  console.log('✅ User + related items inserted');
+
+  // 🔍 VERIFY
+  const check = await docClient.send(new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: 'PK = :pk',
+    ExpressionAttributeValues: {
+      ':pk': `USER#${userId}`,
+    },
+  }));
+
+  console.log('\n🔎 DB STATE AFTER SEED:');
+  console.dir(check.Items, { depth: null });
 }
 
 async function seed() {
   try {
-      console.log('\nSetting up single-table...');
-      await recreateTable(); // fresh table on every seed in dev
+    console.log('\n🚀 Starting seed...');
 
-      console.log('\nSeeding data...');
-      await seedProducts();
-      await seedUser();     // includes settings, newsletter, rewards
-      await seedCart();
-      await seedOrders();
-      await seedAddresses();
-      await seedPaymentMethods();
-      await seedWishlist();
-      await seedReturns();
+    await recreateTable();
+    await seedUser();
 
-      console.log('\n✓ Seed complete!');
-      console.log('─────────────────────────────');
-      console.log('  Dev login credentials:');
-      console.log(`  Email:    ${MOCK_EMAIL}`);
-      console.log(`  Password: ${MOCK_PASSWORD}`);
-      console.log('─────────────────────────────\n');
+    console.log('Seeding products...');
+    await seedProducts();
+    console.log('Products seeded.')
+
+    console.log('\n🎉 Seed complete!');
+    console.log('─────────────────────────────');
+    console.log(`Email:    ${MOCK_EMAIL}`);
+    console.log(`Password: ${MOCK_PASSWORD}`);
+    console.log('─────────────────────────────\n');
 
   } catch (err) {
-      console.error('Seed failed:', err);
+    console.error('❌ Seed failed:', err);
   } finally {
-      process.exit(0);
+    // When imported by tests we don't want to exit the process — leave cleanup to caller
   }
 }
 
-seed();
+// By default do NOT auto-run when this file is imported (avoids Jest parse/runtime issues).
+// To run seeding manually set the environment variable RUN_SEED=true and execute the file:
+//   On *nix: RUN_SEED=true node seed.js
+//   On Windows (PowerShell): $env:RUN_SEED='true'; node seed.js
+if (process.env.RUN_SEED === 'true') {
+  // run only when explicitly requested via env var
+  seed();
+}

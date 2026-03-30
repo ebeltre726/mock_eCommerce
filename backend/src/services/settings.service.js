@@ -45,13 +45,16 @@ export async function patchSettings(userId, fields) {
 }
 
 export async function updatePassword(userId, currentPassword, newPassword) {
+    console.log('updating password for:', `USER#${userId}`, `USER#${userId}`);
     const result = await dynamo.send(new GetCommand({
         TableName: TABLE,
         Key: {
             PK: `USER#${userId}`,
-            SK: `USER#${userId}`,
+            SK: "PROFILE",
         },
     }));
+
+    console.log('found item for password update:', result.Item?.PK, result.Item?.SK);
 
     if (!result.Item) throw new Error('User not found');
 
@@ -64,7 +67,7 @@ export async function updatePassword(userId, currentPassword, newPassword) {
         TableName: TABLE,
         Key: {
             PK: `USER#${userId}`,
-            SK: `USER#${userId}`,
+            SK: "PROFILE",
         },
         UpdateExpression: 'SET password = :password',
         ExpressionAttributeValues: { ':password': hashedPassword },

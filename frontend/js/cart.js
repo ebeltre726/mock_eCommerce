@@ -70,7 +70,7 @@ export const cartModule = (() => {
         
         await loadCart();
 
-        const currentQty = getItemQuantityInCart(productId); // sync, no fetch
+        const currentQty = getItemQuantityInCart(productId) || 0; // sync, no fetch
         const allowedQty = Math.min(quantity, MAX_QTY - currentQty);
         if (allowedQty <= 0) {
             alert(`Maximum of ${MAX_QTY} reached.`);
