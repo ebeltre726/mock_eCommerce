@@ -34,7 +34,9 @@ jobs:
           sleep 5
 
       - name: Run tests
+        working-directory: ./backend
         run: npm test
 
       - name: Run coverage
+        working-directory: ./backend
         run: npm run test -- --coverage
