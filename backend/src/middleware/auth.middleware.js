@@ -1,19 +1,26 @@
-import { verifyToken } from '../services/auth.service.js';
+import jwt from 'jsonwebtoken';
+import env from '../config/env.js';
 
 export function requireAuth(req, res, next) {
-    const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized — no token provided' });
-    }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Unauthorized — no token provided',
+    });
+  }
 
-    const token = authHeader.split(' ')[1];
+  const token = authHeader.split(' ')[1];
 
-    try {
-        const decoded = verifyToken(token);
-        req.user = decoded; // { userId, email }
-        next();
-    } catch (err) {
-        return res.status(401).json({ error: 'Unauthorized — invalid or expired token' });
-    }
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+
+    req.user = decoded; // { userId, email }
+
+    next();
+  } catch (err) {
+    return res.status(401).json({
+      error: 'Unauthorized — invalid or expired token',
+    });
+  }
 }

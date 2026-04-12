@@ -1,5 +1,6 @@
 export default {
   testEnvironment: "node",
+  setupFiles: ['./jest.setup.js'], // Load .env variables before tests
   transform: {
     "^.+\\.js$": "babel-jest",
   },

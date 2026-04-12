@@ -1,8 +1,8 @@
 // tests/payments.test.js
 import request from "supertest";
-import app from "../src/app.js";
-import { dynamo } from "../src/db/dynamoClient.js";
-import { seedUser, recreateTable, seedProducts } from "../seed.js";
+import app from "../../src/app.js";
+import { dynamo } from "../../src/db/dynamoClient.js";
+import { seedUser, recreateTable, seedProducts } from "../../seed.js";
 
 describe("Payments Flow", () => {
   const testUser = { userId: "u003", email: "pay@example.com", password: "pass123" };

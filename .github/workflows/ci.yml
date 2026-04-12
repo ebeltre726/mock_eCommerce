@@ -16,6 +16,12 @@ jobs:
         ports:
           - 8000:8000
 
+    env:
+      NODE_ENV: test
+      JWT_SECRET: test-secret-mockeCommerce
+      DYNAMODB_ENDPOINT: http://localhost:8000
+      AWS_REGION: us-east-1
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -24,14 +30,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         working-directory: ./backend
-        run: npm install
+        run: npm ci
 
-      - name: Wait for DynamoDB
-        run: |
-          sleep 5
+      - name: Wait for DynamoDB Local
+        run: sleep 5
 
       - name: Run tests
         working-directory: ./backend
