@@ -138,6 +138,39 @@ async function put(item) {
   }));
 }
 
+export async function seedAddress(userId, address = {}) {
+  console.log('\n🏠 Seeding ADDRESS...');
+
+  const addressId = address.addressId || 'addr001';
+  const street = address.street || '123 Main St';
+  const city = address.city || 'Anytown';
+  const state = address.state || 'NY';
+  const postal = address.postal || '10001';
+  const isDefault = address.isDefault || false;
+
+  const addressItem = {
+    PK: `USER#${userId}`,
+    SK: `ADDRESS#${addressId}`,
+
+    GSI1PK: `USER#${userId}`,
+    GSI1SK: `ADDRESS#${addressId}`,
+
+    addressId,
+    street,
+    city,
+    state,
+    postal,
+    isDefault,
+    dateCreated: new Date().toISOString(),
+  };
+
+  console.log('➡️ Writing address item:', addressItem.PK, addressItem.SK);
+
+  await put(addressItem);
+
+  console.log('✅ Address inserted');
+}
+
 export async function seedUser(user = {}) {
   console.log('\n🔧 Seeding USER (PROFILE)...');
 
@@ -177,6 +210,16 @@ export async function seedUser(user = {}) {
 
   await put(userItem);
 
+  // Create default address for user
+  await seedAddress(userId, {
+    addressId: 'default',
+    street: '123 Main St',
+    city: 'Anytown',
+    state: 'NY',
+    postal: '10001',
+    isDefault: true,
+  });
+
   await put({
     PK: `USER#${userId}`,
     SK: 'SETTINGS',
@@ -200,7 +243,7 @@ export async function seedUser(user = {}) {
     topics: [],
   });
 
-  console.log('✅ User + related items inserted');
+  console.log('✅ User + address + related items inserted');
 
   // 🔍 VERIFY
   const check = await docClient.send(new QueryCommand({

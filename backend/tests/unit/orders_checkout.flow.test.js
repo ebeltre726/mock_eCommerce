@@ -30,12 +30,12 @@ describe('Orders / Checkout Flow (mocked services)', () => {
   });
 
   it('POST /api/orders -> creates order and returns 201', async () => {
-    const mockOrder = { orderId: 'o123', fullName: 'Jane Doe', shippingAddress: { street: '1 Main', city: 'X', state: 'S', postal: '12345' }, items: [{ productId: 'p1', quantity: 1 }], paymentMethodId: 'demo' };
+    const mockOrder = { orderId: 'o123', fullName: 'Jane Doe', addressId: 'addr1', items: [{ productId: 'p1', quantity: 1 }], paymentMethodId: 'demo' };
     jest.spyOn(ordersService, 'createOrder').mockResolvedValue(mockOrder);
 
     const payload = {
       fullName: 'Jane Doe',
-      shippingAddress: { street: '1 Main', city: 'X', state: 'S', postal: '12345' },
+      addressId: 'addr1',
       items: [{ productId: 'p1', quantity: 1 }],
     };
 

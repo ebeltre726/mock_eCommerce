@@ -34,8 +34,8 @@ router.delete('/payment/:paymentId', validateRequest(accountContracts.deletePaym
 
 // GET /api/account/orders
 // GET /api/account/orders/:orderId
-router.get('/orders', validateResponse(accountContracts.getAddresses), getOrders);
-router.get('/orders/:orderId', validateRequest(accountContracts.getAddresses), validateResponse(accountContracts.getAddresses), getOrder);
+router.get('/orders', validateResponse(accountContracts.getOrders), getOrders);
+router.get('/orders/:orderId', validateRequest(accountContracts.getOrder), validateResponse(accountContracts.getOrder), getOrder);
 
 // GET    /api/account/address
 // POST   /api/account/address

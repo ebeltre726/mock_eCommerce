@@ -13,19 +13,19 @@ const orderItemSchema = Joi.object({
 }).unknown(true);
 
 const shippingAddressSchema = Joi.object({
-  street: Joi.string().required(),
-  city: Joi.string().required(),
-  state: Joi.string().required(),
-  postal: Joi.string().required(),
+  street: Joi.string().optional(),
+  city: Joi.string().optional(),
+  state: Joi.string().optional(),
+  postal: Joi.string().optional(),
   country: Joi.string().optional(),
 }).unknown(true);
 
 const orderSchema = Joi.object({
   orderId: Joi.string().required(),
   userId: Joi.string().optional(),
-  fullName: Joi.string().required(),
-  shippingAddress: shippingAddressSchema.required(),
-  items: Joi.array().items(orderItemSchema).required(),
+  fullName: Joi.string().optional(),
+  shippingAddress: shippingAddressSchema.optional(),
+  items: Joi.array().items(orderItemSchema).optional(),
   paymentMethodId: Joi.string().optional(),
   status: Joi.string().optional(),
   totalAmount: Joi.number().optional(),
@@ -67,7 +67,7 @@ export const ordersContracts = {
     request: {
       body: Joi.object({
         fullName: Joi.string().required(),
-        shippingAddress: shippingAddressSchema.required(),
+        addressId: Joi.string().required(),
         paymentMethodId: Joi.string().optional(),
         items: Joi.array()
           .items(
@@ -81,7 +81,13 @@ export const ordersContracts = {
       }).unknown(true),
     },
     response: {
-      201: orderSchema,
+      201: Joi.object({
+        orderId: Joi.string().optional(),
+        status: Joi.string().optional(),
+        totalAmount: Joi.number().optional(),
+        paymentMethod: Joi.string().optional(),
+        stripePaymentIntentId: Joi.string().optional(),
+      }).unknown(true),
       400: Joi.object({
         error: Joi.string().required(),
       }).unknown(true),

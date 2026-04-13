@@ -199,16 +199,16 @@ async function renderOrderHistory(contentPane, orders) {
         list.innerHTML = filteredOrders.length ? filteredOrders.map(order => `
             <li class="order-item">
                 <div class="order-header">
-                    <span class="order-number">Order #${order.orderNumber}</span>
-                    <span class="order-date">${formatDate(order.orderDate)}</span>
-                    <span class="order-status status-${order.orderStatus}">${capitalize(order.orderStatus)}</span>
+                    <span class="order-number">Order #${order.orderId}</span>
+                    <span class="order-date">${formatDate(order.createdAt)}</span>
+                    <span class="order-status status-${order.status}">${capitalize(order.status)}</span>
                 </div>
                 <ul class="order-items-list">
                     ${order.items.map(item => `
                         <li class="order-line-item">
                             <img src="${item.image}" alt="${item.name}">
                             <span>${item.name}</span>
-                            <span>x${item.qty}</span>
+                            <span>x${item.quantity}</span>
                             <span>$${item.price}</span>
                         </li>
                     `).join('')}
@@ -221,7 +221,7 @@ async function renderOrderHistory(contentPane, orders) {
 
     filter.addEventListener('change', () => {
         const val = filter.value;
-        renderOrders(val === 'all' ? orders : orders.filter(o => o.orderStatus === val));
+        renderOrders(val === 'all' ? orders : orders.filter(o => o.status === val));
     });
 }
 

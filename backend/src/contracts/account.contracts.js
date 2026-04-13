@@ -28,6 +28,35 @@ const paymentSchema = Joi.object({
   isDefault: Joi.boolean().optional(),
 }).unknown(true);
 
+const orderItemSchema = Joi.object({
+  productId: Joi.string().optional(),
+  name: Joi.string().optional(),
+  image: Joi.string().optional(),
+  quantity: Joi.number().optional(),
+  price: Joi.number().optional(),
+}).unknown(true);
+
+const orderShippingAddressSchema = Joi.object({
+  street: Joi.string().optional(),
+  city: Joi.string().optional(),
+  state: Joi.string().optional(),
+  postal: Joi.string().optional(),
+  country: Joi.string().optional(),
+}).unknown(true);
+
+const orderSchema = Joi.object({
+  orderId: Joi.string().optional(),
+  userId: Joi.string().optional(),
+  fullName: Joi.string().optional(),
+  shippingAddress: orderShippingAddressSchema.optional(),
+  items: Joi.array().items(orderItemSchema).optional(),
+  paymentMethodId: Joi.string().optional(),
+  status: Joi.string().optional(),
+  totalAmount: Joi.number().optional(),
+  createdAt: Joi.date().optional(),
+  updatedAt: Joi.date().optional(),
+}).unknown(true);
+
 export const accountContracts = {
   // GET /api/account/overview
   getOverview: {
@@ -125,6 +154,34 @@ export const accountContracts = {
     },
     response: {
       204: Joi.allow(null),
+      404: Joi.object({
+        error: Joi.string().required(),
+      }).unknown(true),
+    },
+  },
+
+  // GET /api/account/orders
+  getOrders: {
+    response: {
+      200: Joi.array().items(orderSchema),
+      401: Joi.object({
+        error: Joi.string().required(),
+      }).unknown(true),
+    },
+  },
+
+  // GET /api/account/orders/:orderId
+  getOrder: {
+    request: {
+      params: Joi.object({
+        orderId: Joi.string().required(),
+      }),
+    },
+    response: {
+      200: orderSchema,
+      401: Joi.object({
+        error: Joi.string().required(),
+      }).unknown(true),
       404: Joi.object({
         error: Joi.string().required(),
       }).unknown(true),

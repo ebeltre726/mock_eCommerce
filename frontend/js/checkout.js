@@ -122,7 +122,7 @@ function setupFormSubmit() {
       e.preventDefault();
 
       // Validate all required shipping fields
-      const requiredIds = ['fullName', 'streetAddress', 'city', 'state'];
+      const requiredIds = ['fullName', 'streetAddress', 'city', 'state', 'postal'];
       const allValid = requiredIds
           .map(id => {
               const el = document.getElementById(id);
@@ -148,9 +148,10 @@ function setupFormSubmit() {
                   street:  document.getElementById('streetAddress').value,
                   apt:     document.getElementById('aptUnit').value || null,
                   city:    document.getElementById('city').value,
-                  state:   document.getElementById('state').value
+                  state:   document.getElementById('state').value,
+                  postal:  document.getElementById('postal').value,
               },
-              cart,
+              cart: cart,
           });
 
           showStatus({

@@ -25,16 +25,15 @@ export async function getOrder(req, res) {
 export async function createOrder(req, res) {
     console.log('createOrder body:', JSON.stringify(req.body, null, 2));
     try {
-        const { fullName, shippingAddress, paymentMethodId, items } = req.body;
+        const { fullName, addressId, paymentMethodId, items } = req.body;
 
-        if (!fullName || !shippingAddress?.street || !shippingAddress?.city 
-            || !shippingAddress?.state || !items?.length) {
+        if (!fullName || !addressId || !items?.length) {
             return res.status(400).json({ error: 'Missing required order fields' });
         }
 
         const order = await createOrderService(req.user.userId, {
             fullName,
-            shippingAddress, // now an object
+            addressId,
             paymentMethodId,
             items,
         });

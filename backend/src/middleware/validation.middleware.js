@@ -7,6 +7,19 @@ export function validateRequest(contract) {
   return (req, res, next) => {
     const errors = [];
 
+    const assignValidatedRequestProperty = (key, value) => {
+      try {
+        req[key] = value;
+      } catch (assignError) {
+        Object.defineProperty(req, key, {
+          value,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      }
+    };
+
     // Validate body
     if (contract.request?.body) {
       const { error, value } = contract.request.body.validate(req.body, {
@@ -23,23 +36,9 @@ export function validateRequest(contract) {
           })),
         });
       } else {
-        req.body = value;
+        assignValidatedRequestProperty('body', value);
       }
     }
-
-    // Validate params
-    const assignValidatedRequestProperty = (key, value) => {
-      try {
-        req[key] = value;
-      } catch (assignError) {
-        Object.defineProperty(req, key, {
-          value,
-          writable: true,
-          configurable: true,
-          enumerable: true,
-        });
-      }
-    };
 
     if (contract.request?.params) {
       const { error, value } = contract.request.params.validate(req.params, {
@@ -79,6 +78,12 @@ export function validateRequest(contract) {
     }
 
     if (errors.length > 0) {
+      console.error('❌ [Validation] Request validation failed:', {
+        path: req.path,
+        method: req.method,
+        body: req.body,
+        errors: errors,
+      });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,

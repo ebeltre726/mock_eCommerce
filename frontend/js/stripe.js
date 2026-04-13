@@ -51,12 +51,25 @@ export async function submitStripePayment({ fullName, shippingAddress, cart }) {
 
     if (error) throw new Error(error.message);
 
+    // First create the address
+    const address = await apiFetch('account/address', {
+        method: 'POST',
+        body: JSON.stringify({
+            street: shippingAddress.street,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            postal: shippingAddress.postal,
+            isDefault: false, // Don't make checkout addresses default
+        }),
+    });
+
+    // Then create the order with addressId
     const order = await apiFetch('orders', {
         method: 'POST',
         body: JSON.stringify({
             paymentMethodId: paymentMethod.id,
             fullName,
-            shippingAddress,
+            addressId: address.addressId,
             cardLast4: paymentMethod.card.last4,
             items:     cart,
         }),
