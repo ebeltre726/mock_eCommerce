@@ -15,7 +15,18 @@ export async function fetchReturns(userId) {
             ':sk': 'RETURN#',
         },
     }));
-    return result.Items || [];
+
+    // Map database fields to frontend-expected fields
+    const returns = (result.Items || []).map(ret => ({
+        returnId: ret.returnId,
+        orderNumber: ret.orderNumber || ret.orderId, // Use orderNumber if available, fallback to orderId
+        status: ret.status,
+        item: ret.item,
+        refundAmount: parseFloat(ret.refundAmount || '0.00'),
+        dateInitiated: ret.dateInitiated || ret.dateRequested,
+    }));
+
+    return returns;
 }
 
 export async function createReturn(userId, returnData) {

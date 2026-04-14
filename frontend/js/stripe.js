@@ -55,10 +55,12 @@ export async function submitStripePayment({ fullName, shippingAddress, cart }) {
     const address = await apiFetch('account/address', {
         method: 'POST',
         body: JSON.stringify({
-            street: shippingAddress.street,
+            line1: shippingAddress.street,
+            line2: shippingAddress.apt || '',
             city: shippingAddress.city,
             state: shippingAddress.state,
-            postal: shippingAddress.postal,
+            zip: shippingAddress.postal,
+            country: 'US',
             isDefault: false, // Don't make checkout addresses default
         }),
     });

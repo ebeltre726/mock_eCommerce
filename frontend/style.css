@@ -788,7 +788,7 @@
     width: 97%;
     margin: 0 auto;
 }
-
+/*
 .searchContainer {
     display: flex;
     padding-right: 5%;
@@ -833,6 +833,7 @@
     background-color: beige;
     cursor: pointer;
 }
+*/
 
 .productsContainer {
     background-color: beige;

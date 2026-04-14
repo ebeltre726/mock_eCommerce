@@ -258,6 +258,42 @@ export async function seedUser(user = {}) {
   console.dir(check.Items, { depth: null });
 }
 
+export async function seedReturns() {
+  console.log('\n🔄 Seeding returns...');
+
+  const returns = [
+    {
+      returnId: 'r1',
+      orderId: 'o001',
+      orderNumber: '10021',
+      item: 'Cushioned Blue Fabric Chair',
+      reason: 'Defective',
+      status: 'Refund Issued',
+      refundAmount: 39.99,
+      dateInitiated: '2024-11-15T10:00:00.000Z'
+    },
+  ];
+
+  for (const ret of returns) {
+    try {
+      const item = {
+        PK: `USER#${USER_ID}`,
+        SK: `RETURN#${ret.returnId}`,
+        entityType: 'RETURN',
+        userId: USER_ID,
+        ...ret,
+      };
+
+      console.log('➡️ Writing return item:', item.SK);
+      await put(item);
+    } catch (err) {
+      console.error('❌ Failed to insert return:', ret.returnId, err);
+    }
+  }
+
+  console.log(`✅ Inserted ${returns.length} returns`);
+}
+
 async function seed() {
   try {
     console.log('\n🚀 Starting seed...');
@@ -267,7 +303,10 @@ async function seed() {
 
     console.log('Seeding products...');
     await seedProducts();
-    console.log('Products seeded.')
+
+    console.log('Seeding returns...');
+    await seedReturns();
+    console.log('Returns seeded.');
 
     console.log('\n🎉 Seed complete!');
     console.log('─────────────────────────────');

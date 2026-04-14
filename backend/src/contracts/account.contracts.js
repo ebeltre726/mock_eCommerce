@@ -7,10 +7,12 @@ import Joi from 'joi';
 
 const addressSchema = Joi.object({
   addressId: Joi.string().optional(),
-  street: Joi.string().required(),
+  label: Joi.string().optional(),
+  line1: Joi.string().required(),
+  line2: Joi.string().allow('').optional(),
   city: Joi.string().required(),
   state: Joi.string().required(),
-  postal: Joi.string().required(),
+  zip: Joi.string().required(),
   country: Joi.string().optional(),
   isDefault: Joi.boolean().optional(),
 }).unknown(true);
@@ -218,10 +220,11 @@ export const accountContracts = {
         addressId: Joi.string().required(),
       }),
       body: Joi.object({
-        street: Joi.string().optional(),
+        line1: Joi.string().optional(),
+        line2: Joi.string().allow('').optional(),
         city: Joi.string().optional(),
         state: Joi.string().optional(),
-        postal: Joi.string().optional(),
+        zip: Joi.string().optional(),
         country: Joi.string().optional(),
         isDefault: Joi.boolean().optional(),
       }).unknown(true),
@@ -309,9 +312,11 @@ export const accountContracts = {
       returns: Joi.array().items(
         Joi.object({
           returnId: Joi.string().required(),
-          orderId: Joi.string().required(),
+          orderNumber: Joi.string().required(),
           status: Joi.string().required(),
-          dateRequested: Joi.date().optional(),
+          item: Joi.string().required(),
+          refundAmount: Joi.number().required(),
+          dateInitiated: Joi.date().optional(),
         }).unknown(true)
       ),
       orders: Joi.array(),
