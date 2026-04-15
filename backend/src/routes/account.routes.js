@@ -1,9 +1,10 @@
 import express from 'express';
+import multer from 'multer';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validateRequest, validateResponse } from '../middleware/validation.middleware.js';
 import { accountContracts } from '../contracts/account.contracts.js';
 
-import { getOverview, updateOverview } from '../controllers/account.controller.js';
+import { getOverview, updateOverview, uploadAvatarFile } from '../controllers/account.controller.js';
 import { getPayments, addPayment, updatePayment, deletePayment } from '../controllers/payment.controller.js';
 import { getOrders, getOrder } from '../controllers/orders.controller.js';
 import { getAddresses, createAddress, updateAddress, deleteAddress } from '../controllers/address.controller.js';
@@ -14,14 +15,17 @@ import { getNewsletter, updateNewsletter } from '../controllers/newsletter.contr
 import { getSettings, updateSettings, changePassword, deleteAccount } from '../controllers/settings.controller.js';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // All account routes require authentication
 router.use(requireAuth);
 
 // GET  /api/account/overview
 // PATCH /api/account/overview
+// POST /api/account/avatar
 router.get('/overview', validateResponse(accountContracts.getOverview), getOverview);
 router.patch('/overview', validateRequest(accountContracts.updateOverview), validateResponse(accountContracts.updateOverview), updateOverview);
+router.post('/avatar', upload.single('file'), uploadAvatarFile);
 
 // GET    /api/account/payment
 // POST   /api/account/payment

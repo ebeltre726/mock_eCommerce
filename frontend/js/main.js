@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const btn = e.target.closest('[data-target]');
         console.log('data-target click:', btn?.dataset.target);
-        if (btn?.dataset.target) overlayModule.open(btn.dataset.target);
+        if (btn?.dataset.target) {
+            e.preventDefault();
+            overlayModule.open(btn.dataset.target);
+        }
     });
 
     await initProducts();    // ← wait for products to render first

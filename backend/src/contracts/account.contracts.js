@@ -68,7 +68,15 @@ export const accountContracts = {
         email: Joi.string().email().optional(),
         firstName: Joi.string().optional(),
         lastName: Joi.string().optional(),
+        avatar: Joi.string().optional(),
+        dateCreated: Joi.date().optional(),
         createdAt: Joi.date().optional(),
+        stats: Joi.object({
+          orders: Joi.number().optional(),
+          wishlist: Joi.number().optional(),
+          points: Joi.number().optional(),
+          returns: Joi.number().optional(),
+        }).optional(),
       }).unknown(true),
       401: Joi.object({
         error: Joi.string().required(),
@@ -429,6 +437,19 @@ export const accountContracts = {
         notifications: Joi.object().optional(),
         privacy: Joi.object().optional(),
         preferences: Joi.object().optional(),
+      }).unknown(true),
+      400: Joi.object({
+        error: Joi.string().required(),
+      }).unknown(true),
+    },
+  },
+
+  // POST /api/account/avatar
+  uploadAvatar: {
+    response: {
+      200: Joi.object({
+        message: Joi.string().optional(),
+        avatar: Joi.string().optional(),
       }).unknown(true),
       400: Joi.object({
         error: Joi.string().required(),

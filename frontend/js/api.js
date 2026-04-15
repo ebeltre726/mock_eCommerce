@@ -30,11 +30,13 @@ export class AuthError extends Error {
 export async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
 
+    const isFormData = options.body instanceof FormData;
+
     const res = await fetch(`${API_BASE}/${endpoint}`, {
         ...options,
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...options.headers,
         },
     });
@@ -45,18 +47,19 @@ export async function apiFetch(endpoint, options = {}) {
     }
 
     if (!res.ok) {
-        // Try to parse the error message from the response body
         let message = `API error: ${res.status}`;
         try {
             const body = await res.json();
-            if (body.error) message = `API error: ${res.status} — ${body.error}`;
+            if (body.error) message += ` — ${body.error}`;
         } catch (_) {}
         throw new Error(message);
     }
 
     const contentType = res.headers.get('content-type');
-    
-    if (!contentType || !contentType.includes('application/json')) return null;
+
+    if (!contentType || !contentType.includes('application/json')) {
+        return null;
+    }
 
     return res.json();
 }

@@ -151,14 +151,88 @@ async function fetchTemplate(panelName) {
 // ============================================================
 
 async function renderOverview(contentPane, user) {
-    contentPane.querySelector('#user-avatar').src = user.avatar;
-    contentPane.querySelector('#user-fullname').textContent = `${user.firstName} ${user.lastName}`;
+    const avatarImg = contentPane.querySelector('#user-avatar');
+
+    if (user.avatar) {
+        avatarImg.src = user.avatar;
+    }
+
+    contentPane.querySelector('#user-fullname').textContent =
+        `${user.firstName} ${user.lastName}`;
+
     contentPane.querySelector('#user-email').textContent = user.email;
-    contentPane.querySelector('#user-since').textContent = `Member since ${formatDate(user.dateCreated)}`;
+
+    contentPane.querySelector('#user-since').textContent =
+        `Member since ${formatDate(user.dateCreated)}`;
+
     contentPane.querySelector('#stat-orders').textContent = user.stats.orders;
     contentPane.querySelector('#stat-wishlist').textContent = user.stats.wishlist;
     contentPane.querySelector('#stat-points').textContent = user.stats.points;
     contentPane.querySelector('#stat-returns').textContent = user.stats.returns;
+
+    // ----------------------------
+    // Avatar upload logic
+    // ----------------------------
+    const editBtn = contentPane.querySelector('#avatar-edit-btn');
+    const fileInput = contentPane.querySelector('#avatar-file-input');
+
+    if (!editBtn || !fileInput) return;
+
+    const setLoading = (isLoading) => {
+        editBtn.disabled = isLoading;
+        editBtn.textContent = isLoading
+            ? 'Uploading...'
+            : 'Change Image ✎';
+    };
+
+    // Open file picker
+    editBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    // Handle file selection + upload
+    fileInput.addEventListener('change', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file); // MUST match multer
+
+        try {
+            setLoading(true);
+
+            // Use direct fetch for file upload (apiFetch sets wrong Content-Type)
+            const response = await fetch('http://localhost:3000/api/account/avatar', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                    // Don't set Content-Type - let browser set it for FormData
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed (${response.status})`);
+            }
+
+            const result = await response.json();
+
+            // Update UI instantly
+            avatarImg.src = result.avatar;
+
+        } catch (err) {
+            console.error('Avatar upload error:', err);
+            alert('Failed to upload avatar. Please try again.');
+
+        } finally {
+            setLoading(false);
+            fileInput.value = ''; // reset input
+        }
+    });
 }
 
 async function renderPaymentMethods(contentPane, methods) {

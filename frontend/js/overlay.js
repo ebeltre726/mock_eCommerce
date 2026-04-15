@@ -19,6 +19,7 @@ export const overlayModule = (() => {
   };
 
   function close() {
+      console.trace('overlay close called from:');
       overlay.classList.remove('active');
       overlayBackground.classList.remove('active');
       contentDiv.innerHTML = '';
@@ -67,6 +68,7 @@ export const overlayModule = (() => {
       if (closeBtn) closeBtn.addEventListener('click', close);
       if (overlayBackground) {
           overlayBackground.addEventListener('click', (e) => {
+            console.log('overlayBackground clicked, target:', e.target, 'is overlayBackground:', e.target === overlayBackground);
               if (e.target === overlayBackground) close();
           });
       }

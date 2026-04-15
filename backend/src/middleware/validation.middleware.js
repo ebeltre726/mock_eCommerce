@@ -5,6 +5,9 @@
 
 export function validateRequest(contract) {
   return (req, res, next) => {
+    if (req.file || req.files) {
+      return next();
+    }
     const errors = [];
 
     const assignValidatedRequestProperty = (key, value) => {

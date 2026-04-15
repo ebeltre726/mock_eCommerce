@@ -26,7 +26,9 @@
   "homepage": "https://github.com/ebeltre726/mock_eCommerce#readme",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1002.0",
+    "@aws-sdk/client-s3": "^3.1030.0",
     "@aws-sdk/lib-dynamodb": "^3.1002.0",
+    "@aws-sdk/s3-request-presigner": "^3.1030.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "cross-env": "^10.1.0",
@@ -34,6 +36,8 @@
     "express": "^5.2.1",
     "joi": "^18.1.2",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "sharp": "^0.34.5",
     "stripe": "^20.4.1",
     "uuid": "^13.0.0"
   },

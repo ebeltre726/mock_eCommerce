@@ -31,8 +31,11 @@ export async function patchOverview(userId, fields) {
     const ExpressionAttributeValues = Object.fromEntries(updates.map(k => [`:${k}`, fields[k]]));
 
     const result = await dynamo.send(new UpdateCommand({
-        TableName: 'Users',
-        Key: { userId },
+        TableName: TABLE_NAME,
+        Key: {
+            PK: `USER#${userId}`,
+            SK: 'PROFILE',
+        },
         UpdateExpression,
         ExpressionAttributeNames,
         ExpressionAttributeValues,
