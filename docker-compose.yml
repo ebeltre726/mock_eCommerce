@@ -9,10 +9,14 @@ services:
     volumes:
       - dynamodb_data:/home/dynamodblocal
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/shell || exit 1"]
+      test: ["CMD-SHELL", "aws dynamodb list-tables --endpoint-url http://localhost:8000 --region us-east-1 --output text 2>/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
+    environment:
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_DEFAULT_REGION: us-east-1
 
   minio:
     image: minio/minio:latest
