@@ -261,7 +261,7 @@ export async function signupUser({
   } catch (err) {
     // Log the real error server-side but never leak DynamoDB internals to the client.
     console.error('Signup DynamoDB error:', err);
-    throw new Error('Failed to create account. Please try again.');
+    throw new Error('Failed to create account. Please try again.', { cause: err });
   }
  
   const token = jwt.sign(
@@ -291,6 +291,6 @@ export function verifyToken(token) {
   } catch (err) {
     // Mask the specific JWT error (expired vs. malformed vs. wrong secret)
     // to avoid leaking implementation details.
-    throw new Error('Invalid or expired token.');
+    throw new Error('Invalid or expired token.', { cause: err });
   }
 }
