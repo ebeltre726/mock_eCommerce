@@ -167,6 +167,21 @@ export const cartModule = (() => {
         return res.json();
     }
 
+    function getItems() {
+        return cartState.map(item => {
+            // Pull price from productInfoModule or the DOM if available
+            const productEl = document.querySelector(`[data-product-id="${item.productId}"]`);
+            const price = productEl
+                ? parseFloat(productEl.dataset.price ?? 0)
+                : 0;
+            return {
+                productId: item.productId,
+                quantity:  item.quantity,
+                price,
+            };
+        });
+    }
+
     async function renderCartProducts(container) {
         await loadCart(); // populates cartState
 
@@ -199,7 +214,7 @@ export const cartModule = (() => {
                     <img class="info" src="info.png">
                     <label class="productDesc">${p.description || ''}</label>
                     <img class="closeProd hidden" src="close.png">
-                    <img class="cartImage" src="http://localhost:3000${p.imageUrl || ''}">
+                    <img class="cartImage" src="${p.imageUrl || ''}">
                 </div>
                 <span class="cartQtyBadge ${item.quantity > 0 ? '' : 'hidden'}">x${item.quantity}</span>
                 <button class="rmvCart">Remove from Cart</button>
@@ -382,5 +397,5 @@ export const cartModule = (() => {
         updateAllBadges(); // populate badges on page load for logged-in users
     }
 
-    return { init, loadCart, removeItemFromCart, updateAllBadges, renderCartProducts, mergeCartsOnLogin, addItemToCart, getCartState, clearCartState };
+    return { init, loadCart, removeItemFromCart, updateAllBadges, renderCartProducts, mergeCartsOnLogin, addItemToCart, getCartState, clearCartState, getItems };
 })();

@@ -54,6 +54,7 @@
 }
 
 .navbar a:hover {
+    cursor: pointer;
     color: lightslategray;
 }
 
@@ -1198,6 +1199,22 @@
     padding-bottom: 5%;
 }
 
+#card-name {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    min-height: 38px;
+}
+
+.stripe-element-container {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    min-height: 38px;
+}
+
 .panel-payment .form-group {
     display: flex;
     flex-direction: column;
@@ -1910,48 +1927,61 @@
 }
 
 /* PAYMENT OVERLAY */
-.checkoutHeader {
-    display: flex;
-    justify-content: space-between;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-top: 0.75rem;
-    align-items: center;
-}
+/* ─────────────────────────────────────────────────────────────
+   checkout.css  —  Furnituria checkout panel
+   Relies on CSS variables from your main style.css:
+     --accent, --border, --radius, --text-dim,
+     --surface, --surface2, --font-body, --nav-font,
+     --font-display, --danger
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Wrapper & container ──────────────────────────────────── */
 
 .checkoutWrapper {
     position: relative;
     width: 100%;
-    margin: 0 auto;
     max-width: 480px;
+    margin: 0 auto;
 }
 
 .checkoutContainer {
-    background: beige;
-    border: 1px solid var(--border);
-    border-radius: 18px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    background: #faf7f2;          /* warm linen */
+    border: 1px solid var(--border);
+    /* Constrain height so the form scrolls inside, total bar stays pinned */
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+
+.checkoutHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .checkoutTitle {
-    font-family: var(--nav-font);
-    font-size: 1.5rem;
+    font-family: var(--nav-font, 'Federant', serif);
+    font-size: 1.25rem;
     font-weight: 500;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    color: #1a1a1a;
+    margin: 0;
 }
 
 .backButton {
     background: none;
     border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-body);
-    font-size: 0.8rem;
-    padding: 0.4rem 0.85rem;
     border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    padding: 0.35rem 0.9rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.18s, color 0.18s;
 }
 
 .backButton:hover {
@@ -1959,99 +1989,312 @@
     color: var(--accent);
 }
 
-/* Scrollable Form Body */
+/* ── Scrollable body ──────────────────────────────────────── */
+
 .checkoutBody {
     flex: 1;
-    overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
 }
 
 .checkoutContent {
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-/* Section Labels */
-.sectionLabel {
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 0.25rem;
+/* ── Autofill section + rail ──────────────────────────────── */
+
+.autofillSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-/* Field Groups */
+.autofillRail {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: none;
+}
+
+.autofillRail::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Chips ────────────────────────────────────────────────── */
+
+.autofillChip {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.5rem 0.8rem;
+    min-width: 120px;
+    max-width: 175px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    outline: none;
+}
+
+.autofillChip:hover {
+    border-color: var(--accent);
+}
+
+.autofillChip.active {
+    border-color: var(--accent);
+    background: #fdf9f1;
+}
+
+.autofillChip:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.autofillChip.newChip {
+    border-style: dashed;
+    min-width: unset;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    background: transparent;
+}
+
+.autofillChip.newChip:hover {
+    color: var(--accent);
+    background: transparent;
+}
+
+.chipBrand {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    line-height: 1;
+}
+
+.chipLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.chipSub {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* ── Form blocks ──────────────────────────────────────────── */
+
+.formBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.blockHeading {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0;
+}
+
 .fieldGroup {
     display: flex;
     flex-direction: column;
-    align-content: center;
-    gap: 0.35rem;
+    gap: 0.3rem;
 }
 
-.fieldGroup label {
-    font-size: 0.78rem;
-    color: black;
+.fieldLabel {
+    font-size: 0.75rem;
     font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.optLabel {
+    font-weight: 400;
+    color: var(--text-dim);
+    font-size: 0.68rem;
 }
 
 .fieldGroup input {
+    background: #fff;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: #1a1a1a;
     width: 100%;
+    box-sizing: border-box;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.fieldGroup input::placeholder { color: #555; }
+.fieldGroup input::placeholder {
+    color: #b0a898;
+}
 
 .fieldGroup input:focus {
-    border-color: black;
-    box-shadow: 0 0 5px 5px rgba(193, 186, 153, 0.25);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .fieldGroup input.invalid {
     border-color: var(--danger);
-    box-shadow: 0 0 0 3px rgba(224,92,92,0.15)
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent);
 }
 
 .fieldRow {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
     align-items: end;
-    gap: 1rem;
 }
+
+/* ── Save row (checkbox + label) ──────────────────────────── */
+
+.saveRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    user-select: none;
+    margin-top: 0.1rem;
+}
+
+.saveRow input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ── Stripe wrappers ──────────────────────────────────────── */
+
+.stripeWrapper {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.stripeWrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ── Demo notice ──────────────────────────────────────────── */
 
 .demoNotice {
-    font-size: .65rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    background: #fdf8ec;
+    border: 1px solid #e8d9a8;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: #8a7040;
 }
 
-/* Stripe Styling */
-.stripeWrapper {
-    background-color: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
+.demoIcon {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    margin-top: 1px;
 }
 
-/* Divider */
+.cardErrors {
+    font-size: 0.75rem;
+    color: var(--danger);
+    min-height: 1rem;
+    margin-top: -0.25rem;
+}
+
+/* ── Divider ──────────────────────────────────────────────── */
+
 .divider {
     height: 1px;
     background: var(--border);
-    margin: 0.25rem 0;
+    margin: 0.1rem 0;
+}
+
+/* ── Cart accordion ───────────────────────────────────────── */
+
+.cartAccordion {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.cartToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.cartToggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.cartToggle[aria-expanded="true"] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+}
+
+.cartChevron {
+    font-size: 0.8rem;
+    transition: transform 0.25s ease;
+    display: inline-block;
+}
+
+.cartToggle[aria-expanded="true"] .cartChevron {
+    transform: rotate(180deg);
 }
 
 .cartPreview {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.35s ease;
+    transition: grid-template-rows 0.28s ease;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
 }
 
 .cartPreview.open {
@@ -2062,46 +2305,192 @@
     overflow: hidden;
 }
 
-.cartPreviewContent {
-    padding: 1rem;
+.cartGrid {
+    padding: 0.75rem 0.9rem;
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
 }
 
-.cartPreviewHeader {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-dim);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding-bottom: 0.5rem;
-}
-
-.cartItem {
+/* cart items are injected by cartModule */
+.cartLineItem {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    color: #1a1a1a;
 }
 
-.cartItem .itemName { color: var(--text); }
-.cartItem .itemQty { 
-    color: var(--text-dim); 
-    font-size: 0.78rem; 
-    margin-left: 0.3rem;
+.cartLineItem .itemQty {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    margin-left: 0.25rem;
 }
 
-.cartItem .itemPrice {
+.cartLineItem .itemPrice {
     color: var(--accent);
     font-weight: 500;
 }
 
 .emptyCart {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-dim);
     text-align: center;
-    padding: 0.5rem 0;
+    padding: 0.4rem 0;
+    margin: 0;
+}
+
+/* ── Submit button ────────────────────────────────────────── */
+
+.submitOrder {
+    width: 100%;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.9rem;
+    cursor: pointer;
+    transition: opacity 0.18s, transform 0.1s;
+    margin-top: 0.25rem;
+}
+
+.submitOrder:hover:not(:disabled) {
+    opacity: 0.88;
+}
+
+.submitOrder:active:not(:disabled) {
+    transform: scale(0.99);
+}
+
+.submitOrder:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ── Sticky total bar ─────────────────────────────────────── */
+
+.totalBar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: #faf7f2;
+}
+
+.totalLabel {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.totalAmount {
+    font-family: var(--font-display, 'Federant', serif);
+    font-size: 1.5rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+}
+
+/* ── Status overlay ───────────────────────────────────────── */
+
+.statusOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 247, 242, 0.97);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    padding: 2rem;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 10;
+}
+
+.statusOverlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Spinner (loading state) */
+@keyframes coSpin {
+    to { transform: rotate(360deg); }
+}
+
+.statusSpinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: coSpin 0.7s linear infinite;
+}
+
+/* Icon glyphs (success / error) */
+.statusIconGlyph {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.statusIconGlyph.success {
+    background: #eaf5ea;
+    color: #2d7a2d;
+}
+
+.statusIconGlyph.error {
+    background: #faeaea;
+    color: var(--danger);
+}
+
+.statusTitle {
+    font-family: var(--nav-font, 'Federant', serif);
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.statusMessage {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    max-width: 280px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.statusDismiss {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    padding: 0.45rem 1.2rem;
+    cursor: pointer;
+    margin-top: 0.25rem;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.statusDismiss:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 /* Sticky Total */

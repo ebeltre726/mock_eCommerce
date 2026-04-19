@@ -338,30 +338,24 @@ export const accountContracts = {
 
   // POST /api/account/returns
   initiateReturn: {
-    request: {
-      body: Joi.object({
-        orderId: Joi.string().required(),
-        reason: Joi.string().required(),
-        items: Joi.array()
-          .items(
-            Joi.object({
-              productId: Joi.string().required(),
-              quantity: Joi.number().min(1).required(),
-            }).unknown(true)
-          )
-          .required(),
-      }).unknown(true),
-    },
-    response: {
-      201: Joi.object({
-        returnId: Joi.string().required(),
-        orderId: Joi.string().required(),
-        status: Joi.string().required(),
-      }).unknown(true),
-      400: Joi.object({
-        error: Joi.string().required(),
-      }).unknown(true),
-    },
+      request: {
+          body: Joi.object({
+              orderId:     Joi.string().required(),
+              orderNumber: Joi.string().optional(),
+              itemId:      Joi.string().required(),
+              item:        Joi.string().required(),
+              reason:      Joi.string().required(),
+              notes:       Joi.string().allow('').optional(),
+          }),
+          // No .unknown(true) — keep write endpoints explicit
+      },
+      response: {
+          201: Joi.object({
+              returnId: Joi.string().required(),
+          }),
+          400: Joi.object({ error: Joi.string().required() }).unknown(true),
+          401: Joi.object({ error: Joi.string().required() }).unknown(true),
+      },
   },
 
   // GET /api/account/rewards

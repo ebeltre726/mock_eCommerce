@@ -15,6 +15,7 @@
 import { accountNavModule } from './navbarModule.js';
 import { overlayModule } from './overlay.js';
 import { apiFetch, AuthError } from './api.js';
+import { mountStripeElements, unmountStripeElements, tokeniseCard } from './stripe.js';
 
 const panelTemplateCache = {};
 
@@ -236,33 +237,87 @@ async function renderOverview(contentPane, user) {
 }
 
 async function renderPaymentMethods(contentPane, methods) {
+    unmountStripeElements(); // ensure no Stripe elements are mounted before rendering the list
     const list = contentPane.querySelector('#card-list');
-
-    list.innerHTML = methods.length ? methods.map(card => `
-        <li class="card-item" data-id="${card.id}">
-            <div class="card-brand">${card.brand}</div>
-            <div class="card-details">
-                <span>•••• •••• •••• ${card.last4}</span>
-                <span>Expires ${card.expiry}</span>
-                ${card.isDefault ? '<span class="badge-default">Default</span>' : ''}
-            </div>
-            <button class="btn-ghost remove-card" data-id="${card.id}">Remove</button>
-        </li>
-    `).join('') : '<li class="empty-state">No saved payment methods.</li>';
-
+ 
+    // methods shape from payment.service.js: toPublicMethod()
+    // { paymentId, stripePaymentMethodId, brand, last4, expiry, isDefault }
+    list.innerHTML = methods.length
+        ? methods.map(card => `
+            <li class="card-item" data-id="${card.paymentId}">
+                <div class="card-brand">${card.brand}</div>
+                <div class="card-details">
+                    <span>•••• •••• •••• ${card.last4}</span>
+                    <span>Expires ${card.expiry}</span>
+                    ${card.isDefault ? '<span class="badge-default">Default</span>' : ''}
+                </div>
+                <button class="btn-ghost remove-card" data-id="${card.paymentId}">Remove</button>
+            </li>
+        `).join('')
+        : '<li class="empty-state">No saved payment methods.</li>';
+ 
+    // Delegated remove listener
     list.addEventListener('click', e => {
-        const removeBtn = e.target.closest('.remove-card');
-        if (removeBtn) removeCard(removeBtn.dataset.id, contentPane);
+        const btn = e.target.closest('.remove-card');
+        if (btn) removeCard(btn.dataset.id, contentPane);
     });
-
-    contentPane.querySelector('.add-card-btn')
-        .addEventListener('click', () => toggleForm(contentPane, 'add-card-form'));
-
-    contentPane.querySelector('#cancel-card-btn')
-        .addEventListener('click', () => toggleForm(contentPane, 'add-card-form', false));
-
-    contentPane.querySelector('#save-card-btn')
-        .addEventListener('click', () => saveCard(contentPane));
+ 
+    // Add card — mount Stripe elements into the panel's form on open,
+    // unmount on close so they can remount cleanly on the next open.
+    const addBtn    = contentPane.querySelector('.add-card-btn');
+    const cancelBtn = contentPane.querySelector('#cancel-card-btn');
+    const saveBtn   = contentPane.querySelector('#save-card-btn');
+    
+    addBtn?.addEventListener('click', () => {
+    const opened = toggleForm(contentPane, 'add-card-form');
+    if (opened) {
+        // Use requestAnimationFrame to ensure the DOM has painted
+        // and the hidden class is fully removed before Stripe mounts
+        requestAnimationFrame(() => mountStripeElements('account'));
+    } else {
+        unmountStripeElements();
+    }
+});
+ 
+    cancelBtn?.addEventListener('click', () => {
+        unmountStripeElements();
+        toggleForm(contentPane, 'add-card-form', false);
+    });
+ 
+    saveBtn?.addEventListener('click', () => saveCard(contentPane));
+}
+ 
+async function saveCard(contentPane) {
+    const btn = contentPane.querySelector('#save-card-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+ 
+    try {
+        const cardholderName = contentPane.querySelector('#card-name')?.value.trim() ?? '';
+ 
+        // tokeniseCard uses the mounted elements from stripe.js —
+        // no Stripe instance or key lives in account.js
+        const tokenData = await tokeniseCard(cardholderName);
+ 
+        // POST to backend which writes the PAYMENT# record in DynamoDB
+        await apiFetch('account/payment', {
+            method: 'POST',
+            body: JSON.stringify(tokenData),
+        });
+ 
+        unmountStripeElements();
+        toggleForm(contentPane, 'add-card-form', false);
+ 
+        // Reload the list from the API so it reflects the new card
+        const updated = await apiFetch('account/payment');
+        await renderPaymentMethods(contentPane, updated);
+ 
+    } catch (err) {
+        showInlineError(contentPane, 'save-card-btn', err.message ?? 'Failed to save card.');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Save Card';
+    }
 }
 
 async function renderOrderHistory(contentPane, orders) {
@@ -364,7 +419,7 @@ async function renderReturns(contentPane, { returns, orders }) {
     orders.forEach(order => {
         const option = document.createElement('option');
         option.value = order.orderId;
-        option.textContent = `Order #${order.orderNumber} — ${formatDate(order.orderDate)}`;
+        option.textContent = `Order #${order.orderId} — ${formatDate(order.createdAt)}`;
         orderSelect.appendChild(option);
     });
 
@@ -439,7 +494,7 @@ async function renderNewsletter(contentPane, prefs) {
         const saved = contentPane.querySelector('#newsletter-saved');
         try {
             await apiFetch('account/newsletter', {
-                method: 'PUT',
+                method: 'PATCH',
                 body: JSON.stringify({
                     subscribed: subscribedCheckbox.checked,
                     topics: [...contentPane.querySelectorAll('[data-topic-id]')].map(el => ({
@@ -545,25 +600,6 @@ async function renderWishlist(contentPane, items) {
 // ACTION HANDLERS
 // ============================================================
 
-function saveCard(contentPane) {
-    const name    = contentPane.querySelector('#card-name').value.trim();
-    const number  = contentPane.querySelector('#card-number').value.trim();
-    const expiry  = contentPane.querySelector('#card-expiry').value.trim();
-    const cvv     = contentPane.querySelector('#card-cvv').value.trim();
-
-    if (!name || !number || !expiry || !cvv) {
-        showInlineError(contentPane, 'save-card-btn', 'Please fill in all card fields.');
-        return;
-    }
-
-    apiFetch('account/payment-methods', {
-        method: 'POST',
-        body: JSON.stringify({ name, number, expiry }),
-    })
-        .then(() => toggleForm(contentPane, 'add-card-form', false))
-        .catch(err => console.error('Failed to save card:', err));
-}
-
 function removeCard(id, contentPane) {
     if (!window.confirm('Remove this payment method?')) return;
 
@@ -643,7 +679,7 @@ function removeAddress(id, addresses, renderList, contentPane) {
 
     apiFetch(`account/address/${id}`, { method: 'DELETE' })
         .then(() => {
-            const idx = addresses.findIndex(a => a.id === id);
+            const idx = addresses.findIndex(a => a.addressId === id);
             if (idx > -1) addresses.splice(idx, 1);
             renderList(addresses);
         })
@@ -712,9 +748,10 @@ function submitReturn(contentPane, orders) {
  */
 function toggleForm(contentPane, formId, show) {
     const form = contentPane.querySelector(`#${formId}`);
-    if (!form) return;
+    if (!form) return false;
     const shouldShow = show !== undefined ? show : form.classList.contains('hidden');
     form.classList.toggle('hidden', !shouldShow);
+    return shouldShow; // ← add this
 }
 
 /**

@@ -21,5 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await initProducts();    // ← wait for products to render first
     cartModule.init();       // ← then init cart so badges find the divs
+    window.cartModule = cartModule; // expose for debugging
     productInfoModule.init();
 });

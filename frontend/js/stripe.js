@@ -1,81 +1,141 @@
-// stripe.js
 import { apiFetch } from './api.js';
 
-const stripe     = Stripe('pk_test_51TDH912E0ytncV4m8z5H93ZqAtjDo6b5LZ446LCdmMXTIPEb8UiZvlEzhZObkrnGDEDNWcP3V8FjzZmaVpnfovk200SQfEH1ca');
-const style = {
-    base: {
-        color: '#32325d',
-        fontFamily: 'inherit',
-        fontSize: '16px',
-        '::placeholder': {
-            color: '#aab7c4', // ← light gray, matches typical input placeholders
-        },
-    },
-    invalid: {
-        color: '#fa755a',
-    },
-};
-const elements   = stripe.elements();
-const cardNumber = elements.create('cardNumber', { style });
-const cardExpiry = elements.create('cardExpiry', { style });
-const cardCvc    = elements.create('cardCvc',    { style });
+// ─── Lazy initialisation ──────────────────────────────────────────────────────
+// Nothing is created until mountStripeElements() is called.
+// This prevents Stripe.js from running before the overlay DOM exists.
 
-export function mountStripeElement() {
+let _stripe   = null;
+let _elements = null;
+let _cardNumber = null;
+let _cardExpiry = null;
+let _cardCvc    = null;
+let _mounted    = false;
+
+const STYLE = {
+    base: {
+        color: '#1a1a1a',
+        fontFamily: 'Poppins, sans-serif',
+        fontSize: '14px',
+        fontSmoothing: 'antialiased',
+        '::placeholder': { color: '#9a9a9a' },
+    },
+    invalid: { color: '#e05c5c', iconColor: '#e05c5c' },
+};
+
+function getStripe() {
+    if (!_stripe) _stripe = Stripe('pk_test_51TDH912E0ytncV4m8z5H93ZqAtjDo6b5LZ446LCdmMXTIPEb8UiZvlEzhZObkrnGDEDNWcP3V8FjzZmaVpnfovk200SQfEH1ca');
+    return _stripe;
+}
+
+// ─── Mount / unmount ──────────────────────────────────────────────────────────
+
+export function mountStripeElements() {
+    if (_mounted) return;
+
     const numberEl = document.getElementById('card-number');
     const expiryEl = document.getElementById('card-expiry');
     const cvcEl    = document.getElementById('card-cvc');
 
     if (!numberEl || !expiryEl || !cvcEl) {
-        console.error('Stripe element containers not found');
+        console.error('[stripe] Element containers not found — cannot mount.');
         return;
     }
 
-    cardNumber.mount(numberEl);
-    cardExpiry.mount(expiryEl);
-    cardCvc.mount(cvcEl);
+    const stripe   = getStripe();
+    _elements      = stripe.elements();
+    _cardNumber    = _elements.create('cardNumber', { style: STYLE });
+    _cardExpiry    = _elements.create('cardExpiry', { style: STYLE });
+    _cardCvc       = _elements.create('cardCvc',    { style: STYLE });
 
-    [cardNumber, cardExpiry, cardCvc].forEach(el => {
-        el.on('change', e => {
-            const errorDiv = document.getElementById('card-errors');
-            if (errorDiv) errorDiv.textContent = e.error ? e.error.message : '';
-        });
+    _cardNumber.mount(numberEl);
+    _cardExpiry.mount(expiryEl);
+    _cardCvc.mount(cvcEl);
+
+    _cardNumber.on('change', e => {
+        const el = document.getElementById('card-errors');
+        if (el) el.textContent = e.error?.message ?? '';
     });
+
+    _mounted = true;
 }
 
-export async function submitStripePayment({ fullName, shippingAddress, cart }) {
+export function unmountStripeElements() {
+    if (!_mounted) return;
+    _cardNumber?.unmount();
+    _cardExpiry?.unmount();
+    _cardCvc?.unmount();
+    // Destroy element references so they can be recreated cleanly on next mount
+    _cardNumber = null;
+    _cardExpiry = null;
+    _cardCvc    = null;
+    _elements   = null;
+    _mounted    = false;
+}
+
+// ─── Tokenise a new card and submit order ─────────────────────────────────────
+
+export async function submitNewCard({ fullName, addressId, saveCard, items }) {
+    if (!_cardNumber) throw new Error('Card elements are not mounted.');
+
+    const stripe = getStripe();
     const { paymentMethod, error } = await stripe.createPaymentMethod({
         type: 'card',
-        card: cardNumber,
+        card: _cardNumber,
         billing_details: { name: fullName },
     });
 
     if (error) throw new Error(error.message);
 
-    // First create the address
-    const address = await apiFetch('account/address', {
-        method: 'POST',
-        body: JSON.stringify({
-            line1: shippingAddress.street,
-            line2: shippingAddress.apt || '',
-            city: shippingAddress.city,
-            state: shippingAddress.state,
-            zip: shippingAddress.postal,
-            country: 'US',
-            isDefault: false, // Don't make checkout addresses default
-        }),
-    });
+    const body = {
+        paymentMethodId: paymentMethod.id,
+        fullName,
+        addressId,
+        items,
+        saveCard,
+    };
 
-    // Then create the order with addressId
-    const order = await apiFetch('orders', {
+    // Only send card metadata if the user wants to save — backend needs it
+    // to write the PAYMENT# record in payment.service.js
+    if (saveCard) {
+        body.cardBrand  = paymentMethod.card.brand;
+        body.cardLast4  = paymentMethod.card.last4;
+        body.cardExpiry = `${paymentMethod.card.exp_month}/${String(paymentMethod.card.exp_year).slice(-2)}`;
+    }
+
+    return apiFetch('orders', { method: 'POST', body: JSON.stringify(body) });
+}
+
+// ─── Submit order with a saved Stripe payment method ─────────────────────────
+
+export async function submitSavedCard({ stripePaymentMethodId, fullName, addressId, items }) {
+    return apiFetch('orders', {
         method: 'POST',
         body: JSON.stringify({
-            paymentMethodId: paymentMethod.id,
+            paymentMethodId: stripePaymentMethodId,
             fullName,
-            addressId: address.addressId,
-            cardLast4: paymentMethod.card.last4,
-            items:     cart,
+            addressId,
+            items,
+            saveCard: false,
         }),
     });
+}
 
-    return order;
+// ─── Account panel — tokenise only (no order) ────────────────────────────────
+// Used by account.js to add a card from the Payment Methods panel.
+
+export async function tokeniseCard(cardholderName) {
+    if (!_cardNumber) throw new Error('Card elements are not mounted.');
+    const stripe = getStripe();
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: _cardNumber,
+        billing_details: { name: cardholderName },
+    });
+    if (error) throw new Error(error.message);
+    return {
+        stripePaymentMethodId: paymentMethod.id,
+        brand:  paymentMethod.card.brand,
+        last4:  paymentMethod.card.last4,
+        expiry: `${paymentMethod.card.exp_month}/${String(paymentMethod.card.exp_year).slice(-2)}`,
+    };
 }

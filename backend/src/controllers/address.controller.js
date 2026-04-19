@@ -31,6 +31,8 @@ export async function updateAddress(req, res) {
 }
 
 export async function deleteAddress(req, res) {
+    console.log('deleteAddress params:', req.params);
+    console.log('deleteAddress userId:', req.user.userId);
     try {
         await removeAddress(req.user.userId, req.params.addressId);
         res.status(204).send();

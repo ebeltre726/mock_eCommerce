@@ -17,11 +17,11 @@ export async function getReturns(req, res) {
 
 export async function initiateReturn(req, res) {
     try {
-        const { orderId, orderNumber, item, reason, notes } = req.body;
+        const { orderId, orderNumber, itemId, item, reason, notes } = req.body;
         if (!orderId || !item || !reason) {
             return res.status(400).json({ error: 'orderId, item, and reason are required' });
         }
-        const newReturn = await createReturn(req.user.userId, { orderId, orderNumber, item, reason, notes });
+        const newReturn = await createReturn(req.user.userId, { orderId, orderNumber, itemId, item, reason, notes });
         res.status(201).json(newReturn);
     } catch (err) {
         console.error('initiateReturn error:', err);
