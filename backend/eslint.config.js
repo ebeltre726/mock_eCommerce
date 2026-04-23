@@ -1,24 +1,22 @@
-import js from "@eslint/js";
+import globals from 'globals';
+import js      from '@eslint/js';
 
 export default [
-  js.configs.recommended,
-  {
-    env: {
-            node: true,  // ← adds setTimeout, setInterval, etc.
-            es2022: true,
+    js.configs.recommended,
+    {
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType:  'module',
+            globals: {
+                ...globals.node,  // ← replaces env: { node: true }
+            },
         },
-    rules: {
-      "no-unused-vars": "warn",
-      "no-undef": "error",
+        rules: {
+            'no-unused-vars': ['warn', {
+                argsIgnorePattern:  '^_',  // ignore _prefixed args
+                varsIgnorePattern:  '^_',  // ignore _prefixed vars
+            }],
+            'no-undef': 'error',
+        },
     },
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",  // since you're using ES modules
-      globals: {
-        process: "readonly",
-        console: "readonly",
-        Buffer: "readonly",
-      }
-    }
-  }
 ];
