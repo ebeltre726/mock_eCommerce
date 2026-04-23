@@ -14,7 +14,11 @@ let _selectedStripeMethodId = null;
 // ─── Init / teardown ─────────────────────────────────────────────────────────
 
 export async function initCheckout() {
-    mountStripeElements();
+    const numberEl = document.getElementById('card-number');
+    const expiryEl = document.getElementById('card-expiry');
+    const cvcEl    = document.getElementById('card-cvc');
+    const errorsEl = document.getElementById('card-errors');
+    mountStripeElements(numberEl, expiryEl, cvcEl, errorsEl);
     _selectedStripeMethodId = null;
 
     const token = localStorage.getItem('token');
@@ -181,13 +185,12 @@ function bindCheckoutEvents() {
     });
 
     document.getElementById('statusDismiss')?.addEventListener('click', () => {
-        const wasSuccess = document.getElementById('statusOverlay').dataset.success === 'true';
-        hideStatus();
-        if (wasSuccess) {
-            teardownCheckout();
-            overlayModule.close();
-        }
-    });
+    const wasSuccess = document.getElementById('statusOverlay').dataset.success === 'true';
+    hideStatus();
+    if (wasSuccess) {
+        overlayModule.close(); // close() now fires teardownCheckout via callback
+    }
+});
 
     document.getElementById('checkoutForm')
         ?.addEventListener('submit', handleSubmit);
@@ -226,13 +229,26 @@ async function handleSubmit(e) {
 
         document.getElementById('statusOverlay').dataset.success = 'true';
         showStatus(
-            'success',
+        'success',
             'Order placed!',
             `Order #${order.orderId} confirmed. Check your email for details.`,
         );
+        console.log('pre-clear cartState:', window.cartModule?.getCartState());
+        window.cartModule.clearCartState();
+        window.cartModule.updateAllBadges();
+        console.log('post-clear cartState:', window.cartModule?.getCartState());
+        console.log('cartModule defined:', !!window.cartModule);
 
     } catch (err) {
-        showStatus('error', 'Payment failed', err.message ?? 'Something went wrong. Please try again.');
+        const isDeclined = err.status === 402 ||
+            err.message?.toLowerCase().includes('declined') ||
+            err.message?.toLowerCase().includes('card');
+
+        showStatus(
+            'error',
+            isDeclined ? 'Card declined' : 'Payment failed',
+            err.message ?? 'Something went wrong. Please try again.',
+        );
         submitBtn.disabled = false;
     }
 }

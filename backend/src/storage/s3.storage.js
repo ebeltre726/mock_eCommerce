@@ -12,35 +12,31 @@ const s3 = new S3Client({
   },
 });
 
-function objectUrl(key) {
-  // MinIO (local):  http://localhost:9000/<bucket>/<key>
-  // Real AWS:       https://<bucket>.s3.<region>.amazonaws.com/<key>
-  if (process.env.S3_ENDPOINT) {
-    return `${process.env.S3_ENDPOINT}/${process.env.S3_BUCKET}/${key}`;
-  }
-  return `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+function objectUrl(bucket, key) {
+    if (process.env.S3_ENDPOINT) {
+        return `${process.env.S3_ENDPOINT}/${bucket}/${key}`;
+    }
+    return `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
 
 export const s3Storage = {
-  async uploadImage(buffer, key, contentType = "image/webp") {
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET,
-        Key: key,
-        Body: buffer,
-        ContentType: contentType,
-      })
-    );
-    return objectUrl(key);
-  },
+    async uploadImage(buffer, key, contentType = 'image/webp', bucket = process.env.S3_BUCKET_AVATARS) {
+        await s3.send(new PutObjectCommand({
+            Bucket:      bucket,
+            Key:         key,
+            Body:        buffer,
+            ContentType: contentType,
+        }));
+        return objectUrl(bucket, key);
+    },
 
-  async getUploadUrl({ key, contentType }) {
-    const command = new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET,
-      Key: key,
-      ContentType: contentType,
-    });
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
-    return { uploadUrl, fileUrl: objectUrl(key) };
-  },
+    async getUploadUrl({ key, contentType, bucket = process.env.S3_BUCKET_AVATARS }) {
+        const command = new PutObjectCommand({
+            Bucket:      bucket,
+            Key:         key,
+            ContentType: contentType,
+        });
+        const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+        return { uploadUrl, fileUrl: objectUrl(bucket, key) };
+    },
 };

@@ -1,8 +1,11 @@
+console.log('[order.service] module evaluating');
 import { dynamo } from '../db/dynamoClient.js';
 import { PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { stripe } from '../config/stripe.js';
+console.log('[order.service] stripe:', typeof stripe, stripe?.constructor?.name);
 import { fetchAddresses } from './address.service.js';
+import { getOrCreateCustomer, addPaymentMethod } from './payment.service.js';
 
 const TABLE = 'Furnituria';
 
@@ -25,14 +28,18 @@ async function fetchAddress(userId, addressId) {
 /**
  * Utility: calculate total from items
  */
-async function calculateTotal(items) {
-  return Math.round(
-    items.reduce((sum, item) => {
-      const price = item.price ?? 0;
-      const qty = item.quantity ?? 1;
-      return sum + price * qty;
-    }, 0) * 100 // convert to cents
-  );
+function calculateTotal(items) {
+    console.log('calculateTotal received:', items, Array.isArray(items));
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('Order must contain at least one item');
+    }
+    return Math.round(
+        items.reduce((sum, item) => {
+            const price = item.price ?? 0;
+            const qty   = item.quantity ?? 1;
+            return sum + price * qty;
+        }, 0) * 100
+    );
 }
 
 /**
@@ -173,43 +180,70 @@ export async function fetchOrder(userId, orderId) {
 /**
  * Create a new order
  */
-export async function createOrder(userId, orderData) {
+export async function createOrder(userId, userEmail, orderData) {
   const orderId = uuidv4();
   let stripePaymentIntentId = null;
   let paymentMethod = 'demo';
 
   // ✅ Always calculate total once
-  const totalAmountCents = await calculateTotal(orderData.items);
+  console.log('orderData.items before calculateTotal:', orderData.items);
+  const totalAmountCents = calculateTotal(orderData.items);
   const totalAmount = totalAmountCents / 100;
 
+  
   // 💳 Stripe payment (optional)
   if (orderData.paymentMethodId) {
     try {
-      // Ensure minimum charge amount (Stripe requires minimum $0.50 for most currencies)
-      const minimumAmount = 50; // $0.50 in cents
-      const chargeAmount = Math.max(totalAmountCents, minimumAmount);
+        const customerId = await getOrCreateCustomer(userId, userEmail);
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: chargeAmount,
-        currency: 'usd',
-        payment_method: orderData.paymentMethodId,
-        confirm: true,
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: 'never',
-        },
-      }, {
-        idempotencyKey: orderId,
-      });
+        // Attach method to customer so it can be reused across orders
+        try {
+            await stripe.paymentMethods.attach(orderData.paymentMethodId, {
+                customer: customerId,
+            });
+        } catch (attachErr) {
+            // Already attached to this customer — safe to continue
+            if (!attachErr.message?.includes('already been attached')) {
+                throw attachErr;
+            }
+        }
 
-      stripePaymentIntentId = paymentIntent.id;
-      paymentMethod = 'stripe_test';
+        const paymentIntent = await stripe.paymentIntents.create(
+            {
+                amount:         Math.max(totalAmountCents, 50),
+                currency:       'usd',
+                customer:       customerId,
+                payment_method: orderData.paymentMethodId,
+                confirm:        true,
+                automatic_payment_methods: {
+                    enabled:         true,
+                    allow_redirects: 'never',
+                },
+            },
+            { idempotencyKey: orderId },
+        );
+
+        stripePaymentIntentId = paymentIntent.id;
+        paymentMethod         = 'stripe';
 
     } catch (err) {
-      console.log('Stripe failed, falling back to demo:', err.message);
-      paymentMethod = 'demo';
+    if (err.type === 'StripeCardError' ||
+        err.type === 'StripeInvalidRequestError') {
+        throw new Error(err.message);
     }
-  }
+
+    if (err.type === 'StripeConnectionError' ||
+        err.type === 'StripeAPIError') {
+        console.warn('[order] Stripe infrastructure error, falling back to demo:', err.message);
+        paymentMethod = 'demo';
+        // No throw — order continues in demo mode
+    } else {
+        // Unknown error — fail hard
+        throw new Error(err.message ?? 'Payment processing failed');
+    }
+}
+
+}
 
   const orderItem = {
     PK: `USER#${userId}`,

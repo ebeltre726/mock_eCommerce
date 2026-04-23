@@ -1,48 +1,38 @@
 import { overlayModule } from './overlay.js';
-import { cartModule } from './cart.js';
+import { cartModule }    from './cart.js';
+import { apiFetch }      from './api.js';
 
 export function initLogin() {
-    const form = document.getElementById('signin-form');
-    const signupButton = document.getElementById('signup-button');
+    const form        = document.getElementById('login-form'); // match your template ID
+    const signupBtn   = document.getElementById('signup-button');
+    const errorEl     = document.getElementById('signin-error');
 
-    if (signupButton) {
-        signupButton.addEventListener('click', () => {
-            overlayModule.open('signup');
-        });
+    if (!form) {
+        console.error('[login] Form element not found — check template ID matches login.js query');
+        return;
     }
 
-    form.addEventListener('submit', async (e) => {
+    signupBtn?.addEventListener('click', () => overlayModule.open('signup'));
+
+    form.addEventListener('submit', async e => {
         e.preventDefault();
 
-        const data = {
-            email: form.email.value,
-            password: form.password.value,
-        };
-
         try {
-            const res = await fetch('http://localhost:3000/api/auth/login', {
+            const result = await apiFetch('auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    email:    form.email.value,
+                    password: form.password.value,
+                }),
             });
 
-            const result = await res.json();
-
-            if (!res.ok) {
-                document.getElementById('signin-error').textContent = result.message || 'Login failed';
-                return;
-            }
-
             localStorage.setItem('token', result.token);
-
-            // Merge any guest cart items with the server cart
             await cartModule.mergeCartsOnLogin();
-
             overlayModule.open('account');
 
         } catch (err) {
-            document.getElementById('signin-error').textContent = 'Something went wrong.';
-            console.error(err);
+            if (errorEl) errorEl.textContent = err.message ?? 'Something went wrong.';
+            console.error('[login] error:', err);
         }
     });
 }

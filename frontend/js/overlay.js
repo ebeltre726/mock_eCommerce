@@ -3,7 +3,9 @@ export const overlayModule = (() => {
   const overlayBackground = document.querySelector('.overlayBackground');
   const closeBtn = overlay.querySelector('.closeOverlays');
   const contentDiv = overlay.querySelector('.content');
+  let _abortController = new AbortController();
   const templateCache = {};
+  let _closeCallbacks = [];
 
   const moduleMap = {
       products: () => import('./products.js').then(m => m.initProducts()),
@@ -18,11 +20,24 @@ export const overlayModule = (() => {
       }),
   };
 
-  function close() {
-      console.trace('overlay close called from:');
-      overlay.classList.remove('active');
-      overlayBackground.classList.remove('active');
-      contentDiv.innerHTML = '';
+    function close() {
+        _abortController.abort(); 
+        _abortController = new AbortController();  
+        _closeCallbacks.forEach(fn => fn());
+        _closeCallbacks = [];
+        overlay.classList.remove('active');
+        overlayBackground.classList.remove('active');
+        contentDiv.innerHTML = '';
+  }
+
+  function refresh(target) {
+    if (contentDiv.innerHTML && _currentTarget === target) {
+        initTemplate(target); // re-run init without re-fetching template
+    }
+  }
+
+  function registerCloseCallback(fn) {
+      _closeCallbacks.push(fn);
   }
 
   function showOverlay() {
@@ -60,8 +75,9 @@ export const overlayModule = (() => {
           });
   }
 
-  function open(target) {
-      loadTemplate(target);
+  function open(target, onClose = null) {
+    if (onClose) _closeCallbacks.push(onClose);
+    loadTemplate(target);
   }
 
   function init() {
@@ -76,3 +92,7 @@ export const overlayModule = (() => {
 
   return { init, open, close };
 })();
+
+export function getOverlaySignal() {
+    return _abortController.signal;
+}

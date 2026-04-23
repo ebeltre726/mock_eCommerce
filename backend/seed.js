@@ -11,12 +11,21 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 
+import 'dotenv/config'; // must be first — loads .env before env.js validates
+import { dynamo }       from './src/db/dynamoClient.js';
+import { storage }      from './src/storage/index.js';
+import { v4 as uuidv4 } from 'uuid';
+import fs               from 'fs/promises';
+import path             from 'path';
+import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 
 const TABLE_NAME = 'Furnituria';
 const USER_ID = 'u001';
 const MOCK_EMAIL = 'jane.doe@email.com';
 const MOCK_PASSWORD = 'password123';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const client = new DynamoDBClient({
   region: 'us-east-1',
@@ -51,54 +60,65 @@ const tableConfig = {
 
 // run with: RUN_SEED=true node seed.js
 
+//imageURLs
+
 export async function seedProducts() {
-  console.log('\n📦 Seeding products...');
+    console.log('\n📦 Seeding products...');
 
-  // 👉 PASTE YOUR PRODUCTS HERE
-  const products = [
-      { id: 'chair-1', name: 'Cushioned Blue Fabric Chair', description: 'A comfortable, blue chair with the highest quality fabric, and four sturdy wooden legs.', imageUrl: 'http://localhost:3000/images/comfychair.jpg', price: 39.99 },
-      { id: 'chair-2', name: 'Cushioned Black Stool Chair', description: 'A black stool chair with a backrest, padded cushion, and three durable wooden legs that move outwards.', imageUrl: 'http://localhost:3000/images/blackchair.jpg', price: 14.99 },
-      { id: 'chair-3', name: 'Dark Blue Leather Chair', description: 'A dark blue chair with premium leather, arm supports, four wooden legs that move outwards, and leg supports.', imageUrl: 'http://localhost:3000/images/blueleatherchair.jpg', price: 29.99 },
-      { id: 'chair-4', name: 'Tan Office Chair', description: 'A tan-colored, adjustable fabric office chair, with arm rests and wheels.', imageUrl: 'http://localhost:3000/images/brownofficechair.jpg', price: 39.99 },
-      { id: 'chair-5', name: 'Tan Fabric Chair', description: 'A tan-colored fabric chair with three thick and sturdy wooden legs that move outwards.', imageUrl: 'http://localhost:3000/images/chair.jpg', price: 19.99 },
-      { id: 'chair-6', name: 'Tan Netted Chair', description: 'A tan-colored netted chair with a metal skeleton and a C-shape design.', imageUrl: 'http://localhost:3000/images/nettedchair.jpg', price: 14.99 },
-      { id: 'chair-7', name: 'Cushioned Stool Chair', description: 'A black stool chair with a brown cushion and backrest. Has four legs with supports.', imageUrl: 'http://localhost:3000/images/stoolchair.jpg', price: 14.99 },
-      { id: 'chair-8', name: 'Wood Office Chair', description: 'Sturdy, wood office chair. Our cheapest product, but most durable. Encouraged for simple use cases.', imageUrl: 'http://localhost:3000/images/woodofficechair.jpg', price: 9.99 },
-      { id: 'chair-9', name: 'Sun-Glazed Chair', description: 'A Furnituria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.', imageUrl: 'http://localhost:3000/images/sunglazedchair.jpg', price: 34.99 },
-      { id: 'chair-10', name: 'Plain White Chair', description: 'A sturdy and durable plain all-white chair. One of our most purchased products.', imageUrl: 'http://localhost:3000/images/whitechair.jpg', price: 9.99 },
-      { id: 'chair-11', name: 'Old-Fashioned Wood Chair', description: 'A sturdy, old-fashioned wood chair with traditional design and leg supports.', imageUrl: 'http://localhost:3000/images/woodchair.jpg', price: 19.99 },
-  ];
+    const existing = await dynamo.send(new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+            ':pk': 'PRODUCT#chair-1',
+        },
+        Limit: 1,
+    }));
 
-  if (!Array.isArray(products) || products.length === 0) {
-    console.warn('⚠️ No products to seed');
-    return;
-  }
-
-  for (const product of products) {
-    try {
-      if (!product.id) {
-        console.warn('⚠️ Skipping product with no id:', product);
-        continue;
-      }
-
-      const item = {
-        PK: `PRODUCT#${product.id}`,
-        SK: `PRODUCT#${product.id}`,
-        entityType: 'PRODUCT',
-
-        ...product,
-      };
-
-      console.log('➡️ Writing product:', item.PK);
-
-      await put(item);
-
-    } catch (err) {
-      console.error('❌ Failed to insert product:', product.id, err);
+    if (existing.Items?.length) {
+        console.log('⏭️  Products already seeded — skipping');
+        return;
     }
-  }
 
-  console.log(`✅ Inserted ${products.length} products`);
+    const productData = [
+        { id: 'chair-1',  name: 'Cushioned Blue Fabric Chair',   description: 'A comfortable, blue chair with the highest quality fabric, and four sturdy wooden legs.',                                                                          filename: 'comfychair.jpg',       price: 39.99 },
+        { id: 'chair-2',  name: 'Cushioned Black Stool Chair',    description: 'A black stool chair with a backrest, padded cushion, and three durable wooden legs that move outwards.',                                                           filename: 'blackchair.jpg',       price: 14.99 },
+        { id: 'chair-3',  name: 'Dark Blue Leather Chair',        description: 'A dark blue chair with premium leather, arm supports, four wooden legs that move outwards, and leg supports.',                                                     filename: 'blueleatherchair.jpg', price: 29.99 },
+        { id: 'chair-4',  name: 'Tan Office Chair',               description: 'A tan-colored, adjustable fabric office chair, with arm rests and wheels.',                                                                                       filename: 'brownofficechair.jpg', price: 39.99 },
+        { id: 'chair-5',  name: 'Tan Fabric Chair',               description: 'A tan-colored fabric chair with three thick and sturdy wooden legs that move outwards.',                                                                          filename: 'chair.jpg',            price: 19.99 },
+        { id: 'chair-6',  name: 'Tan Netted Chair',               description: 'A tan-colored netted chair with a metal skeleton and a C-shape design.',                                                                                         filename: 'nettedchair.jpg',      price: 14.99 },
+        { id: 'chair-7',  name: 'Cushioned Stool Chair',          description: 'A black stool chair with a brown cushion and backrest. Has four legs with supports.',                                                                             filename: 'stoolchair.jpg',       price: 14.99 },
+        { id: 'chair-8',  name: 'Wood Office Chair',              description: 'Sturdy, wood office chair. Our cheapest product, but most durable. Encouraged for simple use cases.',                                                             filename: 'woodofficechair.jpg',  price:  9.99 },
+        { id: 'chair-9',  name: 'Sun-Glazed Chair',               description: 'A Furnituria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.',            filename: 'sunglazedchair.jpg',   price: 34.99 },
+        { id: 'chair-10', name: 'Plain White Chair',              description: 'A sturdy and durable plain all-white chair. One of our most purchased products.',                                                                                 filename: 'whitechair.jpg',       price:  9.99 },
+        { id: 'chair-11', name: 'Old-Fashioned Wood Chair',       description: 'A sturdy, old-fashioned wood chair with traditional design and leg supports.',                                                                                    filename: 'woodchair.jpg',        price: 19.99 },
+    ];
+
+    // Upload all images in parallel first
+    const imageUrls = await Promise.all(
+        productData.map(p => uploadSeedImage(p.filename))
+    );
+
+    // Build product records with real Minio/S3 URLs
+    const products = productData.map((p, i) => ({
+        PK:          `PRODUCT#${p.id}`,
+        SK:          `PRODUCT#${p.id}`,
+        entityType:  'PRODUCT',
+        id:          p.id,
+        name:        p.name,
+        description: p.description,
+        imageUrl:    imageUrls[i],
+        price:       p.price,
+    }));
+
+    // Write to DynamoDB
+    await Promise.all(products.map(product =>
+        dynamo.send(new PutCommand({
+            TableName: TABLE_NAME,
+            Item:      product,
+        }))
+    ));
+
+    console.log(`✅ Seeded ${products.length} products`);
 }
 
 async function waitForTableDeletion() {
@@ -116,6 +136,20 @@ async function waitForTableDeletion() {
       }
     }
   }
+}
+
+async function uploadSeedImage(filename) {
+    const localPath   = path.join(__dirname, 'seed-images', filename);
+    const key         = `products/${filename}`;
+    const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    const url         = await storage.uploadImage(
+        await fs.readFile(localPath),
+        key,
+        contentType,
+        process.env.S3_BUCKET_PRODUCTS,
+    );
+    console.log(`[seed] uploaded ${filename} → ${url}`);
+    return url;
 }
 
 export async function recreateTable() {

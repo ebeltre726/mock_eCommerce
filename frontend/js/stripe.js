@@ -29,31 +29,26 @@ function getStripe() {
 
 // ─── Mount / unmount ──────────────────────────────────────────────────────────
 
-export function mountStripeElements() {
+export function mountStripeElements(numberEl, expiryEl, cvcEl, errorsEl) {
     if (_mounted) return;
 
-    const numberEl = document.getElementById('card-number');
-    const expiryEl = document.getElementById('card-expiry');
-    const cvcEl    = document.getElementById('card-cvc');
-
     if (!numberEl || !expiryEl || !cvcEl) {
-        console.error('[stripe] Element containers not found — cannot mount.');
+        console.error('[stripe] Mount called with missing container elements.');
         return;
     }
 
-    const stripe   = getStripe();
-    _elements      = stripe.elements();
-    _cardNumber    = _elements.create('cardNumber', { style: STYLE });
-    _cardExpiry    = _elements.create('cardExpiry', { style: STYLE });
-    _cardCvc       = _elements.create('cardCvc',    { style: STYLE });
+    const stripe = getStripe();
+    _elements    = stripe.elements();
+    _cardNumber  = _elements.create('cardNumber', { style: STYLE });
+    _cardExpiry  = _elements.create('cardExpiry', { style: STYLE });
+    _cardCvc     = _elements.create('cardCvc',    { style: STYLE });
 
     _cardNumber.mount(numberEl);
     _cardExpiry.mount(expiryEl);
     _cardCvc.mount(cvcEl);
 
     _cardNumber.on('change', e => {
-        const el = document.getElementById('card-errors');
-        if (el) el.textContent = e.error?.message ?? '';
+        if (errorsEl) errorsEl.textContent = e.error?.message ?? '';
     });
 
     _mounted = true;

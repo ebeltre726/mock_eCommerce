@@ -8,14 +8,21 @@ import { initProducts } from "./products.js";
 document.addEventListener('DOMContentLoaded', async () => {
     menuModule.init();
     overlayModule.init();
-
+    
     document.addEventListener('click', e => {
-        
         const btn = e.target.closest('[data-target]');
-        console.log('data-target click:', btn?.dataset.target);
-        if (btn?.dataset.target) {
-            e.preventDefault();
-            overlayModule.open(btn.dataset.target);
+        if (!btn?.dataset.target) return;
+        e.preventDefault();
+
+        const target = btn.dataset.target;
+
+        if (target === 'checkout') {
+            // Register teardown callback for checkout specifically
+            import('./checkout.js').then(m => {
+                overlayModule.open('checkout', m.teardownCheckout);
+            });
+        } else {
+            overlayModule.open(target);
         }
     });
 

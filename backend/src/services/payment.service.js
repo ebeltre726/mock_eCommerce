@@ -1,5 +1,6 @@
 import { GetCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
+import { stripe } from '../config/stripe.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const TABLE = 'Furnituria';
@@ -97,4 +98,28 @@ export async function removePaymentMethod(userId, paymentId) {
             SK: `PAYMENT#${paymentId}`,
         },
     }));
+}
+
+export async function getOrCreateCustomer(userId, userEmail) {
+    const result = await dynamo.send(new GetCommand({
+        TableName: TABLE,
+        Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+    }));
+
+    const existing = result.Item?.stripeCustomerId;
+    if (existing) return existing;
+
+    const customer = await stripe.customers.create({
+        email:    userEmail,
+        metadata: { userId },
+    });
+
+    await dynamo.send(new UpdateCommand({
+        TableName: TABLE,
+        Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+        UpdateExpression: 'SET stripeCustomerId = :cid',
+        ExpressionAttributeValues: { ':cid': customer.id },
+    }));
+
+    return customer.id;
 }

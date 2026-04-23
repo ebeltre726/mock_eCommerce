@@ -1,6 +1,9 @@
 // products.js
+
+import config from './config.js';
+
 const BATCH_SIZE = 6;
-let products = [];
+export let products = [];
 let index = 0;
 let observer;
 
@@ -8,25 +11,24 @@ export async function initProducts() {
     index = 0;
     setupObserver();      // ✅ observer first
     await fetchProducts(); // ✅ fetch after
-    loadNextBatch();       // ✅ manually load first batch
+    //loadNextBatch();       // ✅ manually load first batch
     setupEventDelegation();
 }
 
 async function fetchProducts() {
-  try {
-    const res = await fetch("http://localhost:3000/api/products");
-    if (!res.ok) {
-      console.error("Failed to fetch products:", await res.text());
-      products = [];
-      return;
+    try {
+        const res = await fetch(`${config.apiBase}/products`);
+        if (!res.ok) {
+            console.error('Failed to fetch products:', await res.text());
+            products = [];
+            return;
+        }
+        products = await res.json();
+    } catch (err) {
+        console.error('Error fetching products:', err);
+        products = [];
     }
-    products = await res.json();
-  } catch (err) {
-    console.error("Error fetching products:", err);
-    products = [];
-  }
-
-  loadNextBatch(); // Load first batch
+    loadNextBatch();
 }
 
 function renderProduct(p) {

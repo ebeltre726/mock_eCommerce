@@ -18,16 +18,12 @@ const addressSchema = Joi.object({
 }).unknown(true);
 
 const paymentSchema = Joi.object({
-  paymentId: Joi.string().optional(),
-  type: Joi.string().valid('card', 'paypal', 'bank').required(),
-  cardNumber: Joi.string().when('type', {
-    is: 'card',
-    then: Joi.required(),
-    otherwise: Joi.optional(),
-  }),
-  expiry: Joi.string().optional(),
-  lastFour: Joi.string().optional(),
-  isDefault: Joi.boolean().optional(),
+    paymentId:             Joi.string().optional(),
+    stripePaymentMethodId: Joi.string().optional(),
+    brand:                 Joi.string().optional(),
+    last4:                 Joi.string().length(4).optional(),
+    expiry:                Joi.string().optional(),
+    isDefault:             Joi.boolean().optional(),
 }).unknown(true);
 
 const orderItemSchema = Joi.object({
@@ -118,19 +114,27 @@ export const accountContracts = {
 
   // POST /api/account/payment
   addPayment: {
-    request: {
-      body: paymentSchema,
-    },
-    response: {
-      201: Joi.object({
-        paymentId: Joi.string().required(),
-        type: Joi.string().required(),
-        lastFour: Joi.string().optional(),
-      }).unknown(true),
-      400: Joi.object({
-        error: Joi.string().required(),
-      }).unknown(true),
-    },
+      request: {
+          body: Joi.object({
+              stripePaymentMethodId: Joi.string().required(),
+              brand:                 Joi.string().required(),
+              last4:                 Joi.string().length(4).required(),
+              expiry:                Joi.string().required(),
+              isDefault:             Joi.boolean().optional(),
+          }),
+      },
+      response: {
+          201: Joi.object({
+              paymentId:             Joi.string().required(),
+              stripePaymentMethodId: Joi.string().required(),
+              brand:                 Joi.string().required(),
+              last4:                 Joi.string().required(),
+              expiry:                Joi.string().required(),
+              isDefault:             Joi.boolean().required(),
+          }),
+          400: Joi.object({ error: Joi.string().required() }).unknown(true),
+          401: Joi.object({ error: Joi.string().required() }).unknown(true),
+      },
   },
 
   // PATCH /api/account/payment/:paymentId

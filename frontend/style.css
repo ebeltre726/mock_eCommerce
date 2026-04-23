@@ -461,7 +461,7 @@
     width: 50%;
 }
 
-#signin-form {
+#login-form {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1271,6 +1271,10 @@
     padding: 0 5%;
     flex-direction: column;
     gap: 1rem;
+}
+
+.hidden {
+    display: none;
 }
 
 .add-card-form h3 {
@@ -2919,7 +2923,7 @@
     .signin-modal {
         gap: 2rem;
     }
-    #signin-form {
+    #login-form {
         gap: .75rem;
     }
     .extras {
