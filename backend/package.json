@@ -6,7 +6,7 @@
   "main": "script.js",
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "dev":   "nodemon --env-file=.env server.js",
+    "dev": "nodemon --env-file=.env server.js",
     "lint": "eslint src/**/*.js",
     "test": "npm run test:unit",
     "test:unit": "jest --config jest.unit.config.js --runInBand --detectOpenHandles --forceExit",
@@ -48,6 +48,7 @@
     "@eslint/js": "^10.0.1",
     "babel-jest": "^30.3.0",
     "eslint": "^10.2.0",
+    "globals": "^17.5.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2"
