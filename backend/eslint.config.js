@@ -3,6 +3,10 @@ import js from "@eslint/js";
 export default [
   js.configs.recommended,
   {
+    env: {
+            node: true,  // ← adds setTimeout, setInterval, etc.
+            es2022: true,
+        },
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",

@@ -18,7 +18,7 @@ export function requireAuth(req, res, next) {
     req.user = decoded; // { userId, email }
 
     next();
-  } catch (err) {
+  } catch (_err) {
     return res.status(401).json({
       error: 'Unauthorized — invalid or expired token',
     });

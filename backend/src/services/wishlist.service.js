@@ -1,5 +1,5 @@
 // wishlist.service.js
-import { GetCommand, PutCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 import { incrementStat } from './account.service.js';
 import { v4 as uuidv4 } from 'uuid';

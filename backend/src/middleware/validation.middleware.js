@@ -13,7 +13,7 @@ export function validateRequest(contract) {
     const assignValidatedRequestProperty = (key, value) => {
       try {
         req[key] = value;
-      } catch (assignError) {
+      } catch (_assignError) {
         Object.defineProperty(req, key, {
           value,
           writable: true,

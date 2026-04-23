@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { stripe } from '../config/stripe.js';
 console.log('[order.service] stripe:', typeof stripe, stripe?.constructor?.name);
 import { fetchAddresses } from './address.service.js';
-import { getOrCreateCustomer, addPaymentMethod } from './payment.service.js';
+import { getOrCreateCustomer } from './payment.service.js';
 
 const TABLE = 'Furnituria';
 
@@ -148,7 +148,7 @@ export async function fetchOrder(userId, orderId) {
   if (order.addressId) {
     try {
       address = await fetchAddress(userId, order.addressId);
-    } catch (err) {
+    } catch (_err) {
       console.warn('Address not found for order:', orderId);
     }
   }
@@ -229,7 +229,7 @@ export async function createOrder(userId, userEmail, orderData) {
     } catch (err) {
     if (err.type === 'StripeCardError' ||
         err.type === 'StripeInvalidRequestError') {
-        throw new Error(err.message);
+        throw new Error(err.message, { cause: err });
     }
 
     if (err.type === 'StripeConnectionError' ||
@@ -239,7 +239,7 @@ export async function createOrder(userId, userEmail, orderData) {
         // No throw — order continues in demo mode
     } else {
         // Unknown error — fail hard
-        throw new Error(err.message ?? 'Payment processing failed');
+        throw new Error(err.message ?? 'Payment processing failed', { cause: err });
     }
 }
 
