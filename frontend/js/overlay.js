@@ -13,6 +13,7 @@ export const overlayModule = (() => {
       account:  () => import('./account.js').then(m => m.initAccount()),
       login:    () => import('./login.js').then(m => m.initLogin()),
       signup:   () => import('./signup.js').then(m => m.initSignup()),
+      contact:  () => import('./contact.js').then(m => m.initContact()),
       cart:     () => import('./cart.js').then(m => {
         const container = document.querySelector('.cartContents');
         if (!container) return;
@@ -57,7 +58,7 @@ export const overlayModule = (() => {
           return;
       }
 
-      fetch(`templates/${target}.html`)
+      fetch(`/frontend/public/templates/${target}.html`)
           .then(res => {
               if (!res.ok) throw new Error('Template not found');
               return res.text();
@@ -84,7 +85,6 @@ export const overlayModule = (() => {
       if (closeBtn) closeBtn.addEventListener('click', close);
       if (overlayBackground) {
           overlayBackground.addEventListener('click', (e) => {
-            console.log('overlayBackground clicked, target:', e.target, 'is overlayBackground:', e.target === overlayBackground);
               if (e.target === overlayBackground) close();
           });
       }

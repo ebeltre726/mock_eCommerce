@@ -1,6 +1,7 @@
 // products.js
 
-import config from './config.js';
+import { isWishlisted, toggleWishlist } from './wishlist.js';
+import { apiFetch } from './api.js';
 
 const BATCH_SIZE = 6;
 export let products = [];
@@ -17,15 +18,9 @@ export async function initProducts() {
 
 async function fetchProducts() {
     try {
-        const res = await fetch(`${config.apiBase}/products`);
-        if (!res.ok) {
-            console.error('Failed to fetch products:', await res.text());
-            products = [];
-            return;
-        }
-        products = await res.json();
+        products = await apiFetch('products');
     } catch (err) {
-        console.error('Error fetching products:', err);
+        console.error('Failed to fetch products:', err);
         products = [];
     }
     loadNextBatch();
@@ -40,17 +35,22 @@ function renderProduct(p) {
     div.classList.add("cartProduct");
     div.dataset.productId = p.id;
   
+    const base = import.meta.env?.BASE_URL ?? './';
     div.innerHTML = `
       <label class="itemTitle">${p.name}</label>
       <div class="imgContnr">
-        <img class="info" src="info.png">
+        <img class="info" src="${base}info.png">
         <label class="productDesc">${p.description || ""}</label>
-        <img class="closeProd hidden" src="close.png">
+        <img class="closeProd hidden" src="${base}close.png">
+        <img class="wishlist-icon" src="${isWishlisted(p.id) ? `${base}wl-selected.png` : `${base}wl-unselected.png`}" data-product-id="${p.id}">
         <img class="cartImage" src="${p.imageUrl || ""}">
       </div>
       <button class="addToCart">Add to Cart</button>
       <label class="cartProdPrice">$${p.price || 0}</label>
     `;
+
+    const wlIcon = div.querySelector('.wishlist-icon');
+    wlIcon.addEventListener('click', () => toggleWishlist(p.id, wlIcon));
   
     container.append(div);
   

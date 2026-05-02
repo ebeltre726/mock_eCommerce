@@ -274,7 +274,7 @@ export const accountContracts = {
         Joi.object({
           itemId: Joi.string().required(),
           productId: Joi.string().required(),
-          productName: Joi.string().required(),
+          productName: Joi.string().optional(),
           dateAdded: Joi.date().optional(),
         }).unknown(true)
       ),

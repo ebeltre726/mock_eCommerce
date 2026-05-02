@@ -1,6 +1,7 @@
-import { overlayModule } from './overlay.js';
-import { cartModule }    from './cart.js';
-import { apiFetch }      from './api.js';
+import { overlayModule }         from './overlay.js';
+import { cartModule }            from './cart.js';
+import { apiFetch }              from './api.js';
+import { mergeWishlistOnLogin }  from './wishlist.js';
 
 export function initLogin() {
     const form        = document.getElementById('login-form'); // match your template ID
@@ -28,6 +29,7 @@ export function initLogin() {
 
             localStorage.setItem('token', result.token);
             await cartModule.mergeCartsOnLogin();
+            await mergeWishlistOnLogin();
             overlayModule.open('account');
 
         } catch (err) {

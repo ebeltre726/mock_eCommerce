@@ -15,7 +15,10 @@ export async function fetchWishlist(userId) {
             ':sk': 'WISHLIST#',
         },
     }));
-    return result.Items || [];
+    return (result.Items || []).map(item => ({
+        ...item,
+        itemId: item.wishlistId,
+    }));
 }
 
 export async function addWishlistItem(userId, itemData) {
@@ -32,7 +35,7 @@ export async function addWishlistItem(userId, itemData) {
         },
     }));
     await incrementStat(userId, 'wishlist');
-    return { wishlistId };
+    return { itemId: wishlistId, productId: itemData.productId };
 }
 
 export async function removeWishlistItem(userId, wishlistId) {

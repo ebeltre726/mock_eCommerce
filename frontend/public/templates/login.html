@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furnituria | Login</title>
+</head>
+<body>
+    <div class="signin-wrapper">
+          <div class="signin-modal">
+            <h2>Sign In</h2>
+
+            <form id="login-form">
+              <label for="email">Email</label>
+              <input class="signinInputs"
+                type="email" 
+                id="email" 
+                name="email" 
+                placeholder="Enter your email" 
+                required 
+              />
+
+              <label for="password">Password</label>
+              <input class="signinInputs"
+                type="password" 
+                id="password" 
+                name="password" 
+                placeholder="Enter your password" 
+                required 
+              />
+
+              <div class="signin-options">
+                <label>Remember Me</label>
+                <input type="checkbox" />
+              </div>
+
+              <button type="submit" class="signin-btn" id="loginAcc">
+                Sign In
+              </button>
+            </form>
+          </div>
+          <div id="dividingLine"></div>
+          <div class="extras">
+            <div class="extrasSubchild">
+            <a>
+              Forgot your password?
+            </a>
+            <button class="extraButton">
+                Reset Password
+            </button>
+            </div>
+            <div class="extrasSubchild">
+            <a>
+              Don't have an account?
+            </a>
+            <button class="extraButton" id="signup-button">
+                Sign Up
+            </button>
+            </div>
+          </div>
+          </div>
+</body>
+</html>

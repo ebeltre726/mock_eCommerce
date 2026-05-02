@@ -14,7 +14,7 @@
 
 import { accountNavModule } from './navbarModule.js';
 import { overlayModule } from './overlay.js';
-import { apiFetch, apiFetchForm } from './api.js';
+import { apiFetch, apiFetchForm, AuthError } from './api.js';
 import { mountStripeElements, unmountStripeElements, tokeniseCard } from './stripe.js';
 
 const panelTemplateCache = {};
@@ -128,7 +128,7 @@ async function fetchTemplate(panelName) {
         return '';
     }
     if (panelTemplateCache[panelName]) return panelTemplateCache[panelName];
-    const res = await fetch(`templates/account/${panelName}.html`);
+    const res = await fetch(`/frontend/public/templates/account/${panelName}.html`);
     if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
     const html = await res.text();
     panelTemplateCache[panelName] = html;
@@ -561,10 +561,24 @@ async function renderWishlist(contentPane, items) {
     const list = contentPane.querySelector('#wishlist-list');
     const count = contentPane.querySelector('#wishlist-count');
 
-    count.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
+    const enriched = await Promise.all(
+        items.map(async item => {
+            const product = await apiFetch(`products/${item.productId}`).catch(() => null);
+            return {
+                itemId:    item.itemId,
+                productId: item.productId,
+                name:      product?.name     ?? 'Unknown product',
+                image:     product?.imageUrl ?? '',
+                price:     product?.price    ?? 0,
+                dateAdded: item.createdAt,
+            };
+        })
+    );
 
-    list.innerHTML = items.length ? items.map(item => `
-        <li class="wishlist-item" data-id="${item.id}">
+    count.textContent = `${enriched.length} item${enriched.length !== 1 ? 's' : ''}`;
+
+    list.innerHTML = enriched.length ? enriched.map(item => `
+        <li class="wishlist-item" data-id="${item.itemId}">
             <img src="${item.image}" alt="${item.name}" class="wishlist-img">
             <div class="wishlist-info">
                 <span class="wishlist-name">${item.name}</span>
@@ -572,8 +586,8 @@ async function renderWishlist(contentPane, items) {
                 <span class="wishlist-added">Saved ${formatDate(item.dateAdded)}</span>
             </div>
             <div class="wishlist-actions">
-                <button class="btn-primary add-to-cart" data-id="${item.id}">Add to Cart</button>
-                <button class="btn-ghost remove-wishlist" data-id="${item.id}">Remove</button>
+                <button class="btn-primary add-to-cart" data-id="${item.productId}">Add to Cart</button>
+                <button class="btn-ghost remove-wishlist" data-id="${item.itemId}">Remove</button>
             </div>
         </li>
     `).join('') : '<li class="empty-state">Your wishlist is empty.</li>';

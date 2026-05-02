@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/ebeltre726/mock_eCommerce#readme",
   "dependencies": {
+    "@vendia/serverless-express": "^4.12.6",
     "@aws-sdk/client-dynamodb": "^3.1002.0",
     "@aws-sdk/client-s3": "^3.1030.0",
     "@aws-sdk/lib-dynamodb": "^3.1002.0",

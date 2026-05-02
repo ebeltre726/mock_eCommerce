@@ -4,10 +4,17 @@ import { overlayModule } from './overlay.js';
 import { cartModule } from './cart.js';
 import { productInfoModule } from './productInfo.js';
 import { initProducts } from "./products.js";
+import { loadWishlistState } from './wishlist.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     menuModule.init();
     overlayModule.init();
+
+    await loadWishlistState();
+    await initProducts();
+    cartModule.init();
+    window.cartModule = cartModule;
+    productInfoModule.init();
     
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-target]');
@@ -25,9 +32,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             overlayModule.open(target);
         }
     });
-
-    await initProducts();    // ← wait for products to render first
-    cartModule.init();       // ← then init cart so badges find the divs
-    window.cartModule = cartModule; // expose for debugging
-    productInfoModule.init();
 });

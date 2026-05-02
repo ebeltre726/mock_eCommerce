@@ -8,7 +8,7 @@ import env from '../config/env.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
  
-const TABLE_NAME = 'Furnituria';
+const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 const JWT_SECRET = env.JWT_SECRET;
 const BCRYPT_ROUNDS = 12;
  

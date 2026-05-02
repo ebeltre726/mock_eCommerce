@@ -665,6 +665,25 @@
     display: none;
 }
 
+.wishlist-icon {
+    width: 35px;
+    height: 35px;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    transition: opacity .3s ease;
+    z-index: 500;
+    cursor: pointer;
+}
+
+.wishlist-icon:hover {
+    cursor: pointer;
+}
+
+.wishlist-icon.hidden {
+    display: none;
+}
+
 .closeProd {
     width: 25px;
     height: 25px;
@@ -2981,6 +3000,10 @@
     }
     .address-actions {
         flex-direction: column;
+    }
+    .wishlist-actions {
+        flex-direction: column;
+        gap: 1rem;
     }
 }
 

@@ -1,9 +1,7 @@
-console.log('[order.service] module evaluating');
 import { dynamo } from '../db/dynamoClient.js';
 import { PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { stripe } from '../config/stripe.js';
-console.log('[order.service] stripe:', typeof stripe, stripe?.constructor?.name);
 import { fetchAddresses } from './address.service.js';
 import { getOrCreateCustomer } from './payment.service.js';
 

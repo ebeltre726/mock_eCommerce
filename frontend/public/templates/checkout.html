@@ -1,0 +1,161 @@
+<!-- checkout.html -->
+<!-- Injected into .content inside your overlay -->
+
+<section class="checkoutWrapper" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+
+  <!-- ── Status overlay ─────────────────────────────────────── -->
+  <div class="statusOverlay" id="statusOverlay" role="status" aria-live="polite">
+    <div class="statusIcon"    id="statusIcon"></div>
+    <div class="statusTitle"   id="statusTitle"></div>
+    <div class="statusMessage" id="statusMessage"></div>
+    <button class="statusDismiss" id="statusDismiss">Dismiss</button>
+  </div>
+
+  <div class="checkoutContainer">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <div class="checkoutHeader">
+      <h2 class="checkoutTitle" id="checkoutTitle">Checkout</h2>
+      <button type="button" class="backButton" data-target="cart">← Cart</button>
+    </div>
+
+    <!-- ── Scrollable body ────────────────────────────────────── -->
+    <div class="checkoutBody">
+      <form class="checkoutContent" id="checkoutForm" novalidate>
+
+        <!-- ── Saved address rail ─────────────────────────────── -->
+        <div class="autofillSection" id="addressAutofill" style="display:none">
+          <p class="fieldLabel">Saved addresses</p>
+          <div class="autofillRail" id="addressRail"
+               role="listbox" aria-label="Saved addresses"></div>
+        </div>
+
+        <!-- ── Shipping ───────────────────────────────────────── -->
+        <div class="formBlock">
+          <p class="blockHeading">Shipping</p>
+
+          <div class="fieldGroup">
+            <label class="fieldLabel" for="fullName">Full name</label>
+            <input id="fullName" name="fullName" type="text"
+                   placeholder="Jane Smith" autocomplete="name" required>
+          </div>
+
+          <div class="fieldGroup">
+            <label class="fieldLabel" for="streetAddress">Street address</label>
+            <input id="streetAddress" name="streetAddress" type="text"
+                   placeholder="123 Main St" autocomplete="street-address" required>
+          </div>
+
+          <div class="fieldGroup">
+            <label class="fieldLabel" for="city">City</label>
+            <input id="city" name="city" type="text"
+                   placeholder="New York" autocomplete="address-level2" required>
+          </div>
+
+          <div class="fieldRow">
+            <div class="fieldGroup">
+              <label class="fieldLabel" for="aptUnit">
+                Apt / unit <span class="optLabel">optional</span>
+              </label>
+              <input id="aptUnit" name="aptUnit" type="text"
+                     placeholder="Apt 4B" autocomplete="address-line2">
+            </div>
+            <div class="fieldGroup">
+              <label class="fieldLabel" for="state">State</label>
+              <input id="state" name="state" type="text"
+                     placeholder="NY" maxlength="2"
+                     autocomplete="address-level1" required>
+            </div>
+          </div>
+
+          <div class="fieldGroup">
+            <label class="fieldLabel" for="postal">Zip code</label>
+            <input id="postal" name="postal" type="text"
+                   placeholder="10001" maxlength="5"
+                   autocomplete="postal-code" required>
+          </div>
+
+          <label class="saveRow">
+            <input type="checkbox" id="saveAddressCheck">
+            <span>Save address to my account</span>
+          </label>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ── Saved card rail ────────────────────────────────── -->
+        <div class="autofillSection" id="cardAutofill" style="display:none">
+          <p class="fieldLabel">Saved cards</p>
+          <div class="autofillRail" id="cardRail"
+               role="listbox" aria-label="Saved payment methods"></div>
+        </div>
+
+        <!-- ── Card details ───────────────────────────────────── -->
+        <div class="formBlock" id="newCardSection">
+          <p class="blockHeading">Card details</p>
+
+          <div class="demoNotice">
+            <span class="demoIcon">⚠</span>
+            <span>Demo store — no real charges.
+              Test with <strong>4242 4242 4242 4242</strong>,
+              any future expiry, any CVV.</span>
+          </div>
+
+          <div class="fieldGroup">
+            <label class="fieldLabel">Card number</label>
+            <div class="stripeWrapper" id="card-number"></div>
+          </div>
+
+          <div class="fieldRow">
+            <div class="fieldGroup">
+              <label class="fieldLabel">Expiry</label>
+              <div class="stripeWrapper" id="card-expiry"></div>
+            </div>
+            <div class="fieldGroup">
+              <label class="fieldLabel">CVV</label>
+              <div class="stripeWrapper" id="card-cvc"></div>
+            </div>
+          </div>
+
+          <div id="card-errors" class="cardErrors" role="alert"></div>
+
+          <label class="saveRow" id="saveCardRow">
+            <input type="checkbox" id="saveCardCheck">
+            <span>Save card for future purchases</span>
+          </label>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ── Cart preview ───────────────────────────────────── -->
+        <div class="cartAccordion">
+          <button type="button" class="cartToggle" id="viewCartBtn"
+                  aria-expanded="false" aria-controls="cartPreview">
+            <span class="cartToggleLabel" id="viewCartLebel">View cart</span>
+            <span class="cartChevron" id="cartChevron" aria-hidden="true">▾</span>
+          </button>
+          <div class="cartPreview" id="cartPreview">
+            <div class="cartPreviewInner">
+              <div class="cartGrid" id="cartGrid">
+                <p class="emptyCart">No items in cart.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Submit ─────────────────────────────────────────── -->
+        <button type="submit" class="submitOrder" id="submitOrder">
+          Place order
+        </button>
+
+      </form>
+    </div>
+
+    <!-- ── Sticky total ───────────────────────────────────────── -->
+    <div class="totalBar">
+      <span class="totalLabel">Total</span>
+      <span class="totalAmount" id="totalAmount">$0.00</span>
+    </div>
+
+  </div>
+</section>

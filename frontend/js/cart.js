@@ -1,3 +1,4 @@
+import { isWishlisted, toggleWishlist } from './wishlist.js';
 import { apiFetch } from './api.js';
 import { products } from './products.js';
 import config from './config.js';
@@ -198,19 +199,24 @@ async function renderCartProducts(container) {
         const div = document.createElement('div');
         div.classList.add('cartProduct');
         div.dataset.productId = item.productId;
-
+        
+        const base = import.meta.env?.BASE_URL ?? './';
         div.innerHTML = `
             <label class="itemTitle">${p.name}</label>
             <div class="imgContnr">
-                <img class="info" src="info.png">
+                <img class="info" src="${base}info.png">
                 <label class="productDesc">${p.description || ''}</label>
-                <img class="closeProd hidden" src="close.png">
+                <img class="closeProd hidden" src="${base}close.png">
+                <img class="wishlist-icon" src="${isWishlisted(item.productId) ? `${base}wl-selected.png` : `${base}wl-unselected.png`}" data-product-id="${item.productId}">
                 <img class="cartImage" src="${p.imageUrl || ''}">
             </div>
             <span class="cartQtyBadge ${item.quantity > 0 ? '' : 'hidden'}">x${item.quantity}</span>
             <button class="rmvCart">Remove from Cart</button>
             <label class="cartProdPrice">$${p.price || 0}</label>
         `;
+
+        const wlIcon = div.querySelector('.wishlist-icon');
+        wlIcon.addEventListener('click', () => toggleWishlist(item.productId, wlIcon));
 
         container.insertBefore(div, sentinel || null);
         requestAnimationFrame(() => div.classList.add('active'));
@@ -369,7 +375,7 @@ async function handleClick(e) {
 
 function changeCartIcon() {
     const cartImg = document.querySelector('.bannerNav li:last-child img');
-    if (cartImg) cartImg.src = 'cartAdd.png';
+    if (cartImg) cartImg.src = `${import.meta.env?.BASE_URL ?? './'}cartAdd.png`;
 }
 
 function showCartError(message) {

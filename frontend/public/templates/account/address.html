@@ -1,0 +1,54 @@
+<head></head>
+<body>
+  <div class="panel-header">
+    <h2>Shipping & Billing Addresses</h2>
+    <button class="btn-primary add-address-btn">+ Add Address</button>
+  </div>
+  <div class="panel-addresses">
+  <ul class="address-list" id="address-list">
+    <!-- Populated by account.js -->
+  </ul>
+  <div class="addressContainer">
+    <h3 id="address-form-title">Add Address</h3>
+    <input type="hidden" id="address-id">
+    <div class="address-form">
+    <div class="form-group">
+      <label>Label (e.g. Home, Work)</label>
+      <input type="text" id="addr-label" placeholder="Home">
+    </div>        
+    <div class="form-group">
+      <label>Address Line 1</label>
+      <input type="text" id="addr-line1" placeholder="123 Main St">
+    </div>
+    <div class="form-group">
+      <label>Address Line 2</label>
+      <input type="text" id="addr-line2" placeholder="Apt 4B (optional)">
+    </div>
+    <div class="form-group">
+      <label>City</label>
+      <input type="text" id="addr-city">
+    </div>
+    <div class="form-group">
+      <label>State</label>
+      <input type="text" id="addr-state" maxlength="2">
+    </div>
+    <div class="form-group">
+      <label>ZIP</label>
+      <input type="text" id="addr-zip" maxlength="10">
+    </div>
+    <div class="form-group">
+      <label>Country</label>
+      <input type="text" id="addr-country" value="US">
+    </div>
+    </div>
+    <div class="form-group checkbox-group">
+      <label><input type="checkbox" id="addr-default"> Set as default address</label>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="save-address-btn">Save Address</button>
+      <button class="btn-ghost" id="cancel-address-btn">Cancel</button>
+    </div>
+  </div>
+  </div>
+</div>
+</body>
