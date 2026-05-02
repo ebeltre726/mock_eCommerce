@@ -81,6 +81,7 @@ jobs:
           AWS_ACCESS_KEY_ID:       minioadmin
           AWS_SECRET_ACCESS_KEY:   minioadmin
           STRIPE_SECRET_KEY:       sk_test_dummy
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Tear down services
         if: always()
