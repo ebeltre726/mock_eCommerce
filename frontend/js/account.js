@@ -14,7 +14,8 @@
 
 import { accountNavModule } from './navbarModule.js';
 import { overlayModule } from './overlay.js';
-import { apiFetch, AuthError } from './api.js';
+import { apiFetch, apiFetchForm, AuthError } from './api.js';
+import { mountStripeElements, unmountStripeElements, tokeniseCard } from './stripe.js';
 
 const panelTemplateCache = {};
 
@@ -127,7 +128,7 @@ async function fetchTemplate(panelName) {
         return '';
     }
     if (panelTemplateCache[panelName]) return panelTemplateCache[panelName];
-    const res = await fetch(`templates/account/${panelName}.html`);
+    const res = await fetch(`/frontend/public/templates/account/${panelName}.html`);
     if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
     const html = await res.text();
     panelTemplateCache[panelName] = html;
@@ -151,44 +152,163 @@ async function fetchTemplate(panelName) {
 // ============================================================
 
 async function renderOverview(contentPane, user) {
-    contentPane.querySelector('#user-avatar').src = user.avatar;
-    contentPane.querySelector('#user-fullname').textContent = `${user.firstName} ${user.lastName}`;
+    const avatarImg = contentPane.querySelector('#user-avatar');
+
+    if (user.avatar) {
+        avatarImg.src = user.avatar;
+    }
+
+    contentPane.querySelector('#user-fullname').textContent =
+        `${user.firstName} ${user.lastName}`;
+
     contentPane.querySelector('#user-email').textContent = user.email;
-    contentPane.querySelector('#user-since').textContent = `Member since ${formatDate(user.dateCreated)}`;
+
+    contentPane.querySelector('#user-since').textContent =
+        `Member since ${formatDate(user.dateCreated)}`;
+
     contentPane.querySelector('#stat-orders').textContent = user.stats.orders;
     contentPane.querySelector('#stat-wishlist').textContent = user.stats.wishlist;
     contentPane.querySelector('#stat-points').textContent = user.stats.points;
     contentPane.querySelector('#stat-returns').textContent = user.stats.returns;
+
+    // ----------------------------
+    // Avatar upload logic
+    // ----------------------------
+    const editBtn = contentPane.querySelector('#avatar-edit-btn');
+    const fileInput = contentPane.querySelector('#avatar-file-input');
+
+    if (!editBtn || !fileInput) return;
+
+    const setLoading = (isLoading) => {
+        editBtn.disabled = isLoading;
+        editBtn.textContent = isLoading
+            ? 'Uploading...'
+            : 'Change Image ✎';
+    };
+
+    // Open file picker
+    editBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    // Handle file selection + upload
+    fileInput.addEventListener('change', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file); // MUST match multer
+
+    try {
+        setLoading(true);
+
+        const result = await apiFetchForm('account/avatar', formData);
+
+        // Update UI instantly
+        avatarImg.src = result.avatar;
+
+    } catch (err) {
+        console.error('Avatar upload error:', err);
+        alert(err.message || 'Failed to upload avatar. Please try again.');
+
+    } finally {
+        setLoading(false);
+        fileInput.value = ''; // reset input
+    }
+});
 }
 
 async function renderPaymentMethods(contentPane, methods) {
+    unmountStripeElements(); // ensure no Stripe elements are mounted before rendering the list
     const list = contentPane.querySelector('#card-list');
-
-    list.innerHTML = methods.length ? methods.map(card => `
-        <li class="card-item" data-id="${card.id}">
-            <div class="card-brand">${card.brand}</div>
-            <div class="card-details">
-                <span>•••• •••• •••• ${card.last4}</span>
-                <span>Expires ${card.expiry}</span>
-                ${card.isDefault ? '<span class="badge-default">Default</span>' : ''}
-            </div>
-            <button class="btn-ghost remove-card" data-id="${card.id}">Remove</button>
-        </li>
-    `).join('') : '<li class="empty-state">No saved payment methods.</li>';
-
+ 
+    // methods shape from payment.service.js: toPublicMethod()
+    // { paymentId, stripePaymentMethodId, brand, last4, expiry, isDefault }
+    list.innerHTML = methods.length
+        ? methods.map(card => `
+            <li class="card-item" data-id="${card.paymentId}">
+                <div class="card-brand">${card.brand}</div>
+                <div class="card-details">
+                    <span>•••• •••• •••• ${card.last4}</span>
+                    <span>Expires ${card.expiry}</span>
+                    ${card.isDefault ? '<span class="badge-default">Default</span>' : ''}
+                </div>
+                <button class="btn-ghost remove-card" data-id="${card.paymentId}">Remove</button>
+            </li>
+        `).join('')
+        : '<li class="empty-state">No saved payment methods.</li>';
+ 
+    // Delegated remove listener
     list.addEventListener('click', e => {
-        const removeBtn = e.target.closest('.remove-card');
-        if (removeBtn) removeCard(removeBtn.dataset.id, contentPane);
+        const btn = e.target.closest('.remove-card');
+        if (btn) removeCard(btn.dataset.id, contentPane);
     });
-
-    contentPane.querySelector('.add-card-btn')
-        .addEventListener('click', () => toggleForm(contentPane, 'add-card-form'));
-
-    contentPane.querySelector('#cancel-card-btn')
-        .addEventListener('click', () => toggleForm(contentPane, 'add-card-form', false));
-
-    contentPane.querySelector('#save-card-btn')
-        .addEventListener('click', () => saveCard(contentPane));
+ 
+    // Add card — mount Stripe elements into the panel's form on open,
+    // unmount on close so they can remount cleanly on the next open.
+    const addBtn    = contentPane.querySelector('.add-card-btn');
+    const cancelBtn = contentPane.querySelector('#cancel-card-btn');
+    const saveBtn   = contentPane.querySelector('#save-card-btn');
+    
+    addBtn?.addEventListener('click', () => {
+    const opened = toggleForm(contentPane, 'add-card-form');
+    if (opened) {
+        setTimeout(() => {
+            const numberEl = contentPane.querySelector('#account-card-number');
+            const expiryEl = contentPane.querySelector('#account-card-expiry');
+            const cvcEl    = contentPane.querySelector('#account-card-cvc');
+            const errorsEl = contentPane.querySelector('#account-card-errors');
+            mountStripeElements(numberEl, expiryEl, cvcEl, errorsEl);
+        }, 50);
+    } else {
+        unmountStripeElements();
+    }
+});
+ 
+    cancelBtn?.addEventListener('click', () => {
+        unmountStripeElements();
+        toggleForm(contentPane, 'add-card-form', false);
+    });
+ 
+    saveBtn?.addEventListener('click', () => saveCard(contentPane));
+}
+ 
+async function saveCard(contentPane) {
+    const btn = contentPane.querySelector('#save-card-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+ 
+    try {
+        const cardholderName = contentPane.querySelector('#card-name')?.value.trim() ?? '';
+ 
+        // tokeniseCard uses the mounted elements from stripe.js —
+        // no Stripe instance or key lives in account.js
+        const tokenData = await tokeniseCard(cardholderName);
+ 
+        // POST to backend which writes the PAYMENT# record in DynamoDB
+        await apiFetch('account/payment', {
+            method: 'POST',
+            body: JSON.stringify(tokenData),
+        });
+ 
+        unmountStripeElements();
+        toggleForm(contentPane, 'add-card-form', false);
+ 
+        // Reload the list from the API so it reflects the new card
+        const updated = await apiFetch('account/payment');
+        await renderPaymentMethods(contentPane, updated);
+ 
+    } catch (err) {
+        showInlineError(contentPane, 'save-card-btn', err.message ?? 'Failed to save card.');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Save Card';
+    }
 }
 
 async function renderOrderHistory(contentPane, orders) {
@@ -199,16 +319,16 @@ async function renderOrderHistory(contentPane, orders) {
         list.innerHTML = filteredOrders.length ? filteredOrders.map(order => `
             <li class="order-item">
                 <div class="order-header">
-                    <span class="order-number">Order #${order.orderNumber}</span>
-                    <span class="order-date">${formatDate(order.orderDate)}</span>
-                    <span class="order-status status-${order.orderStatus}">${capitalize(order.orderStatus)}</span>
+                    <span class="order-number">Order #${order.orderId}</span>
+                    <span class="order-date">${formatDate(order.createdAt)}</span>
+                    <span class="order-status status-${order.status}">${capitalize(order.status)}</span>
                 </div>
                 <ul class="order-items-list">
                     ${order.items.map(item => `
                         <li class="order-line-item">
                             <img src="${item.image}" alt="${item.name}">
                             <span>${item.name}</span>
-                            <span>x${item.qty}</span>
+                            <span>x${item.quantity}</span>
                             <span>$${item.price}</span>
                         </li>
                     `).join('')}
@@ -221,7 +341,7 @@ async function renderOrderHistory(contentPane, orders) {
 
     filter.addEventListener('change', () => {
         const val = filter.value;
-        renderOrders(val === 'all' ? orders : orders.filter(o => o.orderStatus === val));
+        renderOrders(val === 'all' ? orders : orders.filter(o => o.status === val));
     });
 }
 
@@ -290,7 +410,7 @@ async function renderReturns(contentPane, { returns, orders }) {
     orders.forEach(order => {
         const option = document.createElement('option');
         option.value = order.orderId;
-        option.textContent = `Order #${order.orderNumber} — ${formatDate(order.orderDate)}`;
+        option.textContent = `Order #${order.orderId} — ${formatDate(order.createdAt)}`;
         orderSelect.appendChild(option);
     });
 
@@ -365,7 +485,7 @@ async function renderNewsletter(contentPane, prefs) {
         const saved = contentPane.querySelector('#newsletter-saved');
         try {
             await apiFetch('account/newsletter', {
-                method: 'PUT',
+                method: 'PATCH',
                 body: JSON.stringify({
                     subscribed: subscribedCheckbox.checked,
                     topics: [...contentPane.querySelectorAll('[data-topic-id]')].map(el => ({
@@ -424,17 +544,16 @@ async function renderSettings(contentPane, settings) {
     });
 
     contentPane.querySelector('#delete-account-btn').addEventListener('click', async () => {
-        const confirmed = window.confirm('Are you sure you want to delete your account? This cannot be undone.');
-        if (!confirmed) return;
-
-        try {
-            await apiFetch('account', { method: 'DELETE' });
-            localStorage.removeItem('token');
-            overlayModule.close();
-        } catch (err) {
-            console.error('Failed to delete account:', err);
-            showInlineError(contentPane, 'delete-account-btn', 'Failed to delete account. Please try again.');
-        }
+        confirmAction('Are you sure you want to delete your account? This cannot be undone.', async () => {
+            try {
+                await apiFetch('account', { method: 'DELETE' });
+                localStorage.removeItem('token');
+                overlayModule.close();
+            } catch (err) {
+                console.error('Failed to delete account:', err);
+                showInlineError(contentPane, 'delete-account-btn', 'Failed to delete account. Please try again.');
+            }
+        });
     });
 }
 
@@ -442,10 +561,24 @@ async function renderWishlist(contentPane, items) {
     const list = contentPane.querySelector('#wishlist-list');
     const count = contentPane.querySelector('#wishlist-count');
 
-    count.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
+    const enriched = await Promise.all(
+        items.map(async item => {
+            const product = await apiFetch(`products/${item.productId}`).catch(() => null);
+            return {
+                itemId:    item.itemId,
+                productId: item.productId,
+                name:      product?.name     ?? 'Unknown product',
+                image:     product?.imageUrl ?? '',
+                price:     product?.price    ?? 0,
+                dateAdded: item.createdAt,
+            };
+        })
+    );
 
-    list.innerHTML = items.length ? items.map(item => `
-        <li class="wishlist-item" data-id="${item.id}">
+    count.textContent = `${enriched.length} item${enriched.length !== 1 ? 's' : ''}`;
+
+    list.innerHTML = enriched.length ? enriched.map(item => `
+        <li class="wishlist-item" data-id="${item.itemId}">
             <img src="${item.image}" alt="${item.name}" class="wishlist-img">
             <div class="wishlist-info">
                 <span class="wishlist-name">${item.name}</span>
@@ -453,8 +586,8 @@ async function renderWishlist(contentPane, items) {
                 <span class="wishlist-added">Saved ${formatDate(item.dateAdded)}</span>
             </div>
             <div class="wishlist-actions">
-                <button class="btn-primary add-to-cart" data-id="${item.id}">Add to Cart</button>
-                <button class="btn-ghost remove-wishlist" data-id="${item.id}">Remove</button>
+                <button class="btn-primary add-to-cart" data-id="${item.productId}">Add to Cart</button>
+                <button class="btn-ghost remove-wishlist" data-id="${item.itemId}">Remove</button>
             </div>
         </li>
     `).join('') : '<li class="empty-state">Your wishlist is empty.</li>';
@@ -471,31 +604,12 @@ async function renderWishlist(contentPane, items) {
 // ACTION HANDLERS
 // ============================================================
 
-function saveCard(contentPane) {
-    const name    = contentPane.querySelector('#card-name').value.trim();
-    const number  = contentPane.querySelector('#card-number').value.trim();
-    const expiry  = contentPane.querySelector('#card-expiry').value.trim();
-    const cvv     = contentPane.querySelector('#card-cvv').value.trim();
-
-    if (!name || !number || !expiry || !cvv) {
-        showInlineError(contentPane, 'save-card-btn', 'Please fill in all card fields.');
-        return;
-    }
-
-    apiFetch('account/payment-methods', {
-        method: 'POST',
-        body: JSON.stringify({ name, number, expiry }),
-    })
-        .then(() => toggleForm(contentPane, 'add-card-form', false))
-        .catch(err => console.error('Failed to save card:', err));
-}
-
 function removeCard(id, contentPane) {
-    if (!window.confirm('Remove this payment method?')) return;
-
-    apiFetch(`account/payment-methods/${id}`, { method: 'DELETE' })
-        .then(() => contentPane.querySelector(`.card-item[data-id="${id}"]`)?.remove())
-        .catch(err => console.error('Failed to remove card:', err));
+    confirmAction('Remove this payment method?', () => {
+        apiFetch(`account/payment-methods/${id}`, { method: 'DELETE' })
+            .then(() => contentPane.querySelector(`.card-item[data-id="${id}"]`)?.remove())
+            .catch(err => console.error('Failed to remove card:', err));
+    });
 }
 
 function showAddAddressForm(contentPane) {
@@ -565,15 +679,15 @@ function saveAddress(addresses, renderList, contentPane) {
 }
 
 function removeAddress(id, addresses, renderList, contentPane) {
-    if (!window.confirm('Remove this address?')) return;
-
+    confirmAction('Remove this address?', () => {
     apiFetch(`account/address/${id}`, { method: 'DELETE' })
         .then(() => {
-            const idx = addresses.findIndex(a => a.id === id);
+            const idx = addresses.findIndex(a => a.addressId === id);
             if (idx > -1) addresses.splice(idx, 1);
             renderList(addresses);
         })
         .catch(err => console.error('Failed to remove address:', err));
+});
 }
 
 function addToCart(id) {
@@ -584,11 +698,11 @@ function addToCart(id) {
 }
 
 function removeWishlistItem(id, contentPane) {
-    if (!window.confirm('Remove from wishlist?')) return;
-
-    apiFetch(`account/wishlist/${id}`, { method: 'DELETE' })
-        .then(() => contentPane.querySelector(`.wishlist-item[data-id="${id}"]`)?.remove())
-        .catch(err => console.error('Failed to remove wishlist item:', err));
+    confirmAction('Remove from wishlist?', () => {
+        apiFetch(`account/wishlist/${id}`, { method: 'DELETE' })
+            .then(() => contentPane.querySelector(`.wishlist-item[data-id="${id}"]`)?.remove())
+            .catch(err => console.error('Failed to remove wishlist item:', err));
+    });
 }
 
 function submitReturn(contentPane, orders) {
@@ -638,9 +752,10 @@ function submitReturn(contentPane, orders) {
  */
 function toggleForm(contentPane, formId, show) {
     const form = contentPane.querySelector(`#${formId}`);
-    if (!form) return;
+    if (!form) return false;
     const shouldShow = show !== undefined ? show : form.classList.contains('hidden');
     form.classList.toggle('hidden', !shouldShow);
+    return shouldShow; // ← add this
 }
 
 /**
@@ -669,4 +784,8 @@ function formatDate(dateStr) {
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function confirmAction(message, onConfirm) {
+    if (window.confirm(message)) onConfirm();
 }

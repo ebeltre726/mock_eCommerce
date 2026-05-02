@@ -3,7 +3,9 @@ export const overlayModule = (() => {
   const overlayBackground = document.querySelector('.overlayBackground');
   const closeBtn = overlay.querySelector('.closeOverlays');
   const contentDiv = overlay.querySelector('.content');
+  let _abortController = new AbortController();
   const templateCache = {};
+  let _closeCallbacks = [];
 
   const moduleMap = {
       products: () => import('./products.js').then(m => m.initProducts()),
@@ -11,6 +13,7 @@ export const overlayModule = (() => {
       account:  () => import('./account.js').then(m => m.initAccount()),
       login:    () => import('./login.js').then(m => m.initLogin()),
       signup:   () => import('./signup.js').then(m => m.initSignup()),
+      contact:  () => import('./contact.js').then(m => m.initContact()),
       cart:     () => import('./cart.js').then(m => {
         const container = document.querySelector('.cartContents');
         if (!container) return;
@@ -18,10 +21,24 @@ export const overlayModule = (() => {
       }),
   };
 
-  function close() {
-      overlay.classList.remove('active');
-      overlayBackground.classList.remove('active');
-      contentDiv.innerHTML = '';
+    function close() {
+        _abortController.abort(); 
+        _abortController = new AbortController();  
+        _closeCallbacks.forEach(fn => fn());
+        _closeCallbacks = [];
+        overlay.classList.remove('active');
+        overlayBackground.classList.remove('active');
+        contentDiv.innerHTML = '';
+  }
+
+  function refresh(target) {
+    if (contentDiv.innerHTML && _currentTarget === target) {
+        initTemplate(target); // re-run init without re-fetching template
+    }
+  }
+
+  function registerCloseCallback(fn) {
+      _closeCallbacks.push(fn);
   }
 
   function showOverlay() {
@@ -41,7 +58,7 @@ export const overlayModule = (() => {
           return;
       }
 
-      fetch(`templates/${target}.html`)
+      fetch(`/frontend/public/templates/${target}.html`)
           .then(res => {
               if (!res.ok) throw new Error('Template not found');
               return res.text();
@@ -59,8 +76,9 @@ export const overlayModule = (() => {
           });
   }
 
-  function open(target) {
-      loadTemplate(target);
+  function open(target, onClose = null) {
+    if (onClose) _closeCallbacks.push(onClose);
+    loadTemplate(target);
   }
 
   function init() {
@@ -74,3 +92,7 @@ export const overlayModule = (() => {
 
   return { init, open, close };
 })();
+
+export function getOverlaySignal() {
+    return _abortController.signal;
+}

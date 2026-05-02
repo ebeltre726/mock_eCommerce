@@ -1,5 +1,6 @@
 // orders.controller.js
 import { fetchOrders, fetchOrder, createOrder as createOrderService } from '../services/orders.service.js';
+import { clearCart } from '../services/cart.service.js';
 
 export async function getOrders(req, res) {
     console.log('req.user:', req.user);
@@ -23,24 +24,28 @@ export async function getOrder(req, res) {
 }
 
 export async function createOrder(req, res) {
-    console.log('createOrder body:', JSON.stringify(req.body, null, 2));
+    console.log('createOrder req.body:', req.body);
+    console.log('createOrder req.user:', req.user);
     try {
-        const { fullName, shippingAddress, paymentMethodId, items } = req.body;
+        const order = await createOrderService(req.user.userId, req.user.email, req.body);
 
-        if (!fullName || !shippingAddress?.street || !shippingAddress?.city 
-            || !shippingAddress?.state || !items?.length) {
-            return res.status(400).json({ error: 'Missing required order fields' });
+        // Clear server cart after successful order — non-fatal if it fails
+        try {
+            await clearCart(req.user.userId);
+        } catch (err) {
+            console.warn('[order] Failed to clear cart:', err.message);
         }
-
-        const order = await createOrderService(req.user.userId, {
-            fullName,
-            shippingAddress, // now an object
-            paymentMethodId,
-            items,
-        });
 
         res.status(201).json(order);
     } catch (err) {
+        // Any thrown error from the Stripe block is a payment failure
+        if (err.message?.toLowerCase().includes('card') ||
+            err.message?.toLowerCase().includes('declined') ||
+            err.message?.toLowerCase().includes('insufficient') ||
+            err.message?.toLowerCase().includes('payment') ||
+            err.message?.toLowerCase().includes('paymentmethod')) {
+            return res.status(402).json({ error: err.message });
+        }
         console.error('createOrder error:', err);
         res.status(500).json({ error: 'Failed to create order' });
     }

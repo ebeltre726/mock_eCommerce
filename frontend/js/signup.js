@@ -1,4 +1,5 @@
 import { overlayModule } from './overlay.js';
+import { apiFetch } from './api.js';
 
 export function initSignup() {
     const form = document.getElementById('signup-form');
@@ -37,38 +38,26 @@ export function initSignup() {
         
 
         try {
-            const res = await fetch("http://localhost:3000/api/auth/signup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+            const result = await apiFetch('auth/signup', {
+                method: 'POST',
                 body: JSON.stringify({
                     firstName: data.firstName,
                     lastName: data.lastName,
                     email: data.email,
                     password: data.password,
-                    termsConditions: data.termsConditions
-                })
+                    termsConditions: data.termsConditions,
+                }),
             });
 
-            const result = await res.json();
-
-            if (!res.ok) {
-                document.getElementById("signup-error").textContent = result.message || "Signup failed";
-                return;
-            }
-
-            // ✅ Option A: auto-login after signup
             if (result.token) {
                 localStorage.setItem('token', result.token);
                 overlayModule.open('account');
             } else {
-                // ✅ Option B: go to login screen
                 overlayModule.open('login');
             }
 
         } catch (err) {
-            document.getElementById("signup-error").textContent = "Something went wrong.";
+            document.getElementById("signup-error").textContent = err.message ?? "Something went wrong.";
             console.error(err);
         }
     });

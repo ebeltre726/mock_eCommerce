@@ -1,8 +1,17 @@
 # Node modules
 node_modules/
 
-# Env files
+# Env files (never commit real secrets; see backend/.env.example)
 .env
+.env.local
+.env.test
+.env.production
+
+# Terraform state (contains resource IDs and may contain secrets)
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
 
 # Logs
 *.log
@@ -17,3 +26,6 @@ Desktop.ini
 
 # MacOS system files
 .DS_Store
+
+# VScode settings
+.vscode/

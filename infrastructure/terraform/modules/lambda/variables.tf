@@ -1,0 +1,9 @@
+variable "ecr_repo_name"      { type = string }
+variable "image_tag"          { type = string }
+variable "aws_region"         { type = string }
+variable "dynamodb_table"     { type = string }
+variable "s3_bucket_avatars"  { type = string }
+variable "s3_bucket_products" { type = string }
+variable "allowed_origins"    { type = string }
+variable "jwt_secret_arn"     { type = string }
+variable "stripe_secret_arn"  { type = string }

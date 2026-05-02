@@ -1,8 +1,8 @@
 // tests/orders.test.js
 import request from "supertest";
-import app from "../src/app.js";
-import { dynamo } from "../src/db/dynamoClient.js";
-import { seedUser, recreateTable, seedProducts } from "../seed.js";
+import app from "../../src/app.js";
+import { dynamo } from "../../src/db/dynamoClient.js";
+import { seedUser, recreateTable, seedProducts } from "../../seed.js";
 
 describe("Orders Flow", () => {
   const testUser = { userId: "u002", email: "order@example.com", password: "pass123" };

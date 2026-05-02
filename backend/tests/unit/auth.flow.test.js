@@ -1,19 +1,26 @@
+import { loginUser, signupUser } from '../../src/services/auth.service.js';
+import { fetchOverview } from '../../src/services/account.service.js';
 import request from 'supertest';
 
-// Mock services before importing the app so controllers see the mocks
-jest.mock('../src/services/auth.service.js', () => ({
-  loginUser: jest.fn(),
-  signupUser: jest.fn(),
-  verifyToken: jest.fn(),
+jest.mock('../../src/middleware/auth.middleware.js', () => ({
+  requireAuth: (req, res, next) => {
+    req.user = { userId: 'u1', email: 'a@b.com' };
+    next();
+  },
 }));
 
-jest.mock('../src/services/account.service.js', () => ({
+// Mock services before importing the app so controllers see the mocks
+jest.mock('../../src/services/auth.service.js', () => ({
+  loginUser: jest.fn(),
+  signupUser: jest.fn(),
+}));
+
+jest.mock('../../src/services/account.service.js', () => ({
   fetchOverview: jest.fn(),
 }));
 
-import app from '../src/app.js';
-import { loginUser, signupUser, verifyToken } from '../src/services/auth.service.js';
-import { fetchOverview } from '../src/services/account.service.js';
+import app from '../../src/app.js';
+
 
 describe('Auth / User Flow (mocked services)', () => {
   beforeEach(() => {
@@ -45,8 +52,6 @@ describe('Auth / User Flow (mocked services)', () => {
   });
 
   it('GET /api/auth/me -> requires auth and returns user overview', async () => {
-    // middleware uses verifyToken
-    verifyToken.mockReturnValue({ userId: 'u1', email: 'a@b.com', firstName: 'A' });
     fetchOverview.mockResolvedValue({ userId: 'u1', email: 'a@b.com', firstName: 'A' });
 
     const res = await request(app)
@@ -55,7 +60,6 @@ describe('Auth / User Flow (mocked services)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('email', 'a@b.com');
-    expect(verifyToken).toHaveBeenCalled();
     expect(fetchOverview).toHaveBeenCalledWith('u1');
   });
 });

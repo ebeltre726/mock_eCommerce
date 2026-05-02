@@ -7,7 +7,7 @@
 //   const API_BASE = import.meta.env.VITE_API_URL;
 // ============================================================
 
-const API_BASE = 'http://localhost:3000/api';
+import config from './config.js';
 
 /**
  * Authenticated fetch wrapper.
@@ -27,14 +27,17 @@ export class AuthError extends Error {
     }
 }
 
+/*
 export async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
+
+    const isFormData = options.body instanceof FormData;
 
     const res = await fetch(`${API_BASE}/${endpoint}`, {
         ...options,
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...options.headers,
         },
     });
@@ -45,18 +48,71 @@ export async function apiFetch(endpoint, options = {}) {
     }
 
     if (!res.ok) {
-        // Try to parse the error message from the response body
         let message = `API error: ${res.status}`;
         try {
             const body = await res.json();
-            if (body.error) message = `API error: ${res.status} — ${body.error}`;
+            if (body.error) message += ` — ${body.error}`;
         } catch (_) {}
         throw new Error(message);
     }
 
     const contentType = res.headers.get('content-type');
-    
-    if (!contentType || !contentType.includes('application/json')) return null;
 
+    if (!contentType || !contentType.includes('application/json')) {
+        return null;
+    }
+
+    return res.json();
+}
+*/
+
+export async function apiFetch(path, options = {}) {
+    const token = localStorage.getItem('token');
+    const res   = await fetch(`${config.apiBase}/${path}`, {
+        ...options,
+        signal: options.signal, // caller can pass AbortController signal
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+            ...options.headers,
+        },
+    });
+
+    if (res.status === 401) {
+        localStorage.removeItem('token');
+        throw new AuthError();
+    }
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const err  = new Error(body.error ?? `Request failed: ${res.status}`);
+        err.status = res.status; // attach status so callers can check it
+        throw err;
+    }
+
+    const contentType = res.headers.get('content-type');
+
+    if (!contentType || !contentType.includes('application/json')) {
+        return null;
+    }
+
+    return res.json();
+}
+
+export async function apiFetchForm(path, formData) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${config.apiBase}/${path}`, {
+        method: 'POST',
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const err = new Error(body.error ?? `Request failed: ${res.status}`);   
+        err.status = res.status;
+        throw err;
+    }
     return res.json();
 }

@@ -1,13 +1,40 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import env from '../config/env.js';
 
 const client = new DynamoDBClient({
-  region: "us-east-1",
-  endpoint: "http://localhost:8000",
-  credentials: {
-    accessKeyId: "dummy",
-    secretAccessKey: "dummy"
-  }
+    region: env.AWS_REGION,
+    ...(env.DYNAMODB_ENDPOINT && {
+        endpoint: env.DYNAMODB_ENDPOINT,
+        credentials: {
+            accessKeyId:     env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+        },
+    }),
 });
 
 export const dynamo = DynamoDBDocumentClient.from(client);
+
+const RETRYABLE = new Set([
+    'ProvisionedThroughputExceededException',
+    'RequestLimitExceeded',
+    'ThrottlingException',
+]);
+
+export async function sendWithRetry(command, maxRetries = 3) {
+    let lastErr;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await dynamo.send(command);
+        } catch (err) {
+            if (RETRYABLE.has(err.name)) {
+                const delay = Math.pow(2, i) * 100; // 100ms, 200ms, 400ms
+                await new Promise(r => setTimeout(r, delay));
+                lastErr = err;
+            } else {
+                throw err;
+            }
+        }
+    }
+    throw lastErr;
+}

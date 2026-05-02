@@ -1,8 +1,8 @@
 // tests/auth.test.js
 import request from "supertest";
-import app from "../src/app.js"; // your Express app
-import { dynamo } from "../src/db/dynamoClient.js";
-import { seedUser, recreateTable, seedProducts } from "../seed.js";
+import app from "../../src/app.js"; // your Express app
+import { dynamo } from "../../src/db/dynamoClient.js";
+import { seedUser, recreateTable, seedProducts } from "../../seed.js";
 
 describe("Auth Flow", () => {
   const testUser = { userId: "test001", email: "test@example.com", password: "pass123" };
