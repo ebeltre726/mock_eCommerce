@@ -1,7 +1,7 @@
 export function validateFile(file) {
   if (!file) throw new Error("File missing");
 
-  const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
 
   if (!allowed.includes(file.mimetype)) {
     throw new Error("Invalid file type");

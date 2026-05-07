@@ -2,7 +2,7 @@
 import { ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 
-const TABLE = 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 
 export async function fetchAllProducts() {
     const result = await dynamo.send(new ScanCommand({

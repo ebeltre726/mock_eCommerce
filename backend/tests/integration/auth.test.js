@@ -1,61 +1,137 @@
-// tests/auth.test.js
-import request from "supertest";
-import app from "../../src/app.js"; // your Express app
-import { dynamo } from "../../src/db/dynamoClient.js";
-import { seedUser, recreateTable, seedProducts } from "../../seed.js";
+/**
+ * Auth integration tests.
+ *
+ * The Cognito SDK is mocked because Cognito is not available in CI.
+ * DynamoDB (via local DynamoDB-local) is real — /me still exercises the full
+ * database path.  The auth middleware is mocked so protected routes can be
+ * tested without a real Cognito token.
+ */
+import request from 'supertest';
+import app from '../../src/app.js';
+import { seedUser, recreateTable, seedProducts } from '../../seed.js';
 
-describe("Auth Flow", () => {
-  const testUser = { userId: "test001", email: "test@example.com", password: "pass123" };
+// ── Mock auth.middleware so protected routes inject a known user ──────────────
+jest.mock('../../src/middleware/auth.middleware.js', () => ({
+  requireAuth: (req, res, next) => {
+    req.user = { userId: 'test001', email: 'test@example.com', firstName: 'Test' };
+    next();
+  },
+}));
 
+// ── Mock the Cognito SDK — not available in CI ────────────────────────────────
+jest.mock('@aws-sdk/client-cognito-identity-provider', () => {
+  const mockSend = jest.fn();
+
+  class MockCognitoClient {
+    send = mockSend;
+  }
+
+  return {
+    CognitoIdentityProviderClient: MockCognitoClient,
+    InitiateAuthCommand:            jest.fn(cmd => ({ _cmd: 'InitiateAuth', ...cmd })),
+    SignUpCommand:                   jest.fn(cmd => ({ _cmd: 'SignUp', ...cmd })),
+    ForgotPasswordCommand:           jest.fn(cmd => ({ _cmd: 'ForgotPassword', ...cmd })),
+    ConfirmForgotPasswordCommand:    jest.fn(cmd => ({ _cmd: 'ConfirmForgotPassword', ...cmd })),
+    GlobalSignOutCommand:            jest.fn(cmd => ({ _cmd: 'GlobalSignOut', ...cmd })),
+    ChangePasswordCommand:           jest.fn(cmd => ({ _cmd: 'ChangePassword', ...cmd })),
+    AdminDeleteUserCommand:          jest.fn(cmd => ({ _cmd: 'AdminDeleteUser', ...cmd })),
+    NotAuthorizedException:          class NotAuthorizedException extends Error {},
+    UserNotConfirmedException:       class UserNotConfirmedException extends Error {},
+    UsernameExistsException:         class UsernameExistsException extends Error {},
+    CodeMismatchException:           class CodeMismatchException extends Error {},
+    ExpiredCodeException:            class ExpiredCodeException extends Error {},
+    InvalidPasswordException:        class InvalidPasswordException extends Error {},
+    LimitExceededException:          class LimitExceededException extends Error {},
+  };
+});
+
+// Import after mocks are hoisted
+import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+
+const mockSend = new CognitoIdentityProviderClient().send;
+
+describe('Auth Flow (integration)', () => {
   beforeAll(async () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await recreateTable();
-    await seedUser(); // seed default user
+    await seedUser({ userId: 'test001', email: 'test@example.com', firstName: 'Test', lastName: 'User' });
     await seedProducts();
-    await seedUser(testUser); // seed test user
   });
 
-  it("should login successfully", async () => {
-    const res = await request(app).post("/api/auth/login").send({
-      email: testUser.email,
-      password: testUser.password,
+  beforeEach(() => {
+    mockSend.mockReset();
+  });
+
+  it('POST /api/auth/login -> calls Cognito and returns tokens', async () => {
+    mockSend.mockResolvedValue({
+      AuthenticationResult: {
+        IdToken:      'mock-id-token',
+        AccessToken:  'mock-access-token',
+        RefreshToken: 'mock-refresh-token',
+      },
+    });
+
+    const res = await request(app).post('/api/auth/login').send({
+      email:    'test@example.com',
+      password: 'Password1!',
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty("token");
+    expect(res.body).toHaveProperty('token', 'mock-id-token');
+    expect(res.body).toHaveProperty('accessToken', 'mock-access-token');
+    expect(res.body).toHaveProperty('refreshToken', 'mock-refresh-token');
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
-  it("should get /me with token", async () => {
-    const loginRes = await request(app).post("/api/auth/login").send(testUser);
-    const token = loginRes.body.token;
+  it('POST /api/auth/login -> returns 401 on bad credentials', async () => {
+    const { NotAuthorizedException } = await import('@aws-sdk/client-cognito-identity-provider');
+    mockSend.mockRejectedValue(new NotAuthorizedException('Incorrect credentials'));
 
-    const meRes = await request(app)
-      .get("/api/auth/me")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).post('/api/auth/login').send({
+      email:    'test@example.com',
+      password: 'wrong-password',
+    });
 
-    expect(meRes.statusCode).toBe(200);
-    expect(meRes.body.email).toBe(testUser.email);
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toHaveProperty('error');
   });
 
-  it("should change password", async () => {
-    const loginRes = await request(app).post("/api/auth/login").send(testUser);
-    const token = loginRes.body.token;
-
+  it('GET /api/auth/me -> returns user profile from DynamoDB (real DB, mocked middleware)', async () => {
     const res = await request(app)
-      .patch("/api/account/password")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ current: testUser.password, password: "newPass123" });
+      .get('/api/auth/me')
+      .set('Authorization', 'Bearer mock-id-token');
 
     expect(res.statusCode).toBe(200);
+    expect(res.body.email).toBe('test@example.com');
+  });
 
-    // Login with new password
-    const loginNew = await request(app)
-      .post("/api/auth/login")
-      .send({ email: testUser.email, password: "newPass123" });
+  it('POST /api/auth/signup -> calls Cognito SignUp and returns verification message', async () => {
+    mockSend.mockResolvedValue({});
 
-    expect(loginNew.statusCode).toBe(200);
+    const res = await request(app).post('/api/auth/signup').send({
+      firstName:       'New',
+      lastName:        'User',
+      email:           'new@example.com',
+      password:        'Password1!',
+      termsConditions: true,
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toHaveProperty('message');
+    expect(res.body.message).toMatch(/email/i);
+  });
+
+  it('POST /api/auth/forgot-password -> calls Cognito ForgotPassword', async () => {
+    mockSend.mockResolvedValue({});
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'test@example.com' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('message');
   });
 });

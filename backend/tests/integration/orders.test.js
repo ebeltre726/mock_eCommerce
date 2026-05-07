@@ -4,8 +4,16 @@ import app from "../../src/app.js";
 import { dynamo } from "../../src/db/dynamoClient.js";
 import { seedUser, recreateTable, seedProducts } from "../../seed.js";
 
+// Cognito not available in CI — bypass token validation and inject user directly
+jest.mock("../../src/middleware/auth.middleware.js", () => ({
+  requireAuth: (req, _res, next) => {
+    req.user = { userId: "u002", email: "order@example.com", firstName: "Order" };
+    next();
+  },
+}));
+
 describe("Orders Flow", () => {
-  const testUser = { userId: "u002", email: "order@example.com", password: "pass123" };
+  const testUser = { userId: "u002", email: "order@example.com" };
   let token, orderId;
 
   beforeAll(async () => {
@@ -14,18 +22,17 @@ describe("Orders Flow", () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await recreateTable();
-    await seedUser(); // seed default user
+    await seedUser();
     await seedProducts();
     await seedUser(testUser);
-    const loginRes = await request(app).post("/api/auth/login").send(testUser);
-    token = loginRes.body.token;
+    token = "test-token"; // middleware is mocked — any string passes
   });
 
   it("should create an order", async () => {
     const res = await request(app)
       .post("/api/orders")
       .set("Authorization", `Bearer ${token}`)
-      .send({ fullName: 'Test User', shippingAddress: { street: '1 Test St', city: 'Testville', state: 'TS', postal: '00000' }, items: [{ productId: "chair-1", quantity: 2 }] });
+      .send({ fullName: 'Test User', addressId: 'default', items: [{ productId: "chair-1", quantity: 2, price: 39.99 }] });
 
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty("orderId");

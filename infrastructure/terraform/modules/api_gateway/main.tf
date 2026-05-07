@@ -4,9 +4,9 @@ resource "aws_apigatewayv2_api" "main" {
 
   cors_configuration {
     # CORS handled at CloudFront level; this is a fallback for direct API access
-    allow_origins = ["*"]
+    allow_origins = var.allowed_origins
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "Authorization"]
+    allow_headers = ["Content-Type", "Authorization", "X-Access-Token"]
     max_age       = 300
   }
 }

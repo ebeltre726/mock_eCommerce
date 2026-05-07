@@ -1,7 +1,8 @@
 import { GetCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
+import { storage } from '../storage/index.js';
 
-const TABLE_NAME = 'Furnituria';
+const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 
 export async function fetchOverview(userId) {
     const [profile, orders, returns, wishlist] = await Promise.all([
@@ -37,8 +38,13 @@ export async function fetchOverview(userId) {
       },
     }));
 
+    const item = profile.Item ?? {};
+    if (item.avatar && !item.avatar.startsWith('http')) {
+        item.avatar = await storage.getDownloadUrl(item.avatar);
+    }
+
     return {
-        ...profile.Item,
+        ...item,
         stats: {
             orders:   orders.Count          ?? 0,
             returns:  returns.Count         ?? 0,

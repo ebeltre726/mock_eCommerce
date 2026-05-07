@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furnituria | Reset Password</title>
+</head>
+<body>
+    <div class="signin-wrapper">
+
+        <!-- Step 1: enter email to receive reset code -->
+        <div class="signin-modal" id="forgot-step1">
+            <h2>Reset Password</h2>
+            <p class="signin-sub">Enter your email and we'll send you a reset code.</p>
+
+            <label for="forgot-email">Email</label>
+            <input class="signinInputs"
+                type="email"
+                id="forgot-email"
+                placeholder="Enter your email"
+            />
+
+            <p class="inline-error" id="forgot-error1"></p>
+
+            <button class="signin-btn" id="send-code-btn">Send Reset Code</button>
+        </div>
+
+        <!-- Step 2: enter code + new password (hidden until step 1 succeeds) -->
+        <div class="signin-modal hidden" id="forgot-step2">
+            <h2>Enter Reset Code</h2>
+            <p class="signin-sub">Check your email for the code and enter it below.</p>
+
+            <label for="reset-code">Reset Code</label>
+            <input class="signinInputs"
+                type="text"
+                id="reset-code"
+                placeholder="Enter the code from your email"
+                autocomplete="one-time-code"
+            />
+
+            <label for="reset-password">New Password</label>
+            <input class="signinInputs"
+                type="password"
+                id="reset-password"
+                placeholder="New password"
+            />
+
+            <label for="reset-confirm-password">Confirm Password</label>
+            <input class="signinInputs"
+                type="password"
+                id="reset-confirm-password"
+                placeholder="Confirm new password"
+            />
+
+            <p class="inline-error" id="forgot-error2"></p>
+
+            <button class="signin-btn" id="confirm-reset-btn">Reset Password</button>
+        </div>
+
+        <!-- Success message (hidden until confirm succeeds) -->
+        <div class="signin-modal hidden" id="forgot-success">
+            <h2>Password Reset</h2>
+            <p class="signin-sub">Your password has been reset. Redirecting you to sign in…</p>
+        </div>
+
+        <div id="dividingLine"></div>
+        <div class="extras">
+            <div class="extrasSubchild">
+                <a>Remember your password?</a>
+                <button class="extraButton" id="back-to-login-btn">Sign In</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

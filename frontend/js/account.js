@@ -128,7 +128,7 @@ async function fetchTemplate(panelName) {
         return '';
     }
     if (panelTemplateCache[panelName]) return panelTemplateCache[panelName];
-    const res = await fetch(`/frontend/public/templates/account/${panelName}.html`);
+    const res = await fetch(`/templates/account/${panelName}.html`);
     if (!res.ok) throw new Error(`Template ${panelName}.html not found`);
     const html = await res.text();
     panelTemplateCache[panelName] = html;
@@ -507,8 +507,20 @@ async function renderSettings(contentPane, settings) {
     contentPane.querySelector('#setting-email-updates').checked = settings.emailUpdates;
     contentPane.querySelector('#setting-sms').checked = settings.smsNotifications;
 
-    contentPane.querySelector('#logout-btn').addEventListener('click', () => {
+    contentPane.querySelector('#logout-btn').addEventListener('click', async () => {
+        const accessToken = localStorage.getItem('accessToken');
+        try {
+            await apiFetch('auth/logout', {
+                method: 'POST',
+                headers: { 'X-Access-Token': accessToken ?? '' },
+            });
+        } catch (err) {
+            // GlobalSignOut failed — still clear locally so the UI is consistent
+            console.warn('[logout] server-side signout failed:', err.message);
+        }
         localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         overlayModule.close();
     });
 
@@ -529,6 +541,7 @@ async function renderSettings(contentPane, settings) {
         try {
             await apiFetch('account/password', {
                 method: 'PATCH',
+                headers: { 'X-Access-Token': localStorage.getItem('accessToken') ?? '' },
                 body: JSON.stringify({ current, password: next }),
             });
             contentPane.querySelector('#password-saved').classList.remove('hidden');
@@ -546,8 +559,13 @@ async function renderSettings(contentPane, settings) {
     contentPane.querySelector('#delete-account-btn').addEventListener('click', async () => {
         confirmAction('Are you sure you want to delete your account? This cannot be undone.', async () => {
             try {
-                await apiFetch('account', { method: 'DELETE' });
+                await apiFetch('account', {
+                    method: 'DELETE',
+                    headers: { 'X-Access-Token': localStorage.getItem('accessToken') ?? '' },
+                });
                 localStorage.removeItem('token');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 overlayModule.close();
             } catch (err) {
                 console.error('Failed to delete account:', err);

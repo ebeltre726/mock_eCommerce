@@ -17,19 +17,14 @@ import { storage }      from './src/storage/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import fs               from 'fs/promises';
 import path             from 'path';
-import { fileURLToPath } from 'url';
-import bcrypt from 'bcrypt';
-
 const TABLE_NAME = 'Furnituria';
 const USER_ID = 'u001';
 const MOCK_EMAIL = 'jane.doe@email.com';
-const MOCK_PASSWORD = 'password123';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MOCK_PASSWORD = 'N/A — managed by Cognito';
 
 const client = new DynamoDBClient({
   region: 'us-east-1',
-  endpoint: 'http://localhost:8000',
+  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000',
   credentials: { accessKeyId: 'dummy', secretAccessKey: 'dummy' },
 });
 
@@ -139,7 +134,7 @@ async function waitForTableDeletion() {
 }
 
 async function uploadSeedImage(filename) {
-    const localPath   = path.join(__dirname, 'seed-images', filename);
+    const localPath   = path.resolve('seed-images', filename);
     const key         = `products/${filename}`;
     const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
     const url         = await storage.uploadImage(
@@ -208,14 +203,12 @@ export async function seedAddress(userId, address = {}) {
 export async function seedUser(user = {}) {
   console.log('\n🔧 Seeding USER (PROFILE)...');
 
-  const userId = user.userId || USER_ID;
-  const email = user.email || MOCK_EMAIL;
-  const plainPassword = user.password || MOCK_PASSWORD;
+  const userId    = user.userId    || USER_ID;
+  const email     = user.email     || MOCK_EMAIL;
   const firstName = user.firstName || 'Jane';
-  const lastName = user.lastName || 'Doe';
+  const lastName  = user.lastName  || 'Doe';
 
-  const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
+  // Passwords are managed by Cognito — no password field in DynamoDB
   const userItem = {
     PK: `USER#${userId}`,
     SK: 'PROFILE',
@@ -227,7 +220,6 @@ export async function seedUser(user = {}) {
     email,
     firstName,
     lastName,
-    password: hashedPassword,
     termsConditions: true,
     dateCreated: new Date().toISOString(),
     avatar: 'http://localhost:3000/images/avatar.png',

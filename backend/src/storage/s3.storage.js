@@ -1,11 +1,11 @@
 // storage/s3.storage.js
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
   endpoint: process.env.S3_ENDPOINT,       // set for MinIO locally, unset for real AWS
-  forcePathStyle: true,                     // required for MinIO & path-style AWS
+  forcePathStyle: !!process.env.S3_ENDPOINT, // required for MinIO; false on real AWS
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -28,6 +28,11 @@ export const s3Storage = {
             ContentType: contentType,
         }));
         return objectUrl(bucket, key);
+    },
+
+    async getDownloadUrl(key, bucket = process.env.S3_BUCKET_AVATARS, expiresIn = 3600) {
+        const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+        return getSignedUrl(s3, command, { expiresIn });
     },
 
     async getUploadUrl({ key, contentType, bucket = process.env.S3_BUCKET_AVATARS }) {

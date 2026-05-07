@@ -1,18 +1,21 @@
-import { loginUser, signupUser } from '../../src/services/auth.service.js';
+import { loginUser, signupUser, logoutUser, forgotPassword } from '../../src/services/auth.service.js';
 import { fetchOverview } from '../../src/services/account.service.js';
 import request from 'supertest';
 
 jest.mock('../../src/middleware/auth.middleware.js', () => ({
   requireAuth: (req, res, next) => {
-    req.user = { userId: 'u1', email: 'a@b.com' };
+    req.user = { userId: 'cognito-sub-u1', email: 'a@b.com', firstName: 'A' };
     next();
   },
 }));
 
-// Mock services before importing the app so controllers see the mocks
 jest.mock('../../src/services/auth.service.js', () => ({
-  loginUser: jest.fn(),
-  signupUser: jest.fn(),
+  loginUser:              jest.fn(),
+  signupUser:             jest.fn(),
+  logoutUser:             jest.fn(),
+  refreshTokens:          jest.fn(),
+  forgotPassword:         jest.fn(),
+  confirmForgotPassword:  jest.fn(),
 }));
 
 jest.mock('../../src/services/account.service.js', () => ({
@@ -21,45 +24,74 @@ jest.mock('../../src/services/account.service.js', () => ({
 
 import app from '../../src/app.js';
 
-
 describe('Auth / User Flow (mocked services)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('signup -> returns 201 and token', async () => {
-    signupUser.mockResolvedValue({ token: 'tok-sign', userId: 'u1', email: 'a@b.com', firstName: 'A' });
+  it('signup -> returns 201 and verification message', async () => {
+    signupUser.mockResolvedValue({ message: 'Please check your email to verify your account before logging in.' });
 
     const res = await request(app)
       .post('/api/auth/signup')
       .send({ firstName: 'A', lastName: 'B', email: 'a@b.com', password: 'pw', termsConditions: true });
 
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('token', 'tok-sign');
+    expect(res.body).toHaveProperty('message');
     expect(signupUser).toHaveBeenCalled();
   });
 
-  it('login -> returns 200 and token', async () => {
-    loginUser.mockResolvedValue({ token: 'tok-login', userId: 'u2', email: 'x@y.com', firstName: 'X' });
+  it('login -> returns 200 with Cognito tokens', async () => {
+    loginUser.mockResolvedValue({
+      token:        'cognito-id-token',
+      accessToken:  'cognito-access-token',
+      refreshToken: 'cognito-refresh-token',
+      userId:       null,
+      email:        'x@y.com',
+    });
 
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'x@y.com', password: 'pw' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('token', 'tok-login');
+    expect(res.body).toHaveProperty('token', 'cognito-id-token');
+    expect(res.body).toHaveProperty('accessToken', 'cognito-access-token');
+    expect(res.body).toHaveProperty('refreshToken', 'cognito-refresh-token');
     expect(loginUser).toHaveBeenCalledWith('x@y.com', 'pw');
   });
 
   it('GET /api/auth/me -> requires auth and returns user overview', async () => {
-    fetchOverview.mockResolvedValue({ userId: 'u1', email: 'a@b.com', firstName: 'A' });
+    fetchOverview.mockResolvedValue({ userId: 'cognito-sub-u1', email: 'a@b.com', firstName: 'A' });
 
     const res = await request(app)
       .get('/api/auth/me')
-      .set('Authorization', 'Bearer sometok');
+      .set('Authorization', 'Bearer cognito-id-token');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('email', 'a@b.com');
-    expect(fetchOverview).toHaveBeenCalledWith('u1');
+    expect(fetchOverview).toHaveBeenCalledWith('cognito-sub-u1');
+  });
+
+  it('POST /api/auth/forgot-password -> returns 200', async () => {
+    forgotPassword.mockResolvedValue({ message: 'If an account with that email exists, a reset code has been sent.' });
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'a@b.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+
+  it('POST /api/auth/logout -> returns 200', async () => {
+    logoutUser.mockResolvedValue();
+
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('x-access-token', 'cognito-access-token');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('success', true);
   });
 });

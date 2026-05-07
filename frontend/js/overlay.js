@@ -13,6 +13,7 @@ export const overlayModule = (() => {
       account:  () => import('./account.js').then(m => m.initAccount()),
       login:    () => import('./login.js').then(m => m.initLogin()),
       signup:   () => import('./signup.js').then(m => m.initSignup()),
+      forgotpw: () => import('./forgotpw.js').then(m => m.initForgotPassword()),
       contact:  () => import('./contact.js').then(m => m.initContact()),
       cart:     () => import('./cart.js').then(m => {
         const container = document.querySelector('.cartContents');
@@ -58,7 +59,7 @@ export const overlayModule = (() => {
           return;
       }
 
-      fetch(`/frontend/public/templates/${target}.html`)
+      fetch(`/templates/${target}.html`)
           .then(res => {
               if (!res.ok) throw new Error('Template not found');
               return res.text();

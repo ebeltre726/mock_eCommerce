@@ -4,8 +4,16 @@ import app from "../../src/app.js";
 import { dynamo } from "../../src/db/dynamoClient.js";
 import { seedUser, recreateTable, seedProducts } from "../../seed.js";
 
+// Cognito not available in CI — bypass token validation and inject user directly
+jest.mock("../../src/middleware/auth.middleware.js", () => ({
+  requireAuth: (req, _res, next) => {
+    req.user = { userId: "u003", email: "pay@example.com", firstName: "Pay" };
+    next();
+  },
+}));
+
 describe("Payments Flow", () => {
-  const testUser = { userId: "u003", email: "pay@example.com", password: "pass123" };
+  const testUser = { userId: "u003", email: "pay@example.com" };
   let token, paymentId;
 
   beforeAll(async () => {
@@ -14,18 +22,17 @@ describe("Payments Flow", () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await recreateTable();
-    await seedUser(); // seed default user
+    await seedUser();
     await seedProducts();
     await seedUser(testUser);
-    const loginRes = await request(app).post("/api/auth/login").send(testUser);
-    token = loginRes.body.token;
+    token = "test-token"; // middleware is mocked — any string passes
   });
 
   it("should add a payment method", async () => {
     const res = await request(app)
       .post("/api/account/payment")
       .set("Authorization", `Bearer ${token}`)
-      .send({ type: "card", cardNumber: "424242424242" });
+      .send({ stripePaymentMethodId: "pm_test_visa", brand: "visa", last4: "4242", expiry: "12/30" });
 
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty("paymentId");

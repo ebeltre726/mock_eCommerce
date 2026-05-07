@@ -84,8 +84,7 @@ export function validateRequest(contract) {
       console.error('❌ [Validation] Request validation failed:', {
         path: req.path,
         method: req.method,
-        body: req.body,
-        errors: errors,
+        errors,
       });
       return res.status(400).json({
         error: 'Validation failed',
@@ -103,6 +102,8 @@ export function validateRequest(contract) {
  */
 export function validateResponse(contract) {
   return (req, res, next) => {
+    if (process.env.NODE_ENV === 'production') return next();
+
     const originalJson = res.json.bind(res);
 
     res.json = function (data) {

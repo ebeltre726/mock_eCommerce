@@ -5,7 +5,7 @@ import { stripe } from '../config/stripe.js';
 import { fetchAddresses } from './address.service.js';
 import { getOrCreateCustomer } from './payment.service.js';
 
-const TABLE = 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 
 /**
  * Utility: fetch address by ID
@@ -24,19 +24,31 @@ async function fetchAddress(userId, addressId) {
 }
 
 /**
- * Utility: calculate total from items
+ * Fetch server-side prices from DynamoDB; rejects if any productId is invalid.
+ */
+async function fetchPricedItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('Order must contain at least one item');
+  }
+  return Promise.all(
+    items.map(async (item) => {
+      if (!item.productId) throw new Error('Each order item must have a productId');
+      const result = await dynamo.send(new GetCommand({
+        TableName: TABLE,
+        Key: { PK: `PRODUCT#${item.productId}`, SK: `PRODUCT#${item.productId}` },
+      }));
+      if (!result.Item) throw new Error(`Invalid productId: ${item.productId}`);
+      return { productId: item.productId, quantity: item.quantity ?? 1, price: result.Item.price };
+    })
+  );
+}
+
+/**
+ * Utility: calculate total from server-fetched items
  */
 function calculateTotal(items) {
-    console.log('calculateTotal received:', items, Array.isArray(items));
-    if (!Array.isArray(items) || items.length === 0) {
-        throw new Error('Order must contain at least one item');
-    }
     return Math.round(
-        items.reduce((sum, item) => {
-            const price = item.price ?? 0;
-            const qty   = item.quantity ?? 1;
-            return sum + price * qty;
-        }, 0) * 100
+        items.reduce((sum, item) => sum + item.price * (item.quantity ?? 1), 0) * 100
     );
 }
 
@@ -181,11 +193,11 @@ export async function fetchOrder(userId, orderId) {
 export async function createOrder(userId, userEmail, orderData) {
   const orderId = uuidv4();
   let stripePaymentIntentId = null;
-  let paymentMethod = 'demo';
+  let paymentMethod = 'pending';
 
-  // ✅ Always calculate total once
-  console.log('orderData.items before calculateTotal:', orderData.items);
-  const totalAmountCents = calculateTotal(orderData.items);
+  // Fetch server-side prices and compute total — never trust client-supplied price
+  const pricedItems = await fetchPricedItems(orderData.items);
+  const totalAmountCents = calculateTotal(pricedItems);
   const totalAmount = totalAmountCents / 100;
 
   
@@ -232,13 +244,13 @@ export async function createOrder(userId, userEmail, orderData) {
 
     if (err.type === 'StripeConnectionError' ||
         err.type === 'StripeAPIError') {
-        console.warn('[order] Stripe infrastructure error, falling back to demo:', err.message);
-        paymentMethod = 'demo';
-        // No throw — order continues in demo mode
-    } else {
-        // Unknown error — fail hard
-        throw new Error(err.message ?? 'Payment processing failed', { cause: err });
+        console.error('[order] Stripe infrastructure error:', err.message);
+        const serviceErr = new Error('payment service unavailable, try again', { cause: err });
+        serviceErr.statusCode = 502;
+        throw serviceErr;
     }
+
+    throw new Error(err.message ?? 'Payment processing failed', { cause: err });
 }
 
 }
@@ -254,11 +266,7 @@ export async function createOrder(userId, userEmail, orderData) {
     fullName: orderData.fullName,
     addressId: orderData.addressId,
 
-    items: orderData.items.map(item => ({
-      productId: item.productId,
-      quantity: item.quantity, // ✅ standardized
-      price: item.price ?? 0,
-    })),
+    items: pricedItems,
 
     totalAmount, // ✅ stored (important)
 

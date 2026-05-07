@@ -1,296 +1,209 @@
-// Local dev mock — in production these calls go to AWS Cognito User Pools.
-// Cognito SDK would replace most of this file.
- 
-import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamo } from '../db/dynamoClient.js';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+  SignUpCommand,
+  ForgotPasswordCommand,
+  ConfirmForgotPasswordCommand,
+  GlobalSignOutCommand,
+  NotAuthorizedException,
+  UserNotConfirmedException,
+  UsernameExistsException,
+  CodeMismatchException,
+  ExpiredCodeException,
+  InvalidPasswordException,
+  LimitExceededException,
+} from '@aws-sdk/client-cognito-identity-provider';
 import env from '../config/env.js';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
- 
-const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnituria';
-const JWT_SECRET = env.JWT_SECRET;
-const BCRYPT_ROUNDS = 12;
- 
-// Fail fast at startup if JWT_SECRET is missing — never fall back to a hardcoded string in any env.
-export function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
 
-  if (!secret) {
-    throw new Error('JWT_SECRET is missing');
-  }
+const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
 
-  return secret;
-}
- 
-// ======================
-// VALIDATION HELPERS
-// ======================
- 
-/**
- * RFC 5322-inspired email regex. Rejects obvious non-emails while staying
- * practical (no false positives on valid-but-exotic addresses).
- */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
- 
-/**
- * Password must be 8–128 chars and contain at least:
- * one uppercase, one lowercase, one digit, one special character.
- */
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{8,128}$/;
- 
-const NAME_REGEX = /^[a-zA-ZÀ-ÖØ-öø-ÿ' -]{1,64}$/;
- 
-function validateEmail(email) {
-  if (typeof email !== 'string') {
-    throw new Error('Email must be a string.');
-  }
- 
-  const trimmed = email.trim().toLowerCase();
- 
-  if (!trimmed) {
-    throw new Error('Email is required.');
-  }
- 
-  if (!trimmed.includes('@')) {
-    throw new Error('Email must contain an @ symbol.');
-  }
- 
-  if (!EMAIL_REGEX.test(trimmed)) {
-    throw new Error('Email address is invalid.');
-  }
- 
-  if (trimmed.length > 254) { // RFC 5321 max length
-    throw new Error('Email address is too long.');
-  }
- 
-  return trimmed; // always return the normalized form
-}
- 
-function validatePassword(password) {
-  if (typeof password !== 'string') {
-    throw new Error('Password must be a string.');
-  }
- 
-  if (!password) {
-    throw new Error('Password is required.');
-  }
- 
-  if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters.');
-  }
- 
-  if (password.length > 128) {
-    throw new Error('Password must not exceed 128 characters.');
-  }
- 
-  if (!PASSWORD_REGEX.test(password)) {
-    throw new Error(
-      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.'
-    );
-  }
-}
- 
-function validateName(value, fieldName) {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new Error(`${fieldName} is required.`);
-  }
- 
-  if (!NAME_REGEX.test(value.trim())) {
-    throw new Error(`${fieldName} contains invalid characters.`);
-  }
-}
- 
 // ======================
 // LOGIN USER
 // ======================
+// Uses USER_PASSWORD_AUTH — backend proxies the credentials to Cognito.
+// Cognito returns three tokens; we pass all three back so the frontend can
+// store the access token (for logout) and refresh token (for silent re-auth).
+//
+// Best practice note: USER_SRP_AUTH from the frontend is more secure because
+// the password never transits your backend. Consider migrating to Amplify's
+// signIn() (SRP) on the frontend if you want zero-knowledge auth.
 export async function loginUser(email, password) {
-  // --- Input validation ---
   if (!email || !password) {
     throw new Error('Email and password are required.');
   }
- 
-  const normalizedEmail = validateEmail(email);
- 
-  if (typeof password !== 'string' || !password) {
-    throw new Error('Password is required.');
+
+  try {
+    const { AuthenticationResult } = await cognito.send(
+      new InitiateAuthCommand({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: env.COGNITO_CLIENT_ID,
+        AuthParameters: {
+          USERNAME: email.trim().toLowerCase(),
+          PASSWORD: password,
+        },
+      })
+    );
+
+    return {
+      token:        AuthenticationResult.IdToken,
+      accessToken:  AuthenticationResult.AccessToken,
+      refreshToken: AuthenticationResult.RefreshToken,
+      // sub and email come from the ID token claims, but the frontend needs
+      // them immediately (before decoding the JWT) for local state.
+      userId: null,   // populated from Cognito ID token sub — frontend should decode or call /me
+      email:  email.trim().toLowerCase(),
+    };
+  } catch (err) {
+    if (
+      err instanceof NotAuthorizedException ||
+      err instanceof UserNotConfirmedException
+    ) {
+      // Never reveal whether the email exists — same message for all auth failures
+      throw new Error('Invalid credentials.');
+    }
+    throw err;
   }
- 
-  // --- Lookup ---
-  const result = await dynamo.send(new QueryCommand({
-    TableName: TABLE_NAME,
-    IndexName: 'GSI1',
-    KeyConditionExpression: 'GSI1PK = :email',
-    ExpressionAttributeValues: {
-      ':email': `EMAIL#${normalizedEmail}`,
-    },
-  }));
- 
-  const user = result.Items?.[0];
- 
-  // Always run bcrypt.compare even when no user is found to prevent
-  // timing-based user enumeration attacks.
-  const DUMMY_HASH = '$2b$12$invalidhashpaddingtomakethisexactly60charslong123456789';
-  const passwordMatches = await bcrypt.compare(
-    password,
-    user?.password ?? DUMMY_HASH
-  );
- 
-  if (!user || !passwordMatches) {
-    // Use one generic message regardless of which check failed — never
-    // reveal whether the email exists in the database.
-    throw new Error('Invalid credentials.');
-  }
- 
-  const token = jwt.sign(
-    {
-      userId: user.userId,
-      email: user.email,
-      firstName: user.firstName,
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
- 
-  return {
-    token,
-    userId: user.userId,
-    email: user.email,
-    firstName: user.firstName,
-  };
 }
- 
+
 // ======================
 // SIGNUP USER
 // ======================
-export async function signupUser({
-  firstName,
-  lastName,
-  email,
-  password,
-  termsConditions,
-}) {
-  // --- Input validation ---
-  validateName(firstName, 'First name');
-  validateName(lastName, 'Last name');
- 
-  const normalizedEmail = validateEmail(email);
- 
-  validatePassword(password);
- 
+// Cognito creates the user and sends a verification email.
+// The PostConfirmation Lambda (cognito/main.tf) creates the DynamoDB profile
+// rows after the user clicks the link — no DynamoDB writes happen here.
+export async function signupUser({ firstName, lastName, email, password, termsConditions }) {
+  if (!firstName || !lastName || !email || !password) {
+    throw new Error('All fields are required.');
+  }
+
   if (termsConditions !== true) {
     throw new Error('You must accept the terms and conditions.');
   }
- 
-  // --- Duplicate email check ---
-  const existing = await dynamo.send(new QueryCommand({
-    TableName: TABLE_NAME,
-    IndexName: 'GSI1',
-    KeyConditionExpression: 'GSI1PK = :email',
-    ExpressionAttributeValues: {
-      ':email': `EMAIL#${normalizedEmail}`,
-    },
-  }));
- 
-  if (existing.Items?.length > 0) {
-    throw new Error('Email already in use.');
-  }
- 
-  const userId = uuidv4();
-  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
- 
-  // Main user profile item
-  const userItem = {
-    PK: `USER#${userId}`,
-    SK: 'PROFILE',
- 
-    GSI1PK: `EMAIL#${normalizedEmail}`,
-    GSI1SK: `USER#${userId}`,
- 
-    userId,
-    email: normalizedEmail, // persist the normalized (lowercase) form
-    firstName: firstName.trim(),
-    lastName: lastName.trim(),
-    password: hashedPassword,
-    termsConditions,
-    dateCreated: new Date().toISOString(),
-    avatar: null,
- 
-    stats: {
-      orders: 0,
-      wishlist: 0,
-      points: 0,
-      returns: 0,
-    },
-  };
- 
-  const settingsItem = {
-    PK: `USER#${userId}`,
-    SK: 'SETTINGS',
-    shareData: false,
-    emailUpdates: false,
-    smsNotifications: false,
-  };
- 
-  const rewardsItem = {
-    PK: `USER#${userId}`,
-    SK: 'REWARDS',
-    points: 0,
-    tier: 'Bronze',
-    deals: [],
-  };
- 
-  const newsletterItem = {
-    PK: `USER#${userId}`,
-    SK: 'NEWSLETTER',
-    subscribed: false,
-    topics: [],
-  };
- 
+
   try {
-    await Promise.all([
-      dynamo.send(new PutCommand({
-        TableName: TABLE_NAME,
-        Item: userItem,
-        ConditionExpression: 'attribute_not_exists(PK)',
-      })),
-      dynamo.send(new PutCommand({ TableName: TABLE_NAME, Item: settingsItem })),
-      dynamo.send(new PutCommand({ TableName: TABLE_NAME, Item: rewardsItem })),
-      dynamo.send(new PutCommand({ TableName: TABLE_NAME, Item: newsletterItem })),
-    ]);
+    await cognito.send(
+      new SignUpCommand({
+        ClientId: env.COGNITO_CLIENT_ID,
+        Username: email.trim().toLowerCase(),
+        Password: password,
+        UserAttributes: [
+          { Name: 'email',       Value: email.trim().toLowerCase() },
+          { Name: 'given_name',  Value: firstName.trim() },
+          { Name: 'family_name', Value: lastName.trim() },
+        ],
+      })
+    );
+
+    return { message: 'Please check your email to verify your account before logging in.' };
   } catch (err) {
-    // Log the real error server-side but never leak DynamoDB internals to the client.
-    console.error('Signup DynamoDB error:', err);
-    throw new Error('Failed to create account. Please try again.', { cause: err });
+    if (err instanceof UsernameExistsException) {
+      throw new Error('An account with this email already exists.');
+    }
+    if (err instanceof InvalidPasswordException) {
+      throw new Error(
+        'Password does not meet requirements: minimum 8 characters, must include uppercase, lowercase, number, and special character.'
+      );
+    }
+    throw err;
   }
- 
-  const token = jwt.sign(
-    { userId, email: normalizedEmail, firstName: firstName.trim() },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
- 
-  return {
-    token,
-    userId,
-    email: normalizedEmail,
-    firstName: firstName.trim(),
-  };
 }
- 
+
 // ======================
-// VERIFY TOKEN
+// REFRESH TOKENS
 // ======================
-export function verifyToken(token) {
-  if (!token || typeof token !== 'string') {
-    throw new Error('Token is required.');
-  }
- 
+export async function refreshTokens(refreshToken) {
+  if (!refreshToken) throw new Error('Refresh token is required.');
+
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const { AuthenticationResult } = await cognito.send(
+      new InitiateAuthCommand({
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: env.COGNITO_CLIENT_ID,
+        AuthParameters: { REFRESH_TOKEN: refreshToken },
+      })
+    );
+
+    return {
+      token:       AuthenticationResult.IdToken,
+      accessToken: AuthenticationResult.AccessToken,
+      // Cognito does not rotate refresh tokens on every refresh
+    };
   } catch (err) {
-    // Mask the specific JWT error (expired vs. malformed vs. wrong secret)
-    // to avoid leaking implementation details.
-    throw new Error('Invalid or expired token.', { cause: err });
+    if (err instanceof NotAuthorizedException) {
+      throw new Error('Refresh token expired. Please log in again.');
+    }
+    throw err;
+  }
+}
+
+// ======================
+// FORGOT PASSWORD
+// ======================
+export async function forgotPassword(email) {
+  if (!email) throw new Error('Email is required.');
+
+  try {
+    await cognito.send(
+      new ForgotPasswordCommand({
+        ClientId: env.COGNITO_CLIENT_ID,
+        Username: email.trim().toLowerCase(),
+      })
+    );
+
+    // Always return success — never reveal whether the email is registered
+    return { message: 'If an account with that email exists, a reset code has been sent.' };
+  } catch (err) {
+    if (err instanceof LimitExceededException) {
+      throw new Error('Too many attempts. Please wait before requesting another reset code.');
+    }
+    throw err;
+  }
+}
+
+// ======================
+// CONFIRM FORGOT PASSWORD
+// ======================
+export async function confirmForgotPassword(email, code, newPassword) {
+  if (!email || !code || !newPassword) {
+    throw new Error('Email, code, and new password are required.');
+  }
+
+  try {
+    await cognito.send(
+      new ConfirmForgotPasswordCommand({
+        ClientId:         env.COGNITO_CLIENT_ID,
+        Username:         email.trim().toLowerCase(),
+        ConfirmationCode: code.trim(),
+        Password:         newPassword,
+      })
+    );
+
+    return { message: 'Password reset successfully. You can now log in.' };
+  } catch (err) {
+    if (err instanceof CodeMismatchException || err instanceof ExpiredCodeException) {
+      throw new Error('Invalid or expired code. Please request a new one.');
+    }
+    if (err instanceof InvalidPasswordException) {
+      throw new Error(
+        'New password does not meet requirements.'
+      );
+    }
+    throw err;
+  }
+}
+
+// ======================
+// LOGOUT
+// ======================
+// GlobalSignOut invalidates ALL tokens (access, ID, refresh) for the user.
+// The accessToken (not the ID token) is required for this call.
+export async function logoutUser(accessToken) {
+  if (!accessToken) return; // graceful no-op if client already cleared tokens
+
+  try {
+    await cognito.send(new GlobalSignOutCommand({ AccessToken: accessToken }));
+  } catch (err) {
+    // Log but don't fail — token may have already expired server-side
+    console.error('GlobalSignOut error (non-fatal):', err.message);
   }
 }

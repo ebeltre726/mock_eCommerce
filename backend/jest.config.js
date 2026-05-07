@@ -5,6 +5,6 @@ export default {
         '^.+\\.js$': 'babel-jest',
     },
     transformIgnorePatterns: [
-        '/node_modules/(?!uuid|@aws-sdk/.*)',
+        '/node_modules/(?!uuid|@aws-sdk/.*|@smithy/.*)',
     ],
 };

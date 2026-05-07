@@ -2,7 +2,7 @@ import { PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk
 import { dynamo } from '../db/dynamoClient.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const TABLE = 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 
 // ─── Shape helpers ────────────────────────────────────────────────────────────
 // DB stores: street, postal (legacy field names)

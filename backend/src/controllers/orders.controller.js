@@ -3,7 +3,6 @@ import { fetchOrders, fetchOrder, createOrder as createOrderService } from '../s
 import { clearCart } from '../services/cart.service.js';
 
 export async function getOrders(req, res) {
-    console.log('req.user:', req.user);
     try {
         const data = await fetchOrders(req.user.userId);
         res.json(data);
@@ -24,8 +23,6 @@ export async function getOrder(req, res) {
 }
 
 export async function createOrder(req, res) {
-    console.log('createOrder req.body:', req.body);
-    console.log('createOrder req.user:', req.user);
     try {
         const order = await createOrderService(req.user.userId, req.user.email, req.body);
 
@@ -38,11 +35,12 @@ export async function createOrder(req, res) {
 
         res.status(201).json(order);
     } catch (err) {
-        // Any thrown error from the Stripe block is a payment failure
+        if (err.statusCode === 502) {
+            return res.status(502).json({ error: err.message });
+        }
         if (err.message?.toLowerCase().includes('card') ||
             err.message?.toLowerCase().includes('declined') ||
             err.message?.toLowerCase().includes('insufficient') ||
-            err.message?.toLowerCase().includes('payment') ||
             err.message?.toLowerCase().includes('paymentmethod')) {
             return res.status(402).json({ error: err.message });
         }

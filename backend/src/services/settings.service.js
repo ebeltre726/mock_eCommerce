@@ -1,9 +1,17 @@
 // settings.service.js
 import { GetCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  CognitoIdentityProviderClient,
+  ChangePasswordCommand,
+  AdminDeleteUserCommand,
+  NotAuthorizedException,
+  InvalidPasswordException,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { dynamo } from '../db/dynamoClient.js';
-import bcrypt from 'bcrypt';
+import env from '../config/env.js';
 
-const TABLE = 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
 
 export async function fetchSettings(userId) {
     const result = await dynamo.send(new GetCommand({
@@ -44,34 +52,28 @@ export async function patchSettings(userId, fields) {
     return result.Attributes;
 }
 
-export async function updatePassword(userId, currentPassword, newPassword) {
-    console.log('updating password for:', `USER#${userId}`, `USER#${userId}`);
-    const result = await dynamo.send(new GetCommand({
-        TableName: TABLE,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: "PROFILE",
-        },
-    }));
+// accessToken is the Cognito access token from the authenticated session —
+// ChangePassword requires it (not the ID token).
+export async function updatePassword(userId, currentPassword, newPassword, accessToken) {
+    if (!accessToken) throw new Error('Authentication token required.');
 
-    console.log('found item for password update:', result.Item?.PK, result.Item?.SK);
-
-    if (!result.Item) throw new Error('User not found');
-
-    const passwordMatches = await bcrypt.compare(currentPassword, result.Item.password);
-    if (!passwordMatches) throw new Error('Invalid current password');
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await dynamo.send(new UpdateCommand({
-        TableName: TABLE,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: "PROFILE",
-        },
-        UpdateExpression: 'SET password = :password',
-        ExpressionAttributeValues: { ':password': hashedPassword },
-    }));
+    try {
+        await cognito.send(
+            new ChangePasswordCommand({
+                AccessToken:      accessToken,
+                PreviousPassword: currentPassword,
+                ProposedPassword: newPassword,
+            })
+        );
+    } catch (err) {
+        if (err instanceof NotAuthorizedException) {
+            throw new Error('Current password is incorrect.');
+        }
+        if (err instanceof InvalidPasswordException) {
+            throw new Error('New password does not meet requirements.');
+        }
+        throw err;
+    }
 }
 
 export async function removeAllUserData(userId) {
@@ -93,7 +95,19 @@ export async function removeAllUserData(userId) {
     );
 }
 
-export async function removeAccount(userId) {
-    // TODO: In production also revoke Stripe customer, cancel subscriptions etc.
-    await removeAllUserData(userId);
+// email is needed because Cognito's AdminDeleteUser identifies users by username (= email).
+export async function removeAccount(userId, email) {
+    await Promise.all([
+        removeAllUserData(userId),
+        // Remove the user from the Cognito User Pool so they cannot log in again.
+        cognito.send(
+            new AdminDeleteUserCommand({
+                UserPoolId: env.COGNITO_USER_POOL_ID,
+                Username:   email,
+            })
+        ).catch(err => {
+            // Log but don't block — DynamoDB data should still be deleted
+            console.error('AdminDeleteUser error (non-fatal):', err.message);
+        }),
+    ]);
 }

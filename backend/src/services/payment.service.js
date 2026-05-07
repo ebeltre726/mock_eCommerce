@@ -3,7 +3,7 @@ import { dynamo } from '../db/dynamoClient.js';
 import { stripe } from '../config/stripe.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const TABLE = 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
 
 // ─── Shape helper ─────────────────────────────────────────────────────────────
 // Returns only the fields the frontend and order.service.js need.
@@ -114,12 +114,24 @@ export async function getOrCreateCustomer(userId, userEmail) {
         metadata: { userId },
     });
 
-    await dynamo.send(new UpdateCommand({
-        TableName: TABLE,
-        Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
-        UpdateExpression: 'SET stripeCustomerId = :cid',
-        ExpressionAttributeValues: { ':cid': customer.id },
-    }));
-
-    return customer.id;
+    try {
+        await dynamo.send(new UpdateCommand({
+            TableName: TABLE,
+            Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+            UpdateExpression: 'SET stripeCustomerId = :cid',
+            ConditionExpression: 'attribute_not_exists(stripeCustomerId)',
+            ExpressionAttributeValues: { ':cid': customer.id },
+        }));
+        return customer.id;
+    } catch (err) {
+        if (err.name === 'ConditionalCheckFailedException') {
+            // Another request already wrote a customer — discard ours and use theirs
+            const refetch = await dynamo.send(new GetCommand({
+                TableName: TABLE,
+                Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+            }));
+            return refetch.Item.stripeCustomerId;
+        }
+        throw err;
+    }
 }
