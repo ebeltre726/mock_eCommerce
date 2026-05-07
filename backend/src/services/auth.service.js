@@ -59,7 +59,7 @@ export async function loginUser(email, password) {
       err instanceof UserNotConfirmedException
     ) {
       // Never reveal whether the email exists — same message for all auth failures
-      throw new Error('Invalid credentials.');
+      throw new Error('Invalid credentials.', { cause: err });
     }
     throw err;
   }
@@ -97,11 +97,12 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
     return { message: 'Please check your email to verify your account before logging in.' };
   } catch (err) {
     if (err instanceof UsernameExistsException) {
-      throw new Error('An account with this email already exists.');
+      throw new Error('An account with this email already exists.', { cause: err });
     }
     if (err instanceof InvalidPasswordException) {
       throw new Error(
-        'Password does not meet requirements: minimum 8 characters, must include uppercase, lowercase, number, and special character.'
+        'Password does not meet requirements: minimum 8 characters, must include uppercase, lowercase, number, and special character.',
+        { cause: err }
       );
     }
     throw err;
@@ -130,7 +131,7 @@ export async function refreshTokens(refreshToken) {
     };
   } catch (err) {
     if (err instanceof NotAuthorizedException) {
-      throw new Error('Refresh token expired. Please log in again.');
+      throw new Error('Refresh token expired. Please log in again.', { cause: err });
     }
     throw err;
   }
@@ -154,7 +155,7 @@ export async function forgotPassword(email) {
     return { message: 'If an account with that email exists, a reset code has been sent.' };
   } catch (err) {
     if (err instanceof LimitExceededException) {
-      throw new Error('Too many attempts. Please wait before requesting another reset code.');
+      throw new Error('Too many attempts. Please wait before requesting another reset code.', { cause: err });
     }
     throw err;
   }
@@ -181,11 +182,12 @@ export async function confirmForgotPassword(email, code, newPassword) {
     return { message: 'Password reset successfully. You can now log in.' };
   } catch (err) {
     if (err instanceof CodeMismatchException || err instanceof ExpiredCodeException) {
-      throw new Error('Invalid or expired code. Please request a new one.');
+      throw new Error('Invalid or expired code. Please request a new one.', { cause: err });
     }
     if (err instanceof InvalidPasswordException) {
       throw new Error(
-        'New password does not meet requirements.'
+        'New password does not meet requirements.',
+        { cause: err }
       );
     }
     throw err;

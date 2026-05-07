@@ -67,10 +67,10 @@ export async function updatePassword(userId, currentPassword, newPassword, acces
         );
     } catch (err) {
         if (err instanceof NotAuthorizedException) {
-            throw new Error('Current password is incorrect.');
+            throw new Error('Current password is incorrect.', { cause: err });
         }
         if (err instanceof InvalidPasswordException) {
-            throw new Error('New password does not meet requirements.');
+            throw new Error('New password does not meet requirements.', { cause: err });
         }
         throw err;
     }
