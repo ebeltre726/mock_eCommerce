@@ -5,8 +5,9 @@ import {
   refreshTokens,
   forgotPassword,
   confirmForgotPassword,
+  resendConfirmation,
 } from '../services/auth.service.js';
-import { fetchOverview } from '../services/account.service.js';
+import { fetchOverview, ensureUserProfile } from '../services/account.service.js';
 
 export async function login(req, res) {
   try {
@@ -15,6 +16,18 @@ export async function login(req, res) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
     const data = await loginUser(email, password);
+
+    // Fire-and-forget profile init. In dev this creates DynamoDB Local rows that
+    // the PostConfirmation Lambda won't have created. In prod this is a no-op
+    // (ConditionalCheckFailed) on every login after the first, and a self-heal
+    // if the Lambda ever failed transiently.
+    ensureUserProfile({
+      userId:    data.userId,
+      email:     data.email,
+      firstName: data.firstName,
+      lastName:  data.lastName,
+    }).catch(err => console.error('ensureUserProfile error (non-fatal):', err.message));
+
     res.json(data);
   } catch (err) {
     console.error('login error:', err);
@@ -33,6 +46,21 @@ export async function signup(req, res) {
   } catch (err) {
     console.error('signup error:', err);
     res.status(400).json({ error: err.message || 'Signup failed' });
+  }
+}
+
+export async function resendConfirmationHandler(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    const result = await resendConfirmation(email);
+    res.json(result);
+  } catch (err) {
+    console.error('resendConfirmation error:', err);
+    const status = err.message?.includes('Too many') ? 429 : 500;
+    res.status(status).json({ error: err.message || 'Request failed' });
   }
 }
 

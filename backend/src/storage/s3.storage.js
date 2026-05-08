@@ -4,12 +4,17 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
-  endpoint: process.env.S3_ENDPOINT,       // set for MinIO locally, unset for real AWS
-  forcePathStyle: !!process.env.S3_ENDPOINT, // required for MinIO; false on real AWS
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
+  endpoint: process.env.S3_ENDPOINT,
+  forcePathStyle: !!process.env.S3_ENDPOINT,
+  // MinIO (local) uses its own credentials — not AWS keys.
+  // Production omits credentials entirely; the SDK resolves them via the
+  // Identity Center / IAM provider chain.
+  ...(process.env.S3_ENDPOINT && {
+    credentials: {
+      accessKeyId:     process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+      secretAccessKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    },
+  }),
 });
 
 function objectUrl(bucket, key) {

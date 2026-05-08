@@ -11,11 +11,13 @@ export const authContracts = {
     },
     response: {
       200: Joi.object({
-        token:        Joi.string().required(), // Cognito ID token
-        accessToken:  Joi.string().optional(), // needed by client for logout
-        refreshToken: Joi.string().optional(), // needed by client for silent refresh
+        token:        Joi.string().required(),
+        accessToken:  Joi.string().optional(),
+        refreshToken: Joi.string().optional(),
         userId:       Joi.string().allow(null).optional(),
         email:        Joi.string().optional(),
+        firstName:    Joi.string().allow('').optional(),
+        lastName:     Joi.string().allow('').optional(),
       }).unknown(true),
       401: Joi.object({ error: Joi.string().required() }).unknown(true),
     },
@@ -37,6 +39,19 @@ export const authContracts = {
         message: Joi.string().required(), // "Please check your email..."
       }).unknown(true),
       400: Joi.object({ error: Joi.string().required() }).unknown(true),
+    },
+  },
+
+  // POST /api/auth/resend-confirmation
+  resendConfirmation: {
+    request: {
+      body: Joi.object({
+        email: Joi.string().email().required(),
+      }).unknown(true),
+    },
+    response: {
+      200: Joi.object({ message: Joi.string().required() }).unknown(true),
+      429: Joi.object({ error: Joi.string().required() }).unknown(true),
     },
   },
 

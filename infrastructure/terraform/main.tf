@@ -56,7 +56,7 @@ module "lambda" {
   dynamodb_table      = var.dynamodb_table
   s3_bucket_avatars   = var.s3_bucket_avatars
   s3_bucket_products  = var.s3_bucket_products
-  allowed_origins     = "https://${module.cloudfront.domain_name}"
+  allowed_origins     = "https://${var.domain_name}"
   stripe_secret_arn   = aws_ssm_parameter.stripe_secret.arn
   cognito_user_pool_id = module.cognito.user_pool_id
   cognito_client_id   = module.cognito.client_id
@@ -71,12 +71,66 @@ module "api_gateway" {
   allowed_origins   = ["*"]
 }
 
+module "route53" {
+  source      = "./modules/route53"
+  providers   = { aws = aws, aws.us_east_1 = aws.us_east_1 }
+  domain_name = var.domain_name
+}
+
 module "cloudfront" {
   source                 = "./modules/cloudfront"
   providers              = { aws.us_east_1 = aws.us_east_1 }
   frontend_bucket_id     = module.s3.frontend_bucket_id
   frontend_bucket_domain = module.s3.frontend_bucket_regional_domain
   api_gateway_url        = module.api_gateway.endpoint
+  acm_certificate_arn    = module.route53.certificate_arn
+  domain_aliases         = [var.domain_name, "www.${var.domain_name}"]
+}
+
+# Route 53 alias records — kept in root to avoid a circular dependency between
+# the route53 module (cert) and the cloudfront module (distribution domain).
+resource "aws_route53_record" "apex_a" {
+  zone_id = module.route53.zone_id
+  name    = var.domain_name
+  type    = "A"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "apex_aaaa" {
+  zone_id = module.route53.zone_id
+  name    = var.domain_name
+  type    = "AAAA"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_a" {
+  zone_id = module.route53.zone_id
+  name    = "www.${var.domain_name}"
+  type    = "A"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_aaaa" {
+  zone_id = module.route53.zone_id
+  name    = "www.${var.domain_name}"
+  type    = "AAAA"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
 
 # Stripe secret in SSM (SecureString — set via AWS Console or CLI after first apply)

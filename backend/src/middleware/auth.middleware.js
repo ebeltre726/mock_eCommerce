@@ -3,7 +3,8 @@ import env from '../config/env.js';
 
 // Verifier is created once and caches Cognito's JWKS internally.
 // It validates: signature, expiry, issuer (User Pool), and audience (Client ID).
-const verifier = CognitoJwtVerifier.create({
+// Exported so lambda.js can pre-warm the JWKS fetch during cold start.
+export const verifier = CognitoJwtVerifier.create({
   userPoolId: env.COGNITO_USER_POOL_ID,
   tokenUse: 'id',
   clientId: env.COGNITO_CLIENT_ID,

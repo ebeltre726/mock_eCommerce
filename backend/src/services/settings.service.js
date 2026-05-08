@@ -10,7 +10,7 @@ import {
 import { dynamo } from '../db/dynamoClient.js';
 import env from '../config/env.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
 
 export async function fetchSettings(userId) {

@@ -3,7 +3,7 @@ import { dynamo } from '../db/dynamoClient.js';
 import { stripe } from '../config/stripe.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
 // ─── Shape helper ─────────────────────────────────────────────────────────────
 // Returns only the fields the frontend and order.service.js need.

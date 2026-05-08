@@ -28,6 +28,7 @@ export async function initCheckout() {
     }
 
     bindCheckoutEvents();
+    updateTotal();
 }
 
 export function teardownCheckout() {
@@ -176,12 +177,20 @@ function bindCheckoutEvents() {
         }
     });
 
-    document.getElementById('viewCartBtn')?.addEventListener('click', () => {
+    document.getElementById('viewCartBtn')?.addEventListener('click', async () => {
         const preview = document.getElementById('cartPreview');
+        const btn     = document.getElementById('viewCartBtn');
         const chevron = document.getElementById('cartChevron');
         const isOpen  = preview.classList.toggle('open');
-        preview.setAttribute('aria-expanded', String(isOpen));
+        btn.setAttribute('aria-expanded', String(isOpen));
         chevron.classList.toggle('flipped', isOpen);
+
+        if (isOpen) {
+            const cartGrid = document.getElementById('cartGrid');
+            if (cartGrid && window.cartModule) {
+                await renderCartPreview(cartGrid);
+            }
+        }
     });
 
     document.getElementById('statusDismiss')?.addEventListener('click', () => {
@@ -325,6 +334,49 @@ function hideStatus() {
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
+
+async function renderCartPreview(cartGrid) {
+    const cartState = window.cartModule.getCartState();
+
+    if (!cartState.length) {
+        cartGrid.innerHTML = '<p class="emptyCart">No items in cart.</p>';
+        updateTotal();
+        return;
+    }
+
+    cartGrid.innerHTML = '<p class="emptyCart">Loading…</p>';
+
+    const details = await Promise.all(
+        cartState.map(item =>
+            apiFetch(`products/${item.productId}`).catch(() => null)
+        )
+    );
+
+    let total = 0;
+    const rows = cartState.map((item, i) => {
+        const p = details[i];
+        if (!p) return '';
+        const lineTotal = (p.price ?? 0) * item.quantity;
+        total += lineTotal;
+        return `
+            <div class="cartLineItem">
+                <span>${esc(p.name)}<span class="itemQty">×${item.quantity}</span></span>
+                <span class="itemPrice">$${lineTotal.toFixed(2)}</span>
+            </div>`;
+    }).join('');
+
+    cartGrid.innerHTML = rows || '<p class="emptyCart">No items in cart.</p>';
+
+    const totalEl = document.getElementById('totalAmount');
+    if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+function updateTotal() {
+    const items = window.cartModule?.getItems?.() ?? [];
+    const total = items.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
+    const totalEl = document.getElementById('totalAmount');
+    if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+}
 
 function setActiveChip(rail, active) {
     rail.querySelectorAll('.autofillChip').forEach(c => {

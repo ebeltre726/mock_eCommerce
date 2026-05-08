@@ -5,7 +5,7 @@ import { stripe } from '../config/stripe.js';
 import { fetchAddresses } from './address.service.js';
 import { getOrCreateCustomer } from './payment.service.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
 /**
  * Utility: fetch address by ID

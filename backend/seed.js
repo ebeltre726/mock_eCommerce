@@ -17,7 +17,7 @@ import { storage }      from './src/storage/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import fs               from 'fs/promises';
 import path             from 'path';
-const TABLE_NAME = 'Furnituria';
+const TABLE_NAME = 'Furnitria';
 const USER_ID = 'u001';
 const MOCK_EMAIL = 'jane.doe@email.com';
 const MOCK_PASSWORD = 'N/A — managed by Cognito';
@@ -83,7 +83,7 @@ export async function seedProducts() {
         { id: 'chair-6',  name: 'Tan Netted Chair',               description: 'A tan-colored netted chair with a metal skeleton and a C-shape design.',                                                                                         filename: 'nettedchair.jpg',      price: 14.99 },
         { id: 'chair-7',  name: 'Cushioned Stool Chair',          description: 'A black stool chair with a brown cushion and backrest. Has four legs with supports.',                                                                             filename: 'stoolchair.jpg',       price: 14.99 },
         { id: 'chair-8',  name: 'Wood Office Chair',              description: 'Sturdy, wood office chair. Our cheapest product, but most durable. Encouraged for simple use cases.',                                                             filename: 'woodofficechair.jpg',  price:  9.99 },
-        { id: 'chair-9',  name: 'Sun-Glazed Chair',               description: 'A Furnituria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.',            filename: 'sunglazedchair.jpg',   price: 34.99 },
+        { id: 'chair-9',  name: 'Sun-Glazed Chair',               description: 'A Furnitria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.',            filename: 'sunglazedchair.jpg',   price: 34.99 },
         { id: 'chair-10', name: 'Plain White Chair',              description: 'A sturdy and durable plain all-white chair. One of our most purchased products.',                                                                                 filename: 'whitechair.jpg',       price:  9.99 },
         { id: 'chair-11', name: 'Old-Fashioned Wood Chair',       description: 'A sturdy, old-fashioned wood chair with traditional design and leg supports.',                                                                                    filename: 'woodchair.jpg',        price: 19.99 },
     ];

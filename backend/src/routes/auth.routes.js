@@ -7,6 +7,7 @@ import {
   refresh,
   forgotPasswordHandler,
   confirmForgotPasswordHandler,
+  resendConfirmationHandler,
   getMe,
 } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
@@ -28,6 +29,9 @@ router.post('/login', authLimiter, validateRequest(authContracts.login), validat
 
 // POST /api/auth/signup
 router.post('/signup', authLimiter, validateRequest(authContracts.signup), validateResponse(authContracts.signup), signup);
+
+// POST /api/auth/resend-confirmation
+router.post('/resend-confirmation', authLimiter, validateRequest(authContracts.resendConfirmation), validateResponse(authContracts.resendConfirmation), resendConfirmationHandler);
 
 // POST /api/auth/logout
 router.post('/logout', authLimiter, validateResponse(authContracts.logout), logout);

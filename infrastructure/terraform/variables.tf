@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "dynamodb_table" {
   description = "DynamoDB table name"
-  default     = "Furnituria"
+  default     = "Furnitria"
 }
 
 variable "frontend_bucket" {
@@ -31,4 +31,9 @@ variable "ecr_repo_name" {
 variable "image_tag" {
   description = "Docker image tag to deploy (set by CI to the Git SHA)"
   default     = "latest"
+}
+
+variable "domain_name" {
+  description = "Root domain registered in Route 53 (e.g. furnitria.com)"
+  default     = "furnitria.com"
 }

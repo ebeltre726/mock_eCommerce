@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
   SignUpCommand,
+  ResendConfirmationCodeCommand,
   ForgotPasswordCommand,
   ConfirmForgotPasswordCommand,
   GlobalSignOutCommand,
@@ -16,6 +17,17 @@ import {
 import env from '../config/env.js';
 
 const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
+
+// Decodes the payload of a JWT without verifying the signature.
+// Safe to call on tokens received directly from Cognito (not from the client).
+function decodeJwtPayload(token) {
+  try {
+    const base64 = token.split('.')[1];
+    return JSON.parse(Buffer.from(base64, 'base64url').toString('utf8'));
+  } catch {
+    return {};
+  }
+}
 
 // ======================
 // LOGIN USER
@@ -44,21 +56,25 @@ export async function loginUser(email, password) {
       })
     );
 
+    // Decode the ID token (trusted — came from Cognito directly) to surface
+    // userId/firstName without requiring a separate /me round-trip on login.
+    const claims = decodeJwtPayload(AuthenticationResult.IdToken);
+
     return {
       token:        AuthenticationResult.IdToken,
       accessToken:  AuthenticationResult.AccessToken,
       refreshToken: AuthenticationResult.RefreshToken,
-      // sub and email come from the ID token claims, but the frontend needs
-      // them immediately (before decoding the JWT) for local state.
-      userId: null,   // populated from Cognito ID token sub — frontend should decode or call /me
-      email:  email.trim().toLowerCase(),
+      userId:       claims.sub        ?? null,
+      email:        claims.email      ?? email.trim().toLowerCase(),
+      firstName:    claims.given_name ?? '',
+      lastName:     claims.family_name ?? '',
     };
   } catch (err) {
-    if (
-      err instanceof NotAuthorizedException ||
-      err instanceof UserNotConfirmedException
-    ) {
-      // Never reveal whether the email exists — same message for all auth failures
+    if (err instanceof UserNotConfirmedException) {
+      throw new Error('Please verify your email before logging in. Check your inbox for a verification link.', { cause: err });
+    }
+    if (err instanceof NotAuthorizedException) {
+      // Never reveal whether the email exists — same message for all wrong-password attempts
       throw new Error('Invalid credentials.', { cause: err });
     }
     throw err;
@@ -107,6 +123,32 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
     }
     throw err;
   }
+}
+
+// ======================
+// RESEND VERIFICATION EMAIL
+// ======================
+// Called when a user loses the verification email or it expired.
+// Always returns success to avoid revealing whether the address is registered.
+export async function resendConfirmation(email) {
+  if (!email) throw new Error('Email is required.');
+
+  try {
+    await cognito.send(
+      new ResendConfirmationCodeCommand({
+        ClientId: env.COGNITO_CLIENT_ID,
+        Username: email.trim().toLowerCase(),
+      })
+    );
+  } catch (err) {
+    if (err instanceof LimitExceededException) {
+      throw new Error('Too many attempts. Please wait before requesting another verification email.', { cause: err });
+    }
+    // Swallow all other errors (e.g. UserNotFoundException) — never reveal
+    // whether the email is registered.
+  }
+
+  return { message: 'If that email is registered and unverified, a new verification link has been sent.' };
 }
 
 // ======================

@@ -13,14 +13,17 @@ import authRouter from './routes/auth.routes.js';
 const app = express();
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) ?? [];
-app.use(cors({
+const corsOptions = {
     origin: (origin, cb) => {
-        // allow server-to-server (no origin) and configured origins
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
-}));
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Access-Token'],
+};
+app.use(cors(corsOptions));
+app.options('/*splat', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,7 +39,7 @@ app.use('/api/orders', ordersRouter);
 app.get("/health", async (req, res) => {
     try {
         await dynamo.send(new DescribeTableCommand({
-            TableName: process.env.DYNAMODB_TABLE ?? 'Furnituria',
+            TableName: process.env.DYNAMODB_TABLE ?? 'Furnitria',
         }));
         res.json({ status: 'OK' });
     } catch {

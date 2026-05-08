@@ -4,7 +4,7 @@ import { dynamo } from "../db/dynamoClient.js";
 import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { validateFile } from "../utils/validateFile.js";
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
 export async function uploadAvatar(userId, file) {
   validateFile(file);

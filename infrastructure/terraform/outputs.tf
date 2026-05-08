@@ -1,6 +1,16 @@
+output "site_url" {
+  description = "Primary public URL for the frontend (custom domain)"
+  value       = "https://${var.domain_name}"
+}
+
 output "cloudfront_url" {
-  description = "Public URL for the frontend + API (set VITE_API_URL to this + /api)"
+  description = "CloudFront distribution URL (direct, bypasses custom domain)"
   value       = "https://${module.cloudfront.domain_name}"
+}
+
+output "route53_name_servers" {
+  description = "Set these NS records at your registrar to delegate DNS to Route 53"
+  value       = module.route53.name_servers
 }
 
 output "api_gateway_endpoint" {

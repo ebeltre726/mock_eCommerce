@@ -16,7 +16,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnituria';
+const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION_OVERRIDE ?? process.env.AWS_REGION ?? 'us-east-1',

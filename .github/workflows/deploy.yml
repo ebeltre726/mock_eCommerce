@@ -202,7 +202,7 @@ jobs:
         run: node scripts/seed-products.js
         env:
           AWS_REGION:         ${{ env.AWS_REGION }}
-          DYNAMODB_TABLE:     Furnituria
+          DYNAMODB_TABLE:     Furnitria
           S3_BUCKET_AVATARS:  ${{ secrets.S3_BUCKET_AVATARS }}
           S3_BUCKET_PRODUCTS: ${{ secrets.S3_BUCKET_PRODUCTS }}
           STRIPE_SECRET_KEY:  placeholder   # not used by seed, satisfies env.js validation

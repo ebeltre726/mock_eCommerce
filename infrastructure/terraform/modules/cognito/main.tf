@@ -22,7 +22,7 @@ resource "aws_cognito_user_pool" "main" {
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
-  email_verification_subject = "Verify your Furnituria account"
+  email_verification_subject = "Verify your Furnitria account"
   email_verification_message = "Your verification code is {####}"
 
   # Matches the password policy enforced by the old auth.service.js

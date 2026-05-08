@@ -348,10 +348,6 @@ async function renderOrderHistory(contentPane, orders) {
 async function renderAddresses(contentPane, addresses) {
     const localAddresses = [...addresses];
 
-    // Address form starts hidden — toggle on add/edit
-    const addressContainer = contentPane.querySelector('.addressContainer');
-    if (addressContainer) addressContainer.classList.add('hidden');
-
     function renderList(addrs) {
         const list = contentPane.querySelector('#address-list');
         list.innerHTML = addrs.length ? addrs.map(addr => `
@@ -379,7 +375,17 @@ async function renderAddresses(contentPane, addresses) {
     });
 
     contentPane.querySelector('.add-address-btn')
-        .addEventListener('click', () => showAddAddressForm(contentPane));
+        ?.addEventListener('click', () => {
+            const opened = toggleForm(contentPane, 'addressContainer');
+            if (opened) {
+                contentPane.querySelector('#address-form-title').textContent = 'Add Address';
+                contentPane.querySelector('#address-id').value = '';
+                ['addr-label','addr-line1','addr-line2','addr-city','addr-state','addr-zip']
+                    .forEach(id => { contentPane.querySelector(`#${id}`).value = ''; });
+                contentPane.querySelector('#addr-country').value = 'US';
+                contentPane.querySelector('#addr-default').checked = false;
+            }
+        });
 
     contentPane.querySelector('#cancel-address-btn')
         .addEventListener('click', () => toggleForm(contentPane, 'addressContainer', false));
@@ -482,9 +488,8 @@ async function renderNewsletter(contentPane, prefs) {
     });
 
     contentPane.querySelector('#save-newsletter-btn').addEventListener('click', async () => {
-        const saved = contentPane.querySelector('#newsletter-saved');
         try {
-            await apiFetch('account/newsletter', {
+            const result = await apiFetch('account/newsletter', {
                 method: 'PATCH',
                 body: JSON.stringify({
                     subscribed: subscribedCheckbox.checked,
@@ -494,8 +499,14 @@ async function renderNewsletter(contentPane, prefs) {
                     })),
                 }),
             });
-            saved.classList.remove('hidden');
-            setTimeout(() => saved.classList.add('hidden'), 3000);
+
+            const confirmationId = result.action === 'subscribed'   ? 'newsletter-saved-subscribed'
+                                 : result.action === 'unsubscribed' ? 'newsletter-saved-unsubscribed'
+                                 :                                    'newsletter-saved-updated';
+
+            const msg = contentPane.querySelector(`#${confirmationId}`);
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 4000);
         } catch (err) {
             console.error('Failed to save newsletter prefs:', err);
         }
@@ -506,6 +517,30 @@ async function renderSettings(contentPane, settings) {
     contentPane.querySelector('#setting-share-data').checked = settings.shareData;
     contentPane.querySelector('#setting-email-updates').checked = settings.emailUpdates;
     contentPane.querySelector('#setting-sms').checked = settings.smsNotifications;
+
+    contentPane.querySelector('#save-settings-btn').addEventListener('click', async () => {
+        const btn = contentPane.querySelector('#save-settings-btn');
+        const saved = contentPane.querySelector('#settings-saved');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await apiFetch('account/settings', {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    shareData:        contentPane.querySelector('#setting-share-data').checked,
+                    emailUpdates:     contentPane.querySelector('#setting-email-updates').checked,
+                    smsNotifications: contentPane.querySelector('#setting-sms').checked,
+                }),
+            });
+            saved.classList.remove('hidden');
+            setTimeout(() => saved.classList.add('hidden'), 3000);
+        } catch (err) {
+            showInlineError(contentPane, 'save-settings-btn', 'Failed to save settings.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Save Settings';
+        }
+    });
 
     contentPane.querySelector('#logout-btn').addEventListener('click', async () => {
         const accessToken = localStorage.getItem('accessToken');
@@ -611,9 +646,9 @@ async function renderWishlist(contentPane, items) {
     `).join('') : '<li class="empty-state">Your wishlist is empty.</li>';
 
     list.addEventListener('click', e => {
-        const cartBtn = e.target.closest('.add-to-cart');
+        const cartBtn   = e.target.closest('.add-to-cart');
         const removeBtn = e.target.closest('.remove-wishlist');
-        if (cartBtn) addToCart(cartBtn.dataset.id);
+        if (cartBtn)   addToCart(cartBtn.dataset.id, cartBtn);
         if (removeBtn) removeWishlistItem(removeBtn.dataset.id, contentPane);
     });
 }
@@ -630,15 +665,6 @@ function removeCard(id, contentPane) {
     });
 }
 
-function showAddAddressForm(contentPane) {
-    contentPane.querySelector('#address-form-title').textContent = 'Add Address';
-    contentPane.querySelector('#address-id').value = '';
-    ['addr-label','addr-line1','addr-line2','addr-city','addr-state','addr-zip']
-        .forEach(id => { contentPane.querySelector(`#${id}`).value = ''; });
-    contentPane.querySelector('#addr-country').value = 'US';
-    contentPane.querySelector('#addr-default').checked = false;
-    toggleForm(contentPane, 'addressContainer');
-}
 
 function showEditAddressForm(id, addresses, contentPane) {
     const addr = addresses.find(a => a.addressId === id);
@@ -655,7 +681,7 @@ function showEditAddressForm(id, addresses, contentPane) {
     contentPane.querySelector('#addr-zip').value     = addr.zip;
     contentPane.querySelector('#addr-country').value = addr.country;
     contentPane.querySelector('#addr-default').checked = addr.isDefault;
-    toggleForm(contentPane, 'addressContainer');
+    toggleForm(contentPane, 'addressContainer', true);
 }
 
 function saveAddress(addresses, renderList, contentPane) {
@@ -708,18 +734,53 @@ function removeAddress(id, addresses, renderList, contentPane) {
 });
 }
 
-function addToCart(id) {
-    apiFetch('cart', {
+function addToCart(id, btn) {
+    const original = btn?.textContent;
+    if (btn) btn.disabled = true;
+
+    apiFetch('cart/add', {
         method: 'POST',
-        body: JSON.stringify({ itemId: id }),
-    }).catch(err => console.error('Failed to add to cart:', err));
+        body: JSON.stringify({ productId: id, quantity: 1 }),
+    })
+        .then(() => {
+            if (btn) {
+                btn.textContent = 'Added!';
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.disabled = false;
+                }, 1500);
+            }
+        })
+        .catch(err => {
+            console.error('Failed to add to cart:', err);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        });
 }
 
 function removeWishlistItem(id, contentPane) {
     confirmAction('Remove from wishlist?', () => {
+        const item    = contentPane.querySelector(`.wishlist-item[data-id="${id}"]`);
+        const removeBtn = item?.querySelector('.remove-wishlist');
+        if (removeBtn) removeBtn.disabled = true;
+
         apiFetch(`account/wishlist/${id}`, { method: 'DELETE' })
-            .then(() => contentPane.querySelector(`.wishlist-item[data-id="${id}"]`)?.remove())
-            .catch(err => console.error('Failed to remove wishlist item:', err));
+            .then(() => {
+                item?.remove();
+                const list      = contentPane.querySelector('#wishlist-list');
+                const countEl   = contentPane.querySelector('#wishlist-count');
+                const remaining = list?.querySelectorAll('.wishlist-item').length ?? 0;
+                if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
+                if (remaining === 0 && list) {
+                    list.innerHTML = '<li class="empty-state">Your wishlist is empty.</li>';
+                }
+            })
+            .catch(err => {
+                console.error('Failed to remove wishlist item:', err);
+                if (removeBtn) removeBtn.disabled = false;
+            });
     });
 }
 

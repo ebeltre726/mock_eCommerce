@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     root: '.',
-    base: './',
+    base: '/',
     // public/ holds runtime-fetched assets (templates, icons) that Vite copies as-is
     publicDir: 'public',
     build: {

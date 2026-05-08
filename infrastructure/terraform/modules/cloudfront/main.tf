@@ -36,12 +36,17 @@ resource "aws_s3_bucket_policy" "frontend_oac" {
   })
 }
 
+locals {
+  use_custom_cert = var.acm_certificate_arn != null
+}
+
 resource "aws_cloudfront_distribution" "main" {
   provider = aws.us_east_1
   enabled  = true
   comment  = "mock-ecommerce"
 
   default_root_object = "index.html"
+  aliases             = local.use_custom_cert ? var.domain_aliases : []
 
   # Origin 1: S3 frontend (private bucket via OAC)
   origin {
@@ -98,7 +103,10 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = !local.use_custom_cert
+    acm_certificate_arn            = local.use_custom_cert ? var.acm_certificate_arn : null
+    ssl_support_method             = local.use_custom_cert ? "sni-only" : null
+    minimum_protocol_version       = local.use_custom_cert ? "TLSv1.2_2021" : null
   }
 }
 

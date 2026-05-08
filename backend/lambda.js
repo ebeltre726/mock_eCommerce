@@ -1,6 +1,7 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import serverlessExpress from '@vendia/serverless-express';
 import app from './src/app.js';
+import { verifier } from './src/middleware/auth.middleware.js';
 
 // Resolved once per cold start; reused across warm invocations.
 let _handler;
@@ -15,6 +16,11 @@ async function getHandler() {
     );
     process.env.STRIPE_SECRET_KEY = Parameter.Value;
   }
+
+  // Pre-warm the Cognito JWKS cache during cold start so the first
+  // authenticated request doesn't pay the ~100ms JWKS fetch latency.
+  // The dummy token will fail verification — that's expected and ignored.
+  await verifier.verify('warmup').catch(() => {});
 
   _handler = serverlessExpress({ app });
   return _handler;
