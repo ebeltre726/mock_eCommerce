@@ -83,7 +83,11 @@ export async function handler(event) {
           emailUpdates: false,
           smsNotifications: false,
         },
-      })),
+        // Idempotent — Cognito may retry; must not overwrite user-changed settings
+        ConditionExpression: 'attribute_not_exists(PK)',
+      })).catch(err => {
+        if (err.name !== 'ConditionalCheckFailedException') throw err;
+      }),
       dynamo.send(new PutCommand({
         TableName: TABLE,
         Item: {
@@ -93,7 +97,10 @@ export async function handler(event) {
           tier: 'Bronze',
           deals: [],
         },
-      })),
+        ConditionExpression: 'attribute_not_exists(PK)',
+      })).catch(err => {
+        if (err.name !== 'ConditionalCheckFailedException') throw err;
+      }),
       dynamo.send(new PutCommand({
         TableName: TABLE,
         Item: {
@@ -102,7 +109,10 @@ export async function handler(event) {
           subscribed: false,
           topics: [],
         },
-      })),
+        ConditionExpression: 'attribute_not_exists(PK)',
+      })).catch(err => {
+        if (err.name !== 'ConditionalCheckFailedException') throw err;
+      }),
     ]);
 
     console.log(`PostConfirmation: created DynamoDB profile for user ${userId}`);

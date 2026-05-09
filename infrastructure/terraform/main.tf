@@ -34,10 +34,12 @@ module "dynamodb" {
 }
 
 module "s3" {
-  source          = "./modules/s3"
-  frontend_bucket = var.frontend_bucket
-  avatars_bucket  = var.s3_bucket_avatars
-  products_bucket = var.s3_bucket_products
+  source                     = "./modules/s3"
+  frontend_bucket            = var.frontend_bucket
+  avatars_bucket             = var.s3_bucket_avatars
+  products_bucket            = var.s3_bucket_products
+  force_destroy_data_buckets = var.force_destroy_data_buckets
+  force_destroy_frontend     = var.force_destroy_frontend
 }
 
 module "cognito" {
@@ -46,6 +48,7 @@ module "cognito" {
   dynamodb_table = var.dynamodb_table
   ecr_repo_name  = var.ecr_repo_name
   image_tag      = var.image_tag
+  ses_email_arn  = var.ses_email_arn
 }
 
 module "lambda" {
@@ -57,18 +60,24 @@ module "lambda" {
   s3_bucket_avatars   = var.s3_bucket_avatars
   s3_bucket_products  = var.s3_bucket_products
   allowed_origins     = "https://${var.domain_name}"
-  stripe_secret_arn   = aws_ssm_parameter.stripe_secret.arn
+  stripe_secret_arn           = aws_ssm_parameter.stripe_secret.arn
+  emailjs_private_key_arn     = aws_ssm_parameter.emailjs_private_key.arn
   cognito_user_pool_id = module.cognito.user_pool_id
   cognito_client_id   = module.cognito.client_id
+  emailjs_service_id            = var.emailjs_service_id
+  emailjs_public_key            = var.emailjs_public_key
+  emailjs_template_contact      = var.emailjs_template_contact
+  emailjs_template_subscribed   = var.emailjs_template_subscribed
+  emailjs_template_unsubscribed = var.emailjs_template_unsubscribed
 }
 
 module "api_gateway" {
   source            = "./modules/api_gateway"
   lambda_invoke_arn = module.lambda.invoke_arn
   lambda_arn        = module.lambda.arn
-  # CloudFront URL can't be used here — it creates a cycle (cloudfront → api_gateway → cloudfront).
-  # Express middleware is the real gatekeeper; this only covers direct preflight to API GW.
-  allowed_origins   = ["*"]
+  # var.domain_name is a root variable with no module dependency, so using it here
+  # avoids the cloudfront→api_gateway→cloudfront cycle while still restricting origins.
+  allowed_origins   = ["https://${var.domain_name}", "https://www.${var.domain_name}"]
 }
 
 module "route53" {
@@ -82,9 +91,13 @@ module "cloudfront" {
   providers              = { aws.us_east_1 = aws.us_east_1 }
   frontend_bucket_id     = module.s3.frontend_bucket_id
   frontend_bucket_domain = module.s3.frontend_bucket_regional_domain
+  products_bucket_id     = module.s3.products_bucket_id
+  products_bucket_domain = module.s3.products_bucket_regional_domain
+  avatars_bucket_domain  = module.s3.avatars_bucket_regional_domain
   api_gateway_url        = module.api_gateway.endpoint
   acm_certificate_arn    = module.route53.certificate_arn
   domain_aliases         = [var.domain_name, "www.${var.domain_name}"]
+  waf_auth_rate_limit    = var.waf_auth_rate_limit
 }
 
 # Route 53 alias records — kept in root to avoid a circular dependency between
@@ -141,5 +154,18 @@ resource "aws_ssm_parameter" "stripe_secret" {
 
   lifecycle {
     ignore_changes = [value]  # prevents Terraform from overwriting manually set secrets
+  }
+}
+
+# EmailJS private key in SSM (SecureString).
+# Value is written by the deploy workflow via `aws ssm put-parameter --overwrite`
+# before terraform apply, keeping it out of the tfplan artifact entirely.
+resource "aws_ssm_parameter" "emailjs_private_key" {
+  name  = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
+  type  = "SecureString"
+  value = "REPLACE_ME"
+
+  lifecycle {
+    ignore_changes = [value]
   }
 }

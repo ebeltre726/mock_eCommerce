@@ -1,5 +1,8 @@
 variable "frontend_bucket_id"     { type = string }
 variable "frontend_bucket_domain"  { type = string }
+variable "products_bucket_id"      { type = string }
+variable "products_bucket_domain"  { type = string }
+variable "avatars_bucket_domain"   { type = string }
 variable "api_gateway_url"         { type = string }
 
 variable "acm_certificate_arn" {
@@ -12,4 +15,10 @@ variable "domain_aliases" {
   description = "Custom domain names served by this distribution (e.g. furnitria.com, www.furnitria.com)"
   type        = list(string)
   default     = []
+}
+
+variable "waf_auth_rate_limit" {
+  description = "Maximum requests per IP per 5-minute window to /api/auth/* before WAF blocks. AWS minimum is 100. Set to 0 to disable the auth rate-limiting rule."
+  type        = number
+  default     = 300
 }

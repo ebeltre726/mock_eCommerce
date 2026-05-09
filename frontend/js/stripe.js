@@ -23,7 +23,11 @@ const STYLE = {
 };
 
 function getStripe() {
-    if (!_stripe) _stripe = Stripe('pk_test_51TDH912E0ytncV4m8z5H93ZqAtjDo6b5LZ446LCdmMXTIPEb8UiZvlEzhZObkrnGDEDNWcP3V8FjzZmaVpnfovk200SQfEH1ca');
+    if (!_stripe) {
+        const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+        if (!key) throw new Error('VITE_STRIPE_PUBLISHABLE_KEY is not set');
+        _stripe = Stripe(key);
+    }
     return _stripe;
 }
 
@@ -69,7 +73,7 @@ export function unmountStripeElements() {
 
 // ─── Tokenise a new card and submit order ─────────────────────────────────────
 
-export async function submitNewCard({ fullName, addressId, saveCard, items }) {
+export async function submitNewCard({ fullName, addressId, shippingAddress, saveCard, items }) {
     if (!_cardNumber) throw new Error('Card elements are not mounted.');
 
     const stripe = getStripe();
@@ -84,31 +88,23 @@ export async function submitNewCard({ fullName, addressId, saveCard, items }) {
     const body = {
         paymentMethodId: paymentMethod.id,
         fullName,
-        addressId,
+        ...(addressId ? { addressId } : { shippingAddress }),
         items,
         saveCard,
     };
-
-    // Only send card metadata if the user wants to save — backend needs it
-    // to write the PAYMENT# record in payment.service.js
-    if (saveCard) {
-        body.cardBrand  = paymentMethod.card.brand;
-        body.cardLast4  = paymentMethod.card.last4;
-        body.cardExpiry = `${paymentMethod.card.exp_month}/${String(paymentMethod.card.exp_year).slice(-2)}`;
-    }
 
     return apiFetch('orders', { method: 'POST', body: JSON.stringify(body) });
 }
 
 // ─── Submit order with a saved Stripe payment method ─────────────────────────
 
-export async function submitSavedCard({ stripePaymentMethodId, fullName, addressId, items }) {
+export async function submitSavedCard({ stripePaymentMethodId, fullName, addressId, shippingAddress, items }) {
     return apiFetch('orders', {
         method: 'POST',
         body: JSON.stringify({
             paymentMethodId: stripePaymentMethodId,
             fullName,
-            addressId,
+            ...(addressId ? { addressId } : { shippingAddress }),
             items,
             saveCard: false,
         }),

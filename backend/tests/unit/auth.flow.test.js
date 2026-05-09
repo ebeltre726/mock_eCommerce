@@ -19,7 +19,8 @@ jest.mock('../../src/services/auth.service.js', () => ({
 }));
 
 jest.mock('../../src/services/account.service.js', () => ({
-  fetchOverview: jest.fn(),
+  fetchOverview:     jest.fn(),
+  ensureUserProfile: jest.fn().mockResolvedValue(undefined),
 }));
 
 import app from '../../src/app.js';
@@ -41,7 +42,7 @@ describe('Auth / User Flow (mocked services)', () => {
     expect(signupUser).toHaveBeenCalled();
   });
 
-  it('login -> returns 200 with Cognito tokens', async () => {
+  it('login -> sets httpOnly cookies and returns user info (no tokens in body)', async () => {
     loginUser.mockResolvedValue({
       token:        'cognito-id-token',
       accessToken:  'cognito-access-token',
@@ -55,9 +56,18 @@ describe('Auth / User Flow (mocked services)', () => {
       .send({ email: 'x@y.com', password: 'pw' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('token', 'cognito-id-token');
-    expect(res.body).toHaveProperty('accessToken', 'cognito-access-token');
-    expect(res.body).toHaveProperty('refreshToken', 'cognito-refresh-token');
+
+    // Tokens must be in httpOnly cookies, not the response body
+    expect(res.body).not.toHaveProperty('token');
+    expect(res.body).not.toHaveProperty('accessToken');
+    expect(res.body).not.toHaveProperty('refreshToken');
+    expect(res.body).toHaveProperty('email', 'x@y.com');
+
+    const cookies = res.headers['set-cookie'] ?? [];
+    expect(cookies.some(c => c.startsWith('id_token='))).toBe(true);
+    expect(cookies.some(c => c.startsWith('access_token='))).toBe(true);
+    expect(cookies.some(c => c.includes('HttpOnly'))).toBe(true);
+
     expect(loginUser).toHaveBeenCalledWith('x@y.com', 'pw');
   });
 

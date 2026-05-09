@@ -18,36 +18,34 @@ jobs:
   # ──────────────────────────────────────────────────
   # 0. Ensure the ECR repository exists before we try to push to it.
   #    On first deploy the repo doesn't exist yet — Terraform normally creates
-  #    it, but the build job runs before Terraform.  A targeted pre-apply
-  #    creates the repo (idempotent no-op on all subsequent runs) so the
-  #    image push in the next job always succeeds.
+  #    it, but the build job runs before Terraform.  We use the AWS CLI directly
+  #    rather than a targeted terraform apply -auto-approve to avoid plan-less
+  #    applies and the risk of partial state mutations.
+  #    The create-repository call is a no-op when the repo already exists.
   # ──────────────────────────────────────────────────
   bootstrap-ecr:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_ECR }}
           aws-region:     ${{ env.AWS_REGION }}
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~1.6"
-
-      - name: Terraform init
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform init
-
       - name: Ensure ECR repository exists
-        working-directory: ${{ env.TF_DIR }}
         run: |
-          terraform apply -auto-approve \
-            -target=module.lambda.aws_ecr_repository.backend \
-            -target=module.lambda.aws_ecr_lifecycle_policy.backend
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPO }} 2>/dev/null \
+            || aws ecr create-repository \
+                 --repository-name ${{ env.ECR_REPO }} \
+                 --image-tag-mutability IMMUTABLE \
+                 --image-scanning-configuration scanOnPush=true
+
+      - name: Ensure ECR lifecycle policy is set
+        run: |
+          aws ecr put-lifecycle-policy \
+            --repository-name ${{ env.ECR_REPO }} \
+            --lifecycle-policy-text '{"rules":[{"rulePriority":1,"description":"Retain last 10 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
 
   # ──────────────────────────────────────────────────
   # 1. Build and push backend container image to ECR
@@ -65,7 +63,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BUILD }}
           aws-region:     ${{ env.AWS_REGION }}
 
       - name: Login to ECR
@@ -97,7 +95,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_TF_PLAN }}
           aws-region:     ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
@@ -113,7 +111,12 @@ jobs:
         run: |
           terraform plan \
             -out=tfplan \
-            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}"
+            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}" \
+            -var="emailjs_service_id=${{ secrets.EMAILJS_SERVICE_ID }}" \
+            -var="emailjs_public_key=${{ secrets.EMAILJS_PUBLIC_KEY }}" \
+            -var="emailjs_template_contact=${{ secrets.EMAILJS_TEMPLATE_CONTACT }}" \
+            -var="emailjs_template_subscribed=${{ secrets.EMAILJS_TEMPLATE_SUBSCRIBED }}" \
+            -var="emailjs_template_unsubscribed=${{ secrets.EMAILJS_TEMPLATE_UNSUBSCRIBED }}"
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -142,7 +145,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_TF_APPLY }}
           aws-region:     ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
@@ -158,6 +161,14 @@ jobs:
         with:
           name: tfplan-${{ github.run_id }}
           path: ${{ env.TF_DIR }}
+
+      - name: Write EmailJS private key to SSM
+        run: |
+          aws ssm put-parameter \
+            --name "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY" \
+            --value "${{ secrets.EMAILJS_PRIVATE_KEY }}" \
+            --type SecureString \
+            --overwrite
 
       - name: Terraform apply
         working-directory: ${{ env.TF_DIR }}
@@ -184,7 +195,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_SEED }}
           aws-region:     ${{ env.AWS_REGION }}
 
       - uses: actions/setup-node@v4
@@ -201,11 +212,14 @@ jobs:
         working-directory: ./backend
         run: node scripts/seed-products.js
         env:
-          AWS_REGION:         ${{ env.AWS_REGION }}
-          DYNAMODB_TABLE:     Furnitria
-          S3_BUCKET_AVATARS:  ${{ secrets.S3_BUCKET_AVATARS }}
-          S3_BUCKET_PRODUCTS: ${{ secrets.S3_BUCKET_PRODUCTS }}
-          STRIPE_SECRET_KEY:  placeholder   # not used by seed, satisfies env.js validation
+          AWS_REGION:          ${{ env.AWS_REGION }}
+          DYNAMODB_TABLE:      Furnitria
+          S3_BUCKET_AVATARS:   ${{ secrets.S3_BUCKET_AVATARS }}
+          S3_BUCKET_PRODUCTS:  ${{ secrets.S3_BUCKET_PRODUCTS }}
+          STRIPE_SECRET_KEY:   placeholder   # not used by seed, satisfies env.js validation
+          COGNITO_USER_POOL_ID: placeholder  # not used by seed, satisfies env.js validation
+          COGNITO_CLIENT_ID:   placeholder   # not used by seed, satisfies env.js validation
+          ALLOWED_ORIGINS:     placeholder   # not used by seed, satisfies env.js validation
 
   # ──────────────────────────────────────────────────
   # 4. Build frontend and deploy to S3 + invalidate CDN
@@ -220,7 +234,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_FRONTEND }}
           aws-region:     ${{ env.AWS_REGION }}
 
       - uses: actions/setup-node@v4
@@ -240,6 +254,8 @@ jobs:
           # Cognito identifiers are not secrets — safe to embed in the frontend bundle
           VITE_COGNITO_USER_POOL_ID: ${{ needs.terraform-apply.outputs.cognito_user_pool_id }}
           VITE_COGNITO_CLIENT_ID:    ${{ needs.terraform-apply.outputs.cognito_client_id }}
+          # Stripe publishable key is intentionally public — embedded in the frontend bundle
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Sync dist to S3

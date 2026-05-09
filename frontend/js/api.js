@@ -10,13 +10,12 @@ export class AuthError extends Error {
 export async function apiFetch(path, options = {}) {
     const { _isRetry, ...fetchOptions } = options;
 
-    const token = localStorage.getItem('token');
     const res = await fetch(`${config.apiBase}/${path}`, {
         ...fetchOptions,
+        credentials: 'include',
         signal: fetchOptions.signal,
         headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
             ...fetchOptions.headers,
         },
     });
@@ -24,29 +23,19 @@ export async function apiFetch(path, options = {}) {
     if (res.status === 401) {
         // Attempt a silent token refresh once before giving up.
         // _isRetry prevents infinite loops if the refresh endpoint itself 401s.
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken && !_isRetry) {
+        if (!_isRetry) {
             try {
-                const refreshed = await apiFetch('auth/refresh', {
-                    method:    'POST',
-                    body:      JSON.stringify({ refreshToken }),
-                    _isRetry:  true,
+                await apiFetch('auth/refresh', {
+                    method:   'POST',
+                    _isRetry: true,
                 });
-                localStorage.setItem('token', refreshed.token);
-                if (refreshed.accessToken) {
-                    localStorage.setItem('accessToken', refreshed.accessToken);
-                }
-                // Retry the original request — apiFetch will read the new token
-                // from localStorage on the next call.
+                // New tokens are in cookies — retry the original request.
                 return apiFetch(path, { ...options, _isRetry: true });
             } catch (_) {
-                // Refresh failed — fall through to clear tokens and throw
+                // Refresh failed — fall through and throw AuthError
             }
         }
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         throw new AuthError();
     }
 
@@ -66,13 +55,10 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function apiFetchForm(path, formData) {
-    const token = localStorage.getItem('token');
     const res = await fetch(`${config.apiBase}/${path}`, {
-        method: 'POST',
-        headers: {
-            ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: formData,
+        method:      'POST',
+        credentials: 'include',
+        body:        formData,
     });
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));

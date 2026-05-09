@@ -6,6 +6,7 @@ import {
     submitNewCard,
     submitSavedCard,
 } from './stripe.js';
+import { esc, escAttr, isLoggedIn } from './utils.js';
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 // stripePaymentMethodId of the selected saved card, null = new card entry
@@ -21,10 +22,13 @@ export async function initCheckout() {
     mountStripeElements(numberEl, expiryEl, cvcEl, errorsEl);
     _selectedStripeMethodId = null;
 
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isLoggedIn()) {
         // Load in parallel — UI degrades gracefully if either fails
         await Promise.all([loadSavedAddresses(), loadSavedCards()]);
+    } else {
+        // Guests have no account — hide save options so they're never offered
+        document.getElementById('saveAddressRow').style.display = 'none';
+        document.getElementById('saveCardRow').style.display    = 'none';
     }
 
     bindCheckoutEvents();
@@ -41,9 +45,12 @@ export function teardownCheckout() {
     if (addressRail) addressRail.innerHTML = '';
     if (cardRail)    cardRail.innerHTML    = '';
 
-    document.getElementById('addressAutofill').style.display = 'none';
-    document.getElementById('cardAutofill').style.display    = 'none';
-    document.getElementById('newCardSection').style.display  = '';
+    const setDisplay = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
+    setDisplay('addressAutofill', 'none');
+    setDisplay('cardAutofill',    'none');
+    setDisplay('newCardSection',  '');
+    setDisplay('saveAddressRow',  '');
+    setDisplay('saveCardRow',     '');
 
     hideStatus();
 }
@@ -53,7 +60,7 @@ export function teardownCheckout() {
 async function loadSavedAddresses() {
     let addresses;
     try {
-        addresses = await apiFetch('account/address');
+        ({ addresses } = await apiFetch('account/address'));
     } catch {
         return; // Not logged in or network error — blank form is fine
     }
@@ -210,6 +217,13 @@ function bindCheckoutEvents() {
 async function handleSubmit(e) {
     e.preventDefault();
 
+    // Validate before disabling the button or touching Stripe/APIs
+    const items = window.cartModule?.getItems?.() ?? [];
+    if (!items.length) {
+        showStatus('error', 'Your cart is empty', 'Add items to your cart before checking out.');
+        return;
+    }
+
     const submitBtn = document.getElementById('submitOrder');
     submitBtn.disabled = true;
     showStatus('loading', 'Processing…', '');
@@ -218,22 +232,21 @@ async function handleSubmit(e) {
         const fullName    = document.getElementById('fullName').value.trim();
         const saveAddress = document.getElementById('saveAddressCheck')?.checked ?? false;
         const saveCard    = document.getElementById('saveCardCheck')?.checked ?? false;
-        const items       = window.cartModule?.getItems?.() ?? [];
 
         if (!fullName) throw new Error('Please enter your full name.');
 
-        const addressId = await resolveAddressId(saveAddress);
+        const addressPayload = await resolveAddress(saveAddress);
         let order;
 
         if (_selectedStripeMethodId) {
             order = await submitSavedCard({
                 stripePaymentMethodId: _selectedStripeMethodId,
                 fullName,
-                addressId,
-                items,
+                ...addressPayload,
+                items,  // validated non-empty above
             });
         } else {
-            order = await submitNewCard({ fullName, addressId, saveCard, items });
+            order = await submitNewCard({ fullName, ...addressPayload, saveCard, items });
         }
 
         document.getElementById('statusOverlay').dataset.success = 'true';
@@ -242,11 +255,8 @@ async function handleSubmit(e) {
             'Order placed!',
             `Order #${order.orderId} confirmed. Check your email for details.`,
         );
-        console.log('pre-clear cartState:', window.cartModule?.getCartState());
         window.cartModule.clearCartState();
         window.cartModule.updateAllBadges();
-        console.log('post-clear cartState:', window.cartModule?.getCartState());
-        console.log('cartModule defined:', !!window.cartModule);
 
     } catch (err) {
         const isDeclined = err.status === 402 ||
@@ -264,25 +274,18 @@ async function handleSubmit(e) {
 
 // ─── Address resolution ───────────────────────────────────────────────────────
 //
-// order.service.js stores addressId on the order record and resolves the full
-// address at read-time. We therefore always need a persisted addressId.
-//
 // Rules:
-//   - Saved chip selected  → use chip's addressId directly, no extra write.
-//   - New address + save   → POST to /account/address with isDefault: false,
-//                            use returned addressId.
-//   - New address + no save → POST a transient record (label: 'Shipping',
-//                             isDefault: false). This is the minimum needed for
-//                             order.service.js to resolve the address. A future
-//                             improvement would be to store address inline on
-//                             the order to avoid orphan records.
+//   - Saved chip selected   → return { addressId } directly, no extra write.
+//   - New address + save    → POST to /account/address, return { addressId }.
+//   - New address + no save → return { shippingAddress } inline so the order
+//                             stores it directly without creating an orphan record.
 
-async function resolveAddressId(saveAddress) {
+async function resolveAddress(saveAddress) {
     const rail       = document.getElementById('addressRail');
     const activeChip = rail?.querySelector('.autofillChip.active');
 
     if (activeChip && activeChip.dataset.addressId !== 'new') {
-        return activeChip.dataset.addressId;
+        return { addressId: activeChip.dataset.addressId };
     }
 
     const line1  = document.getElementById('streetAddress').value.trim();
@@ -294,33 +297,43 @@ async function resolveAddressId(saveAddress) {
         throw new Error('Please fill in your full shipping address.');
     }
 
-    const saved = await apiFetch('account/address', {
-        method: 'POST',
-        body: JSON.stringify({
-            line1,
-            line2:     document.getElementById('aptUnit').value.trim(),
-            city,
-            state,
-            zip:       postal,
-            country:   'US',
-            label:     saveAddress ? 'Home' : 'Shipping',
-            isDefault: false,
-        }),
-    });
+    const addressData = {
+        line1,
+        line2:   document.getElementById('aptUnit').value.trim(),
+        city,
+        state,
+        zip:     postal,
+        country: 'US',
+    };
 
-    return saved.addressId;
+    const isAuthenticated = isLoggedIn();
+    if (saveAddress && isAuthenticated) {
+        const saved = await apiFetch('account/address', {
+            method: 'POST',
+            body: JSON.stringify({ ...addressData, label: 'Home', isDefault: false }),
+        });
+        return { addressId: saved.addressId };
+    }
+
+    return { shippingAddress: addressData };
 }
 
 // ─── Status overlay ───────────────────────────────────────────────────────────
 
 function showStatus(type, title, message) {
-    const overlay = document.getElementById('statusOverlay');
-    const iconMap = {
-        loading: '<div class="statusSpinner"></div>',
-        success: '<div class="statusIconGlyph success">✓</div>',
-        error:   '<div class="statusIconGlyph error">✕</div>',
-    };
-    document.getElementById('statusIcon').innerHTML      = iconMap[type] ?? '';
+    const overlay  = document.getElementById('statusOverlay');
+    const iconEl   = document.getElementById('statusIcon');
+
+    iconEl.textContent = '';
+    const glyph = document.createElement('div');
+    if (type === 'loading') {
+        glyph.className = 'statusSpinner';
+    } else {
+        glyph.className = `statusIconGlyph ${type}`;
+        glyph.textContent = type === 'success' ? '✓' : '✕';
+    }
+    iconEl.appendChild(glyph);
+
     document.getElementById('statusTitle').textContent   = title;
     document.getElementById('statusMessage').textContent = message;
     overlay.dataset.success = '';
@@ -329,7 +342,8 @@ function showStatus(type, title, message) {
 
 function hideStatus() {
     const overlay = document.getElementById('statusOverlay');
-    overlay.className    = 'statusOverlay';
+    if (!overlay) return;
+    overlay.className       = 'statusOverlay';
     overlay.dataset.success = '';
 }
 
@@ -390,13 +404,4 @@ function setValue(id, val) {
     if (el) el.value = val ?? '';
 }
 
-function esc(str) {
-    return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
-function escAttr(str) {
-    return String(str ?? '').replace(/"/g, '&quot;');
-}
+// esc() and escAttr() are imported from ./utils.js

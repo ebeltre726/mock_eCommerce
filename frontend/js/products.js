@@ -2,26 +2,40 @@
 
 import { isWishlisted, toggleWishlist } from './wishlist.js';
 import { apiFetch } from './api.js';
+import { esc, escAttr } from './utils.js';
 
 const BATCH_SIZE = 6;
+const PAGE_SIZE = 24;
 export let products = [];
 let index = 0;
 let observer;
+let nextCursor = null;
+let isFetching = false;
 
 export async function initProducts() {
     index = 0;
-    setupObserver();      // ✅ observer first
-    await fetchProducts(); // ✅ fetch after
-    //loadNextBatch();       // ✅ manually load first batch
+    products = [];
+    nextCursor = null;
+    isFetching = false;
+    setupObserver();
+    await fetchProducts();
     setupEventDelegation();
 }
 
 async function fetchProducts() {
+    if (isFetching) return;
+    isFetching = true;
     try {
-        products = await apiFetch('products');
+        const url = nextCursor
+            ? `products?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(nextCursor)}`
+            : `products?limit=${PAGE_SIZE}`;
+        const data = await apiFetch(url);
+        products = products.concat(data.items ?? []);
+        nextCursor = data.nextCursor ?? null;
     } catch (err) {
         console.error('Failed to fetch products:', err);
-        products = [];
+    } finally {
+        isFetching = false;
     }
     loadNextBatch();
 }
@@ -37,16 +51,16 @@ function renderProduct(p) {
   
     const base = import.meta.env?.BASE_URL ?? './';
     div.innerHTML = `
-      <label class="itemTitle">${p.name}</label>
+      <label class="itemTitle">${esc(p.name)}</label>
       <div class="imgContnr">
-        <img class="info" src="${base}info.png">
-        <label class="productDesc">${p.description || ""}</label>
-        <img class="closeProd hidden" src="${base}close.png">
-        <img class="wishlist-icon" src="${isWishlisted(p.id) ? `${base}wl-selected.png` : `${base}wl-unselected.png`}" data-product-id="${p.id}">
-        <img class="cartImage" src="${p.imageUrl || ""}">
+        <img class="info" src="${escAttr(base)}info.png">
+        <label class="productDesc">${esc(p.description || "")}</label>
+        <img class="closeProd hidden" src="${escAttr(base)}close.png">
+        <img class="wishlist-icon" src="${isWishlisted(p.id) ? `${escAttr(base)}wl-selected.png` : `${escAttr(base)}wl-unselected.png`}" data-product-id="${escAttr(String(p.id))}">
+        <img class="cartImage" src="${escAttr(p.imageUrl || "")}">
       </div>
       <button class="addToCart">Add to Cart</button>
-      <label class="cartProdPrice">$${p.price || 0}</label>
+      <label class="cartProdPrice">$${esc(String(p.price || 0))}</label>
     `;
 
     const wlIcon = div.querySelector('.wishlist-icon');
@@ -61,9 +75,11 @@ function renderProduct(p) {
 export function resetProducts() {
     products = [];
     index = 0;
+    nextCursor = null;
+    isFetching = false;
     if (observer) {
-      observer.disconnect();
-      observer = null;
+        observer.disconnect();
+        observer = null;
     }
 }
 
@@ -71,11 +87,15 @@ function loadNextBatch() {
     const nextItems = products.slice(index, index + BATCH_SIZE);
     nextItems.forEach(renderProduct);
     index += nextItems.length;
-  
-    if (index >= products.length && observer) {
-      observer.disconnect();
+
+    if (index >= products.length) {
+        if (nextCursor) {
+            fetchProducts();
+        } else if (observer) {
+            observer.disconnect();
+        }
     }
-  }
+}
 
 function setupObserver() {
     const sentinel = document.getElementById("productMarker");

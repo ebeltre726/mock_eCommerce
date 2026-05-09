@@ -16,6 +16,8 @@ import { accountNavModule } from './navbarModule.js';
 import { overlayModule } from './overlay.js';
 import { apiFetch, apiFetchForm, AuthError } from './api.js';
 import { mountStripeElements, unmountStripeElements, tokeniseCard } from './stripe.js';
+import { syncWishlistRemoval } from './wishlist.js';
+import { esc, escAttr, isLoggedIn } from './utils.js';
 
 const panelTemplateCache = {};
 
@@ -24,18 +26,21 @@ const panelTemplateCache = {};
 // ============================================================
 
 export async function initAccount() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        overlayModule.open('signup');
-        return;
-    }
-
     let user;
     try {
-        user = await apiFetch('auth/me'); // validates token + returns user data
+        user = await apiFetch('auth/me');
     } catch (err) {
-        localStorage.removeItem('token');
-        overlayModule.open('login');
+        // 401 (AuthError)  → not authenticated          → redirect to login/signup
+        // 404              → valid JWT but no profile   → redirect to login/signup
+        // 5xx / TypeError  → transient infra fault      → inline error, don't redirect
+        //                    (user IS logged in; showing login would be confusing)
+        if (err instanceof AuthError || err.status === 404) {
+            overlayModule.open(isLoggedIn() ? 'login' : 'signup');
+        } else {
+            const pane = document.querySelector('.content');
+            if (pane) pane.innerHTML = '<p class="panel-error">Could not load your account. Please try again.</p>';
+            console.error('[account] init error:', err);
+        }
         return;
     }
 
@@ -101,7 +106,6 @@ function setupAccountUI(navPanel, contentPane, user) {
             initialisedPanels.add(panelName);
         } catch (err) {
             if (err instanceof AuthError) {
-                localStorage.removeItem('token');
                 overlayModule.open('login');
                 return;
             }
@@ -231,14 +235,14 @@ async function renderPaymentMethods(contentPane, methods) {
     // { paymentId, stripePaymentMethodId, brand, last4, expiry, isDefault }
     list.innerHTML = methods.length
         ? methods.map(card => `
-            <li class="card-item" data-id="${card.paymentId}">
-                <div class="card-brand">${card.brand}</div>
+            <li class="card-item" data-id="${escAttr(card.paymentId)}">
+                <div class="card-brand">${esc(card.brand)}</div>
                 <div class="card-details">
-                    <span>•••• •••• •••• ${card.last4}</span>
-                    <span>Expires ${card.expiry}</span>
+                    <span>•••• •••• •••• ${esc(card.last4)}</span>
+                    <span>Expires ${esc(card.expiry)}</span>
                     ${card.isDefault ? '<span class="badge-default">Default</span>' : ''}
                 </div>
-                <button class="btn-ghost remove-card" data-id="${card.paymentId}">Remove</button>
+                <button class="btn-ghost remove-card" data-id="${escAttr(card.paymentId)}">Remove</button>
             </li>
         `).join('')
         : '<li class="empty-state">No saved payment methods.</li>';
@@ -311,61 +315,115 @@ async function saveCard(contentPane) {
     }
 }
 
-async function renderOrderHistory(contentPane, orders) {
-    const list = contentPane.querySelector('#order-list');
+async function renderOrderHistory(contentPane, data) {
+    const list   = contentPane.querySelector('#order-list');
     const filter = contentPane.querySelector('#order-status-filter');
+
+    let allOrders    = data.orders;
+    let nextCursor   = data.nextCursor;
 
     function renderOrders(filteredOrders) {
         list.innerHTML = filteredOrders.length ? filteredOrders.map(order => `
             <li class="order-item">
                 <div class="order-header">
-                    <span class="order-number">Order #${order.orderId}</span>
+                    <span class="order-number">Order #${esc(order.orderId)}</span>
                     <span class="order-date">${formatDate(order.createdAt)}</span>
-                    <span class="order-status status-${order.status}">${capitalize(order.status)}</span>
+                    <span class="order-status status-${escAttr(order.status)}">${esc(capitalize(order.status))}</span>
                 </div>
                 <ul class="order-items-list">
                     ${order.items.map(item => `
                         <li class="order-line-item">
-                            <img src="${item.image}" alt="${item.name}">
-                            <span>${item.name}</span>
-                            <span>x${item.quantity}</span>
-                            <span>$${item.price}</span>
+                            <img src="${escAttr(item.image)}" alt="${escAttr(item.name)}">
+                            <span>${esc(item.name)}</span>
+                            <span>x${esc(String(item.quantity))}</span>
+                            <span>$${esc(String(item.price))}</span>
                         </li>
                     `).join('')}
                 </ul>
             </li>
         `).join('') : '<li class="empty-state">No orders found.</li>';
+
+        if (nextCursor) {
+            const li = document.createElement('li');
+            li.className = 'load-more-item';
+            li.innerHTML = '<button class="btn-ghost load-more-orders">Load more</button>';
+            list.appendChild(li);
+        }
     }
 
-    renderOrders(orders);
+    renderOrders(allOrders);
 
     filter.addEventListener('change', () => {
         const val = filter.value;
-        renderOrders(val === 'all' ? orders : orders.filter(o => o.status === val));
+        renderOrders(val === 'all' ? allOrders : allOrders.filter(o => o.status === val));
+    });
+
+    list.addEventListener('click', async e => {
+        const btn = e.target.closest('.load-more-orders');
+        if (!btn || !nextCursor) return;
+        btn.disabled    = true;
+        btn.textContent = 'Loading…';
+        try {
+            const more = await apiFetch(`account/orders?cursor=${encodeURIComponent(nextCursor)}`);
+            allOrders  = [...allOrders, ...more.orders];
+            nextCursor = more.nextCursor;
+            const val  = filter.value;
+            renderOrders(val === 'all' ? allOrders : allOrders.filter(o => o.status === val));
+        } catch (err) {
+            console.error('Failed to load more orders:', err);
+            btn.disabled    = false;
+            btn.textContent = 'Load more';
+        }
     });
 }
 
-async function renderAddresses(contentPane, addresses) {
+async function renderAddresses(contentPane, { addresses, nextCursor }) {
     const localAddresses = [...addresses];
+    let currentCursor = nextCursor;
 
     function renderList(addrs) {
         const list = contentPane.querySelector('#address-list');
         list.innerHTML = addrs.length ? addrs.map(addr => `
-            <li class="address-item" data-id="${addr.addressId}">
-                <div class="address-label">${addr.label} ${addr.isDefault ? '<span class="badge-default">Default</span>' : ''}</div>
+            <li class="address-item" data-id="${escAttr(addr.addressId)}">
+                <div class="address-label">${esc(addr.label)} ${addr.isDefault ? '<span class="badge-default">Default</span>' : ''}</div>
                 <div class="address-text">
-                    ${addr.line1}${addr.line2 ? ', ' + addr.line2 : ''}<br>
-                    ${addr.city}, ${addr.state} ${addr.zip}, ${addr.country}
+                    ${esc(addr.line1)}${addr.line2 ? ', ' + esc(addr.line2) : ''}<br>
+                    ${esc(addr.city)}, ${esc(addr.state)} ${esc(addr.zip)}, ${esc(addr.country)}
                 </div>
                 <div class="address-actions">
-                    <button class="btn-ghost edit-address" data-id="${addr.addressId}">Edit</button>
-                    <button class="btn-ghost remove-address" data-id="${addr.addressId}">Remove</button>
+                    <button class="btn-ghost edit-address" data-id="${escAttr(addr.addressId)}">Edit</button>
+                    <button class="btn-ghost remove-address" data-id="${escAttr(addr.addressId)}">Remove</button>
                 </div>
             </li>
         `).join('') : '<li class="empty-state">No saved addresses.</li>';
     }
 
+    function renderLoadMore() {
+        const existing = contentPane.querySelector('.load-more-addresses');
+        if (existing) existing.remove();
+        if (!currentCursor) return;
+        const btn = document.createElement('button');
+        btn.className = 'btn-ghost load-more-addresses';
+        btn.textContent = 'Load more';
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+            try {
+                const page = await apiFetch(`account/address?cursor=${encodeURIComponent(currentCursor)}`);
+                localAddresses.push(...page.addresses);
+                currentCursor = page.nextCursor;
+                renderList(localAddresses);
+                renderLoadMore();
+            } catch {
+                btn.disabled = false;
+                btn.textContent = 'Load more';
+            }
+        });
+        contentPane.querySelector('#address-list').insertAdjacentElement('afterend', btn);
+    }
+
     renderList(localAddresses);
+    renderLoadMore();
 
     contentPane.querySelector('#address-list').addEventListener('click', e => {
         const removeBtn = e.target.closest('.remove-address');
@@ -401,12 +459,12 @@ async function renderReturns(contentPane, { returns, orders }) {
     list.innerHTML = returns.length ? returns.map(ret => `
         <li class="return-item">
             <div class="return-header">
-                <span class="return-order">Order #${ret.orderNumber}</span>
-                <span class="return-status status-${ret.status.toLowerCase().replace(' ', '-')}">${ret.status}</span>
+                <span class="return-order">Order #${esc(ret.orderNumber)}</span>
+                <span class="return-status status-${escAttr(ret.status.toLowerCase().replace(' ', '-'))}">${esc(ret.status)}</span>
             </div>
             <div class="return-details">
-                <span>${ret.item}</span>
-                <span>Refund: $${ret.refundAmount}</span>
+                <span>${esc(ret.item)}</span>
+                <span>Refund: $${esc(String(ret.refundAmount))}</span>
                 <span>Initiated: ${formatDate(ret.dateInitiated)}</span>
             </div>
         </li>
@@ -457,10 +515,10 @@ async function renderRewards(contentPane, rewards) {
     dealsList.innerHTML = rewards.deals.length ? rewards.deals.map(deal => `
         <li class="deal-item">
             <div class="deal-info">
-                <span class="deal-description">${deal.description}</span>
+                <span class="deal-description">${esc(deal.description)}</span>
                 <span class="deal-expiry">Expires ${formatDate(deal.expiry)}</span>
             </div>
-            <span class="deal-code">${deal.discount}</span>
+            <span class="deal-code">${esc(deal.discount)}</span>
         </li>
     `).join('') : '<li class="empty-state">No deals available right now.</li>';
 }
@@ -476,9 +534,9 @@ async function renderNewsletter(contentPane, prefs) {
     topicsList.innerHTML = prefs.topics.map(topic => `
         <li>
             <label class="toggle-label">
-                <input type="checkbox" data-topic-id="${topic.topicId}" ${topic.selected ? 'checked' : ''}>
+                <input type="checkbox" data-topic-id="${escAttr(topic.topicId)}" ${topic.selected ? 'checked' : ''}>
                 <span class="toggle-track"></span>
-                ${topic.name}
+                ${esc(topic.name)}
             </label>
         </li>
     `).join('');
@@ -543,19 +601,12 @@ async function renderSettings(contentPane, settings) {
     });
 
     contentPane.querySelector('#logout-btn').addEventListener('click', async () => {
-        const accessToken = localStorage.getItem('accessToken');
         try {
-            await apiFetch('auth/logout', {
-                method: 'POST',
-                headers: { 'X-Access-Token': accessToken ?? '' },
-            });
+            await apiFetch('auth/logout', { method: 'POST' });
         } catch (err) {
-            // GlobalSignOut failed — still clear locally so the UI is consistent
+            // GlobalSignOut failed — cookies are cleared by the server regardless
             console.warn('[logout] server-side signout failed:', err.message);
         }
-        localStorage.removeItem('token');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         overlayModule.close();
     });
 
@@ -576,13 +627,11 @@ async function renderSettings(contentPane, settings) {
         try {
             await apiFetch('account/password', {
                 method: 'PATCH',
-                headers: { 'X-Access-Token': localStorage.getItem('accessToken') ?? '' },
                 body: JSON.stringify({ current, password: next }),
             });
             contentPane.querySelector('#password-saved').classList.remove('hidden');
             setTimeout(() => contentPane.querySelector('#password-saved').classList.add('hidden'), 3000);
         } catch (err) {
-            console.log('password error:', err.message);
             if (err.message.includes('Invalid current password')) {
                 showInlineError(contentPane, 'change-password-btn', 'Current password is incorrect.');
             } else {
@@ -594,13 +643,7 @@ async function renderSettings(contentPane, settings) {
     contentPane.querySelector('#delete-account-btn').addEventListener('click', async () => {
         confirmAction('Are you sure you want to delete your account? This cannot be undone.', async () => {
             try {
-                await apiFetch('account', {
-                    method: 'DELETE',
-                    headers: { 'X-Access-Token': localStorage.getItem('accessToken') ?? '' },
-                });
-                localStorage.removeItem('token');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                await apiFetch('account', { method: 'DELETE' });
                 overlayModule.close();
             } catch (err) {
                 console.error('Failed to delete account:', err);
@@ -614,33 +657,38 @@ async function renderWishlist(contentPane, items) {
     const list = contentPane.querySelector('#wishlist-list');
     const count = contentPane.querySelector('#wishlist-count');
 
-    const enriched = await Promise.all(
-        items.map(async item => {
-            const product = await apiFetch(`products/${item.productId}`).catch(() => null);
-            return {
-                itemId:    item.itemId,
-                productId: item.productId,
-                name:      product?.name     ?? 'Unknown product',
-                image:     product?.imageUrl ?? '',
-                price:     product?.price    ?? 0,
-                dateAdded: item.createdAt,
-            };
-        })
-    );
+    // Fetch all product details in one BatchGetItem call instead of N individual requests.
+    const productIds = [...new Set(items.map(i => i.productId).filter(Boolean))];
+    let productMap = {};
+    if (productIds.length > 0) {
+        productMap = await apiFetch(`products/batch?ids=${productIds.join(',')}`).catch(() => ({}));
+    }
+
+    const enriched = items.map(item => {
+        const product = productMap[item.productId] ?? null;
+        return {
+            itemId:    item.itemId,
+            productId: item.productId,
+            name:      product?.name     ?? 'Unknown product',
+            image:     product?.imageUrl ?? '',
+            price:     product?.price    ?? 0,
+            dateAdded: item.createdAt,
+        };
+    });
 
     count.textContent = `${enriched.length} item${enriched.length !== 1 ? 's' : ''}`;
 
     list.innerHTML = enriched.length ? enriched.map(item => `
-        <li class="wishlist-item" data-id="${item.itemId}">
-            <img src="${item.image}" alt="${item.name}" class="wishlist-img">
+        <li class="wishlist-item" data-id="${escAttr(item.itemId)}" data-product-id="${escAttr(item.productId)}">
+            <img src="${escAttr(item.image)}" alt="${escAttr(item.name)}" class="wishlist-img">
             <div class="wishlist-info">
-                <span class="wishlist-name">${item.name}</span>
-                <span class="wishlist-price">$${item.price}</span>
+                <span class="wishlist-name">${esc(item.name)}</span>
+                <span class="wishlist-price">$${esc(String(item.price))}</span>
                 <span class="wishlist-added">Saved ${formatDate(item.dateAdded)}</span>
             </div>
             <div class="wishlist-actions">
-                <button class="btn-primary add-to-cart" data-id="${item.productId}">Add to Cart</button>
-                <button class="btn-ghost remove-wishlist" data-id="${item.itemId}">Remove</button>
+                <button class="btn-primary add-to-cart" data-id="${escAttr(item.productId)}">Add to Cart</button>
+                <button class="btn-ghost remove-wishlist" data-id="${escAttr(item.itemId)}">Remove</button>
             </div>
         </li>
     `).join('') : '<li class="empty-state">Your wishlist is empty.</li>';
@@ -659,7 +707,7 @@ async function renderWishlist(contentPane, items) {
 
 function removeCard(id, contentPane) {
     confirmAction('Remove this payment method?', () => {
-        apiFetch(`account/payment-methods/${id}`, { method: 'DELETE' })
+        apiFetch(`account/payment/${id}`, { method: 'DELETE' })
             .then(() => contentPane.querySelector(`.card-item[data-id="${id}"]`)?.remove())
             .catch(err => console.error('Failed to remove card:', err));
     });
@@ -668,7 +716,6 @@ function removeCard(id, contentPane) {
 
 function showEditAddressForm(id, addresses, contentPane) {
     const addr = addresses.find(a => a.addressId === id);
-    console.log('showEditAddressForm id:', id, 'found:', addr);
     if (!addr) return;
 
     contentPane.querySelector('#address-form-title').textContent = 'Edit Address';
@@ -686,8 +733,6 @@ function showEditAddressForm(id, addresses, contentPane) {
 
 function saveAddress(addresses, renderList, contentPane) {
     const id = contentPane.querySelector('#address-id').value;
-    console.log('saveAddress id:', id);
-    console.log('addresses array:', JSON.stringify(addresses));
     const updated = {
         addressId: id || String(Date.now()),
         label:     contentPane.querySelector('#addr-label').value.trim(),
@@ -709,12 +754,13 @@ function saveAddress(addresses, renderList, contentPane) {
     const endpoint = id ? `account/address/${id}` : 'account/address';
 
     apiFetch(endpoint, { method, body: JSON.stringify(updated) })
-        .then(() => {
+        .then((result) => {
             if (id) {
                 const idx = addresses.findIndex(a => a.addressId === id);
                 if (idx > -1) addresses[idx] = updated;
             } else {
-                addresses.push(updated);
+                // Use the server-assigned addressId so edit/delete work immediately
+                addresses.push({ ...updated, addressId: result.addressId });
             }
             toggleForm(contentPane, 'addressContainer', false);
             renderList(addresses);
@@ -762,12 +808,14 @@ function addToCart(id, btn) {
 
 function removeWishlistItem(id, contentPane) {
     confirmAction('Remove from wishlist?', () => {
-        const item    = contentPane.querySelector(`.wishlist-item[data-id="${id}"]`);
+        const item      = contentPane.querySelector(`.wishlist-item[data-id="${id}"]`);
         const removeBtn = item?.querySelector('.remove-wishlist');
+        const productId = item?.dataset.productId;
         if (removeBtn) removeBtn.disabled = true;
 
         apiFetch(`account/wishlist/${id}`, { method: 'DELETE' })
             .then(() => {
+                if (productId) syncWishlistRemoval(productId);
                 item?.remove();
                 const list      = contentPane.querySelector('#wishlist-list');
                 const countEl   = contentPane.querySelector('#wishlist-count');
@@ -791,8 +839,6 @@ function submitReturn(contentPane, orders) {
     const itemId     = itemSelect?.selectedOptions[0]?.dataset.itemId;
     const reason     = contentPane.querySelector('#return-reason').value;
     const notes      = contentPane.querySelector('#return-notes').value.trim();
-
-    console.log('submitReturn:', { orderId, item, itemId, reason, notes });
 
     if (!orderId || !item || !reason) {
         showInlineError(contentPane, 'submit-return-btn', 'Please select an order, item, and reason.');

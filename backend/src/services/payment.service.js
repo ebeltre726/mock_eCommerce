@@ -30,6 +30,7 @@ export async function fetchPayments(userId) {
             ':pk': `USER#${userId}`,
             ':sk': 'PAYMENT#',
         },
+        Limit: 20,
     }));
 
     return (result.Items || []).map(toPublicMethod);
@@ -89,14 +90,31 @@ export async function patchPaymentMethod(userId, paymentId, fields) {
 }
 
 // ─── Remove a payment method ──────────────────────────────────────────────────
+// Fetches the DynamoDB record first (to get the Stripe ID), detaches it from
+// the Stripe customer, then deletes the local record. Order matters: detaching
+// from Stripe first ensures the card can't be charged after it's removed from
+// the user's account, even if the DynamoDB delete fails.
 
 export async function removePaymentMethod(userId, paymentId) {
+    const { Item } = await dynamo.send(new GetCommand({
+        TableName: TABLE,
+        Key: { PK: `USER#${userId}`, SK: `PAYMENT#${paymentId}` },
+    }));
+
+    if (!Item) return; // already gone — idempotent
+
+    if (Item.stripePaymentMethodId) {
+        try {
+            await stripe.paymentMethods.detach(Item.stripePaymentMethodId);
+        } catch (err) {
+            // A missing resource means it was already detached — safe to proceed.
+            if (err.code !== 'resource_missing') throw err;
+        }
+    }
+
     await dynamo.send(new DeleteCommand({
         TableName: TABLE,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: `PAYMENT#${paymentId}`,
-        },
+        Key: { PK: `USER#${userId}`, SK: `PAYMENT#${paymentId}` },
     }));
 }
 

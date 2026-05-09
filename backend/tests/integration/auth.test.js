@@ -65,7 +65,7 @@ describe('Auth Flow (integration)', () => {
     mockSend.mockReset();
   });
 
-  it('POST /api/auth/login -> calls Cognito and returns tokens', async () => {
+  it('POST /api/auth/login -> sets httpOnly cookies and returns user info (no tokens in body)', async () => {
     mockSend.mockResolvedValue({
       AuthenticationResult: {
         IdToken:      'mock-id-token',
@@ -80,9 +80,18 @@ describe('Auth Flow (integration)', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('token', 'mock-id-token');
-    expect(res.body).toHaveProperty('accessToken', 'mock-access-token');
-    expect(res.body).toHaveProperty('refreshToken', 'mock-refresh-token');
+
+    // Tokens must be in httpOnly cookies, not the response body
+    expect(res.body).not.toHaveProperty('token');
+    expect(res.body).not.toHaveProperty('accessToken');
+    expect(res.body).not.toHaveProperty('refreshToken');
+    expect(res.body).toHaveProperty('email', 'test@example.com');
+
+    const cookies = res.headers['set-cookie'] ?? [];
+    expect(cookies.some(c => c.startsWith('id_token='))).toBe(true);
+    expect(cookies.some(c => c.startsWith('access_token='))).toBe(true);
+    expect(cookies.some(c => c.includes('HttpOnly'))).toBe(true);
+
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 

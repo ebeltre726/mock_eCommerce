@@ -12,13 +12,29 @@
 // Migration checklist (emailjs → ses):
 //   1. Set EMAIL_DRIVER=ses
 //   2. Set SES_FROM_ADDRESS=<verified sender identity, e.g. no-reply@furnitria.com>
-//   3. Ensure the Lambda/ECS IAM role has ses:SendEmail on your verified identity
-//   4. Remove EMAILJS_* vars from SSM / environment
-//   5. Delete the sendViaEmailJS() block below (optional cleanup)
+//   3. Set SES_CONTACT_TO_ADDRESS=<inbox that receives contact form submissions>
+//   4. Ensure the Lambda/ECS IAM role has ses:SendEmail on your verified identity
+//   5. Remove EMAILJS_* vars from SSM / environment
+//   6. Delete the sendViaEmailJS() block below (optional cleanup)
+//
+// EmailJS template requirements:
+//   EMAILJS_TEMPLATE_SUBSCRIBED   — variables: {{to_email}}, {{to_name}}
+//   EMAILJS_TEMPLATE_UNSUBSCRIBED — variables: {{to_email}}, {{to_name}}
+//   EMAILJS_TEMPLATE_CONTACT      — variables: {{from_name}}, {{from_email}}, {{message}}
 
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import logger from '../utils/logger.js';
 
 const DRIVER = process.env.EMAIL_DRIVER ?? 'emailjs';
+
+function escHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
 
 // ── EmailJS driver ───────────────────────────────────────────────────────────
 
@@ -28,7 +44,11 @@ async function sendViaEmailJS(templateId, templateParams) {
     const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
     if (!serviceId || !publicKey) {
-        console.warn('[email] EmailJS is not configured — skipping send (set EMAILJS_SERVICE_ID + EMAILJS_PUBLIC_KEY)');
+        logger.warn('[email] EmailJS is not configured — skipping send (set EMAILJS_SERVICE_ID + EMAILJS_PUBLIC_KEY)');
+        return;
+    }
+    if (!templateId) {
+        logger.warn('[email] EmailJS template ID is missing — skipping send (check EMAILJS_TEMPLATE_* env vars)');
         return;
     }
 
@@ -71,7 +91,7 @@ async function sendViaSES({ to, subject, html, text }) {
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export async function sendNewsletterSubscribed({ email, firstName }) {
-    const name = firstName ?? 'there';
+    const name = escHtml(firstName ?? 'there');
 
     if (DRIVER === 'ses') {
         return sendViaSES({
@@ -90,7 +110,7 @@ export async function sendNewsletterSubscribed({ email, firstName }) {
 }
 
 export async function sendNewsletterUnsubscribed({ email, firstName }) {
-    const name = firstName ?? 'there';
+    const name = escHtml(firstName ?? 'there');
 
     if (DRIVER === 'ses') {
         return sendViaSES({
@@ -105,5 +125,30 @@ export async function sendNewsletterUnsubscribed({ email, firstName }) {
     return sendViaEmailJS(process.env.EMAILJS_TEMPLATE_UNSUBSCRIBED, {
         to_email: email,
         to_name:  name,
+    });
+}
+
+export async function sendContactNotification({ firstName, lastName, email, emailMessage }) {
+    const fromName = `${firstName} ${lastName}`;
+
+    if (DRIVER === 'ses') {
+        const to = process.env.SES_CONTACT_TO_ADDRESS;
+        if (!to) throw new Error('FATAL: SES_CONTACT_TO_ADDRESS is not set');
+        const safeFromName = escHtml(fromName);
+        const safeEmail    = escHtml(email);
+        const safeMessage  = escHtml(emailMessage);
+        return sendViaSES({
+            to,
+            subject: `[Furnitria] New contact message from ${fromName}`,
+            html:    `<p><strong>From:</strong> ${safeFromName} &lt;${safeEmail}&gt;</p><p><strong>Message:</strong></p><p>${safeMessage}</p>`,
+            text:    `From: ${fromName} <${email}>\n\nMessage:\n${emailMessage}`,
+        });
+    }
+
+    // EmailJS: template must expose {{from_name}}, {{from_email}}, {{message}} variables
+    return sendViaEmailJS(process.env.EMAILJS_TEMPLATE_CONTACT, {
+        from_name:  fromName,
+        from_email: email,
+        message:    emailMessage,
     });
 }

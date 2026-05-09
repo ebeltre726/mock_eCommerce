@@ -1,6 +1,7 @@
 import { dynamo } from '../db/dynamoClient.js';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
+import logger from '../utils/logger.js';
 
 const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
@@ -26,4 +27,6 @@ export async function sendMessage({ firstName, lastName, email, emailMessage }) 
             createdAt: now,
         },
     }));
+
+    logger.info({ messageId, email }, '[contact] message stored');
 }

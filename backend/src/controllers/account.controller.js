@@ -1,12 +1,13 @@
 import { fetchOverview, patchOverview } from '../services/account.service.js';
 import { uploadAvatar } from '../services/avatar.service.js';
+import logger from '../utils/logger.js';
 
 export async function getOverview(req, res) {
     try {
         const data = await fetchOverview(req.user.userId);
         res.json(data);
     } catch (err) {
-        console.error('getOverview error:', err);
+        logger.error({ err }, 'getOverview error');
         res.status(500).json({ error: 'Failed to retrieve overview' });
     }
 }
@@ -16,7 +17,7 @@ export async function updateOverview(req, res) {
         const updated = await patchOverview(req.user.userId, req.body);
         res.json(updated);
     } catch (err) {
-        console.error('updateOverview error:', err);
+        logger.error({ err }, 'updateOverview error');
         res.status(400).json({ error: err.message || 'Failed to update profile' });
     }
 }
@@ -26,7 +27,7 @@ export async function uploadAvatarFile(req, res) {
     const userId = req.user.userId;
     const file = req.file;
 
-    console.log('Avatar upload attempt:', { userId, file: file ? { size: file.size, mimetype: file.mimetype, originalname: file.originalname } : 'no file' });
+    logger.info({ userId, fileSize: file?.size, mimetype: file?.mimetype }, 'Avatar upload attempt');
 
     const result = await uploadAvatar(userId, file);
 
@@ -36,7 +37,7 @@ export async function uploadAvatarFile(req, res) {
     });
 
   } catch (err) {
-    console.error('Avatar upload error:', err);
+    logger.error({ err }, 'Avatar upload error');
     res.status(400).json({ error: err.message });
   }
 }

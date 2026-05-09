@@ -8,6 +8,32 @@ import {
   resendConfirmation,
 } from '../services/auth.service.js';
 import { fetchOverview, ensureUserProfile } from '../services/account.service.js';
+import { verifier } from '../middleware/auth.middleware.js';
+import logger from '../utils/logger.js';
+
+// Tokens are delivered via httpOnly cookies so client-side JS cannot read them.
+// A non-httpOnly `logged_in` cookie lets the frontend determine auth state
+// without a round-trip and without exposing any sensitive value.
+function cookieBase() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/' };
+}
+
+function setAuthCookies(res, { token, accessToken, refreshToken }) {
+  const base = cookieBase();
+  res.cookie('id_token',      token,        { ...base, maxAge: 60 * 60 * 1000 });
+  if (accessToken)  res.cookie('access_token',  accessToken,  { ...base, maxAge: 60 * 60 * 1000 });
+  if (refreshToken) res.cookie('refresh_token', refreshToken, { ...base, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('logged_in', '1', { ...base, httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
+}
+
+function clearAuthCookies(res) {
+  const base = cookieBase();
+  res.clearCookie('id_token',      base);
+  res.clearCookie('access_token',  base);
+  res.clearCookie('refresh_token', base);
+  res.clearCookie('logged_in',     { ...base, httpOnly: false });
+}
 
 export async function login(req, res) {
   try {
@@ -26,12 +52,15 @@ export async function login(req, res) {
       email:     data.email,
       firstName: data.firstName,
       lastName:  data.lastName,
-    }).catch(err => console.error('ensureUserProfile error (non-fatal):', err.message));
+    }).catch(err => logger.error({ err: err.message }, 'ensureUserProfile error (non-fatal)'));
 
-    res.json(data);
+    setAuthCookies(res, data);
+
+    const { token, accessToken, refreshToken, ...user } = data;
+    res.json(user);
   } catch (err) {
-    console.error('login error:', err);
-    res.status(401).json({ error: err.message || 'Login failed' });
+    logger.error({ err }, 'login error');
+    res.status(401).json({ error: 'Invalid email or password' });
   }
 }
 
@@ -44,8 +73,8 @@ export async function signup(req, res) {
     const data = await signupUser({ firstName, lastName, email, password, termsConditions });
     res.status(201).json(data);
   } catch (err) {
-    console.error('signup error:', err);
-    res.status(400).json({ error: err.message || 'Signup failed' });
+    logger.error({ err }, 'signup error');
+    res.status(400).json({ error: 'Signup failed. Please check your details and try again.' });
   }
 }
 
@@ -58,7 +87,7 @@ export async function resendConfirmationHandler(req, res) {
     const result = await resendConfirmation(email);
     res.json(result);
   } catch (err) {
-    console.error('resendConfirmation error:', err);
+    logger.error({ err }, 'resendConfirmation error');
     const status = err.message?.includes('Too many') ? 429 : 500;
     res.status(status).json({ error: err.message || 'Request failed' });
   }
@@ -66,27 +95,31 @@ export async function resendConfirmationHandler(req, res) {
 
 export async function logout(req, res) {
   try {
-    // The access token (not the ID token) is required for GlobalSignOut.
-    // Client must send it as X-Access-Token header alongside the usual Bearer ID token.
-    const accessToken = req.headers['x-access-token'];
+    // access_token cookie is required for GlobalSignOut; fall back to the
+    // X-Access-Token header so existing API clients are not broken.
+    const accessToken = req.cookies?.access_token ?? req.headers['x-access-token'];
     await logoutUser(accessToken);
+    clearAuthCookies(res);
     res.json({ success: true, message: 'Logged out' });
   } catch (err) {
-    console.error('logout error:', err);
+    logger.error({ err }, 'logout error');
     res.status(500).json({ error: 'Logout failed' });
   }
 }
 
 export async function refresh(req, res) {
   try {
-    const { refreshToken } = req.body;
+    // Prefer cookie; fall back to body for non-browser API clients.
+    const refreshToken = req.cookies?.refresh_token ?? req.body?.refreshToken;
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token is required' });
+      return res.status(401).json({ error: 'Refresh token is required' });
     }
     const tokens = await refreshTokens(refreshToken);
-    res.json(tokens);
+    setAuthCookies(res, tokens);
+    res.json({ success: true });
   } catch (err) {
-    console.error('refresh error:', err);
+    logger.error({ err }, 'refresh error');
+    clearAuthCookies(res);
     res.status(401).json({ error: err.message || 'Token refresh failed' });
   }
 }
@@ -100,7 +133,7 @@ export async function forgotPasswordHandler(req, res) {
     const result = await forgotPassword(email);
     res.json(result);
   } catch (err) {
-    console.error('forgotPassword error:', err);
+    logger.error({ err }, 'forgotPassword error');
     const status = err.message?.includes('Too many') ? 429 : 500;
     res.status(status).json({ error: err.message || 'Request failed' });
   }
@@ -115,8 +148,41 @@ export async function confirmForgotPasswordHandler(req, res) {
     const result = await confirmForgotPassword(email, code, password);
     res.json(result);
   } catch (err) {
-    console.error('confirmForgotPassword error:', err);
+    logger.error({ err }, 'confirmForgotPassword error');
     res.status(400).json({ error: err.message || 'Password reset failed' });
+  }
+}
+
+// Accepts tokens from a successful client-side SRP auth (via amazon-cognito-identity-js),
+// verifies the IdToken, and sets the same httpOnly cookies as the proxied login.
+// This lets the frontend do zero-knowledge SRP while still using the httpOnly cookie session model.
+export async function session(req, res) {
+  try {
+    const { idToken, accessToken, refreshToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    const payload = await verifier.verify(idToken);
+
+    ensureUserProfile({
+      userId:    payload.sub,
+      email:     payload.email,
+      firstName: payload.given_name ?? '',
+      lastName:  payload.family_name ?? '',
+    }).catch(err => logger.error({ err: err.message }, 'ensureUserProfile error (non-fatal)'));
+
+    setAuthCookies(res, { token: idToken, accessToken, refreshToken });
+
+    res.json({
+      userId:    payload.sub,
+      email:     payload.email,
+      firstName: payload.given_name  ?? '',
+      lastName:  payload.family_name ?? '',
+    });
+  } catch (err) {
+    logger.error({ err }, 'session error');
+    res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
@@ -128,7 +194,7 @@ export async function getMe(req, res) {
     }
     res.json(user);
   } catch (err) {
-    console.error('getMe error:', err);
+    logger.error({ err }, 'getMe error');
     const isInfra = err.name?.includes('DynamoDB') || err.$metadata !== undefined;
     res.status(isInfra ? 503 : 404).json({ error: isInfra ? 'Service temporarily unavailable' : 'Account not found' });
   }

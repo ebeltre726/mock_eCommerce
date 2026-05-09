@@ -11,13 +11,17 @@ export const verifier = CognitoJwtVerifier.create({
 });
 
 export async function requireAuth(req, res, next) {
+  // Cookie-based auth (browser) takes precedence over the Authorization header
+  // so that httpOnly cookies are used when available.  The header path remains
+  // for non-browser API clients and backwards compatibility.
   const authHeader = req.headers.authorization;
+  const token =
+    req.cookies?.id_token ??
+    (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized — no token provided' });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const payload = await verifier.verify(token);

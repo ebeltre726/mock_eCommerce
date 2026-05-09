@@ -54,6 +54,6 @@ describe("Orders Flow", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual(expect.arrayContaining([expect.objectContaining({ orderId })]));
+    expect(res.body.orders).toEqual(expect.arrayContaining([expect.objectContaining({ orderId })]));
   });
 });

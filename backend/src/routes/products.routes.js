@@ -9,6 +9,9 @@ const router = express.Router();
 // GET all products
 router.get("/", validateRequest(productsContracts.getProducts), validateResponse(productsContracts.getProducts), productsController.getAllProducts);
 
+// GET batch products by IDs — must be registered before /:productId to avoid matching "batch" as an ID
+router.get("/batch", validateRequest(productsContracts.getProductsBatch), productsController.getProductsBatch);
+
 // GET single product by ID
 router.get("/:productId", validateRequest(productsContracts.getProduct), validateResponse(productsContracts.getProduct), productsController.getProductById);
 

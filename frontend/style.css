@@ -124,6 +124,7 @@
 .ctaButtons {
     display: flex;
     justify-content: space-around;
+    gap: 2rem;
 }
 
 .ctaButton {
@@ -2262,6 +2263,36 @@
     font-size: 0.72rem;
     line-height: 1.5;
     color: #8a7040;
+}
+
+.demoNotice .testCardTable {
+    display: block;
+    margin: 0.4rem 0 0.2rem;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    color: #8a7040;
+}
+
+.demoNotice .testCardTable td {
+    padding: 0.1rem 0.6rem 0.1rem 0;
+    vertical-align: top;
+}
+
+.demoNotice .testCardTable td:first-child {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.demoNotice.panel-notice {
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.demoNoticeSmall {
+    display: block;
+    font-size: 0.68rem;
+    color: #a08050;
+    margin-top: 0.1rem;
 }
 
 .demoIcon {

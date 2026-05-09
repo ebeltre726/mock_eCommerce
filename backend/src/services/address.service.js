@@ -22,7 +22,7 @@ function toDbFields(data) {
     };
 }
 
-function toPublicAddress(item) {
+export function toPublicAddress(item) {
     return {
         addressId: item.addressId,
         label:     item.label     || 'Home',
@@ -38,17 +38,42 @@ function toPublicAddress(item) {
 
 // ─── Fetch all ────────────────────────────────────────────────────────────────
 
-export async function fetchAddresses(userId) {
-    const result = await dynamo.send(new QueryCommand({
+const ADDRESS_PAGE_SIZE = 20;
+
+/**
+ * Returns { addresses, nextCursor } where nextCursor is a base64-encoded
+ * DynamoDB LastEvaluatedKey, or null if there are no more pages.
+ */
+export async function fetchAddresses(userId, cursor = null) {
+    const queryParams = {
         TableName: TABLE,
         KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
         ExpressionAttributeValues: {
             ':pk': `USER#${userId}`,
             ':sk': 'ADDRESS#',
         },
-    }));
+        Limit: ADDRESS_PAGE_SIZE,
+    };
 
-    return (result.Items || []).map(toPublicAddress);
+    if (cursor) {
+        try {
+            queryParams.ExclusiveStartKey = JSON.parse(
+                Buffer.from(cursor, 'base64').toString('utf8'),
+            );
+        } catch {
+            const err = new Error('Invalid pagination cursor');
+            err.statusCode = 400;
+            throw err;
+        }
+    }
+
+    const result = await dynamo.send(new QueryCommand(queryParams));
+
+    const nextCursor = result.LastEvaluatedKey
+        ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
+        : null;
+
+    return { addresses: (result.Items || []).map(toPublicAddress), nextCursor };
 }
 
 // ─── Add ──────────────────────────────────────────────────────────────────────
@@ -87,25 +112,32 @@ export async function patchAddress(userId, addressId, fields) {
     // Use dbFields here — this was the bug in the original (was using fields[k])
     const ExpressionAttributeValues = Object.fromEntries(updates.map(k => [`:${k}`, dbFields[k]]));
 
-    const result = await dynamo.send(new UpdateCommand({
-        TableName: TABLE,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: `ADDRESS#${addressId}`,
-        },
-        UpdateExpression,
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
-    }));
+    try {
+        const result = await dynamo.send(new UpdateCommand({
+            TableName: TABLE,
+            Key: {
+                PK: `USER#${userId}`,
+                SK: `ADDRESS#${addressId}`,
+            },
+            UpdateExpression,
+            ExpressionAttributeNames,
+            ExpressionAttributeValues,
+            ConditionExpression: 'attribute_exists(PK)',
+            ReturnValues: 'ALL_NEW',
+        }));
 
-    return toPublicAddress(result.Attributes);
+        return toPublicAddress(result.Attributes);
+    } catch (err) {
+        if (err.name === 'ConditionalCheckFailedException') {
+            throw new Error('Address not found', { cause: err });
+        }
+        throw err;
+    }
 }
 
 // ─── Remove ───────────────────────────────────────────────────────────────────
 
 export async function removeAddress(userId, addressId) {
-    console.log('removeAddress key:', `USER#${userId}`, `ADDRESS#${addressId}`);
     await dynamo.send(new DeleteCommand({
         TableName: TABLE,
         Key: {

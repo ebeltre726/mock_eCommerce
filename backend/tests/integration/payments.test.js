@@ -12,6 +12,24 @@ jest.mock("../../src/middleware/auth.middleware.js", () => ({
   },
 }));
 
+// Stripe not available in CI — mock all calls made by addPayment / removePayment
+jest.mock("../../src/config/stripe.js", () => ({
+  stripe: {
+    paymentMethods: {
+      retrieve: jest.fn(async () => ({
+        id:   "pm_test_visa",
+        type: "card",
+        card: { brand: "visa", last4: "4242", exp_month: 12, exp_year: 2030 },
+      })),
+      attach:   jest.fn(async () => ({})),
+      detach:   jest.fn(async () => ({})),
+    },
+    customers: {
+      create: jest.fn(async () => ({ id: "cus_test123" })),
+    },
+  },
+}));
+
 describe("Payments Flow", () => {
   const testUser = { userId: "u003", email: "pay@example.com" };
   let token, paymentId;

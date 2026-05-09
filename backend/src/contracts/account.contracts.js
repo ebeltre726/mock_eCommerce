@@ -15,7 +15,7 @@ const addressSchema = Joi.object({
   zip: Joi.string().required(),
   country: Joi.string().optional(),
   isDefault: Joi.boolean().optional(),
-}).unknown(true);
+});
 
 const paymentSchema = Joi.object({
     paymentId:             Joi.string().optional(),
@@ -87,7 +87,7 @@ export const accountContracts = {
         firstName: Joi.string().optional(),
         lastName: Joi.string().optional(),
         email: Joi.string().email().optional(),
-      }).unknown(true),
+      }),
     },
     response: {
       200: Joi.object({
@@ -113,13 +113,12 @@ export const accountContracts = {
   },
 
   // POST /api/account/payment
+  // Only the Stripe payment method ID and optional default flag come from the client.
+  // brand/last4/expiry are fetched server-side from Stripe in the controller.
   addPayment: {
       request: {
           body: Joi.object({
               stripePaymentMethodId: Joi.string().required(),
-              brand:                 Joi.string().required(),
-              last4:                 Joi.string().length(4).required(),
-              expiry:                Joi.string().required(),
               isDefault:             Joi.boolean().optional(),
           }),
       },
@@ -146,7 +145,7 @@ export const accountContracts = {
       body: Joi.object({
         expiry: Joi.string().optional(),
         isDefault: Joi.boolean().optional(),
-      }).unknown(true),
+      }),
     },
     response: {
       200: paymentSchema,
@@ -177,7 +176,10 @@ export const accountContracts = {
   // GET /api/account/orders
   getOrders: {
     response: {
-      200: Joi.array().items(orderSchema),
+      200: Joi.object({
+        orders:     Joi.array().items(orderSchema).required(),
+        nextCursor: Joi.string().allow(null).required(),
+      }),
       401: Joi.object({
         error: Joi.string().required(),
       }).unknown(true),
@@ -205,7 +207,11 @@ export const accountContracts = {
   // GET /api/account/address
   getAddresses: {
     response: {
-      200: Joi.array().items(addressSchema),
+      200: Joi.object({
+        addresses:  Joi.array().items(addressSchema).required(),
+        nextCursor: Joi.string().allow(null).required(),
+      }),
+      400: Joi.object({ error: Joi.string().required() }).unknown(true),
       401: Joi.object({
         error: Joi.string().required(),
       }).unknown(true),
@@ -239,7 +245,7 @@ export const accountContracts = {
         zip: Joi.string().optional(),
         country: Joi.string().optional(),
         isDefault: Joi.boolean().optional(),
-      }).unknown(true),
+      }),
     },
     response: {
       200: addressSchema,
@@ -289,7 +295,7 @@ export const accountContracts = {
     request: {
       body: Joi.object({
         productId: Joi.string().required(),
-      }).unknown(true),
+      }),
     },
     response: {
       201: Joi.object({
@@ -351,7 +357,6 @@ export const accountContracts = {
               reason:      Joi.string().required(),
               notes:       Joi.string().allow('').optional(),
           }),
-          // No .unknown(true) — keep write endpoints explicit
       },
       response: {
           201: Joi.object({
@@ -394,12 +399,19 @@ export const accountContracts = {
     request: {
       body: Joi.object({
         subscribed: Joi.boolean().required(),
-      }).unknown(true),
+        topics: Joi.array().items(
+          Joi.object({
+            topicId:  Joi.string().required(),
+            selected: Joi.boolean().required(),
+          })
+        ).optional(),
+      }),
     },
     response: {
       200: Joi.object({
         subscribed: Joi.boolean().optional(),
-        email: Joi.string().email().optional(),
+        topics:     Joi.array().optional(),
+        email:      Joi.string().email().optional(),
       }).unknown(true),
       400: Joi.object({
         error: Joi.string().required(),
@@ -425,16 +437,16 @@ export const accountContracts = {
   updateSettings: {
     request: {
       body: Joi.object({
-        notifications: Joi.object().optional(),
-        privacy: Joi.object().optional(),
-        preferences: Joi.object().optional(),
-      }).unknown(true),
+        shareData:        Joi.boolean().optional(),
+        emailUpdates:     Joi.boolean().optional(),
+        smsNotifications: Joi.boolean().optional(),
+      }),
     },
     response: {
       200: Joi.object({
-        notifications: Joi.object().optional(),
-        privacy: Joi.object().optional(),
-        preferences: Joi.object().optional(),
+        shareData:        Joi.boolean().optional(),
+        emailUpdates:     Joi.boolean().optional(),
+        smsNotifications: Joi.boolean().optional(),
       }).unknown(true),
       400: Joi.object({
         error: Joi.string().required(),
@@ -460,8 +472,8 @@ export const accountContracts = {
     request: {
       body: Joi.object({
         current: Joi.string().required(),
-        password: Joi.string().required(), // Remove min length to match test data
-      }).unknown(true),
+        password: Joi.string().required(),
+      }),
     },
     response: {
       200: Joi.object({
@@ -478,7 +490,7 @@ export const accountContracts = {
     request: {
       body: Joi.object({
         password: Joi.string().required(),
-      }).unknown(true),
+      }),
     },
     response: {
       200: Joi.object({

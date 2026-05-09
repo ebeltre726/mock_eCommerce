@@ -70,9 +70,17 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  # NOTE: Cognito sends verification emails from its own address by default
-  # (limit: 50/day). For production, configure an SES identity here:
-  #   email_configuration { email_sending_account = "DEVELOPER"; source_arn = <ses_arn> }
+  # When ses_email_arn is provided, Cognito delegates sending to SES (no 50/day cap).
+  # Leave var.ses_email_arn empty in dev/staging to use Cognito's sandbox sender.
+  dynamic "email_configuration" {
+    for_each = var.ses_email_arn != "" ? [1] : []
+    content {
+      email_sending_account  = "DEVELOPER"
+      source_arn             = var.ses_email_arn
+      # "no-reply@" is the recommended From address — it must match a verified SES identity.
+      from_email_address     = "no-reply@furnitria.com"
+    }
+  }
 
   tags = { Project = "mock-ecommerce" }
 }
@@ -87,11 +95,11 @@ resource "aws_cognito_user_pool_client" "frontend" {
   # Public client — SPAs cannot keep a secret
   generate_secret = false
 
-  # USER_PASSWORD_AUTH: our backend proxies email+password on the user's behalf
-  # REFRESH_TOKEN_AUTH: silent re-auth without re-login
-  # USER_SRP_AUTH: forward-compatible with Amplify client-side auth
+  # ALLOW_USER_PASSWORD_AUTH is intentionally removed — the browser login path
+  # uses client-side SRP (POST /api/auth/tokens) so the password never reaches
+  # this backend. Removing it forces all auth through the zero-knowledge SRP flow
+  # and eliminates the backend-proxy attack surface.
   explicit_auth_flows = [
-    "ALLOW_USER_PASSWORD_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
     "ALLOW_USER_SRP_AUTH",
   ]
@@ -141,12 +149,17 @@ resource "aws_iam_role_policy" "post_confirmation_policy" {
         # Only needs to write the initial profile rows — no read, no delete
         Effect   = "Allow"
         Action   = ["dynamodb:PutItem"]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/${var.dynamodb_table}"
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table}"
       },
       {
         Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Action   = ["logs:CreateLogGroup"]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mock-ecommerce-post-confirmation"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mock-ecommerce-post-confirmation:*"
       }
     ]
   })

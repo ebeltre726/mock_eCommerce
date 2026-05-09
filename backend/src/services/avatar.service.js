@@ -1,13 +1,21 @@
 import sharp from "sharp";
 import { storage } from "../storage/index.js";
 import { dynamo } from "../db/dynamoClient.js";
-import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { validateFile } from "../utils/validateFile.js";
+import logger from "../utils/logger.js";
 
 const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 
 export async function uploadAvatar(userId, file) {
-  validateFile(file);
+  await validateFile(file);
+
+  const existing = await dynamo.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+    ProjectionExpression: 'avatar',
+  }));
+  const oldKey = existing.Item?.avatar ?? null;
 
   const buffer = await sharp(file.buffer)
     .resize(300, 300, { fit: "cover" })
@@ -30,5 +38,14 @@ export async function uploadAvatar(userId, file) {
     },
   }));
 
+  // Best-effort: delete the previous avatar so stale objects don't accumulate.
+  if (oldKey && oldKey !== key) {
+    storage.deleteObject(oldKey).catch(err =>
+      logger.warn({ oldKey, err: err.message }, '[avatar] failed to delete old object')
+    );
+  }
+
+  // Always return a presigned URL (not the plain objectUrl from uploadImage) because
+  // the avatars bucket is private — the plain S3 URL returns 403 for unauthenticated requests.
   return storage.getDownloadUrl(key);
 }

@@ -20,20 +20,26 @@ export async function fetchNewsletter(userId) {
 }
 
 export async function patchNewsletter(userId, { subscribed, topics }) {
+    const hasTopics = Array.isArray(topics);
+
     const result = await dynamo.send(new UpdateCommand({
         TableName: TABLE,
         Key: {
             PK: `USER#${userId}`,
             SK: 'NEWSLETTER',
         },
-        UpdateExpression: 'SET #subscribed = :subscribed, #topics = :topics',
+        UpdateExpression: hasTopics
+            ? 'SET entityType = if_not_exists(entityType, :entityType), userId = if_not_exists(userId, :userId), #subscribed = :subscribed, #topics = :topics'
+            : 'SET entityType = if_not_exists(entityType, :entityType), userId = if_not_exists(userId, :userId), #subscribed = :subscribed',
         ExpressionAttributeNames: {
             '#subscribed': 'subscribed',
-            '#topics': 'topics',
+            ...(hasTopics && { '#topics': 'topics' }),
         },
         ExpressionAttributeValues: {
+            ':entityType': 'NEWSLETTER',
+            ':userId': userId,
             ':subscribed': subscribed,
-            ':topics': topics,
+            ...(hasTopics && { ':topics': topics }),
         },
         ReturnValues: 'ALL_NEW',
     }));

@@ -1,5 +1,5 @@
 // storage/s3.storage.js
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
@@ -38,6 +38,10 @@ export const s3Storage = {
     async getDownloadUrl(key, bucket = process.env.S3_BUCKET_AVATARS, expiresIn = 3600) {
         const command = new GetObjectCommand({ Bucket: bucket, Key: key });
         return getSignedUrl(s3, command, { expiresIn });
+    },
+
+    async deleteObject(key, bucket = process.env.S3_BUCKET_AVATARS) {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },
 
     async getUploadUrl({ key, contentType, bucket = process.env.S3_BUCKET_AVATARS }) {

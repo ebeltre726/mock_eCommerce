@@ -5,6 +5,19 @@
     <button class="btn-primary add-card-btn">+ Add Card</button>
   </div>
   <div class="panel-payment">
+    <div class="demoNotice panel-notice">
+      <span class="demoIcon">⚠</span>
+      <span>Demo store — no real charges. Use Stripe test cards:</span>
+      <table class="testCardTable">
+        <tr><td><strong>4242 4242 4242 4242</strong></td><td>Success</td></tr>
+        <tr><td><strong>4000 0000 0000 0002</strong></td><td>Card declined</td></tr>
+        <tr><td><strong>4000 0000 0000 9995</strong></td><td>Insufficient funds</td></tr>
+        <tr><td><strong>4000 0000 0000 0069</strong></td><td>Card expired</td></tr>
+        <tr><td><strong>4000 0000 0000 0127</strong></td><td>Incorrect CVC</td></tr>
+      </table>
+      <span class="demoNoticeSmall">Use any future expiry date and any 3-digit CVV.</span>
+    </div>
+
     <ul class="card-list" id="card-list">
       <!-- Populated by account.js -->
     </ul>

@@ -15,6 +15,7 @@ import {
   LimitExceededException,
 } from '@aws-sdk/client-cognito-identity-provider';
 import env from '../config/env.js';
+import logger from '../utils/logger.js';
 
 const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
 
@@ -33,13 +34,17 @@ function decodeJwtPayload(token) {
 // LOGIN USER
 // ======================
 // Uses USER_PASSWORD_AUTH — backend proxies the credentials to Cognito.
-// Cognito returns three tokens; we pass all three back so the frontend can
-// store the access token (for logout) and refresh token (for silent re-auth).
+// ALLOW_USER_PASSWORD_AUTH has been removed from the Cognito client so this
+// path is disabled in production. It remains here only for local dev and
+// integration tests (which mock the Cognito SDK).
 //
-// Best practice note: USER_SRP_AUTH from the frontend is more secure because
-// the password never transits your backend. Consider migrating to Amplify's
-// signIn() (SRP) on the frontend if you want zero-knowledge auth.
+// The production browser login path uses client-side SRP (amazon-cognito-identity-js)
+// which never sends the password to this backend. See POST /api/auth/tokens.
 export async function loginUser(email, password) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('USER_PASSWORD_AUTH is disabled in production. Use the SRP login flow.');
+  }
+
   if (!email || !password) {
     throw new Error('Email and password are required.');
   }
@@ -248,6 +253,6 @@ export async function logoutUser(accessToken) {
     await cognito.send(new GlobalSignOutCommand({ AccessToken: accessToken }));
   } catch (err) {
     // Log but don't fail — token may have already expired server-side
-    console.error('GlobalSignOut error (non-fatal):', err.message);
+    logger.warn({ err: err.message }, 'GlobalSignOut error (non-fatal)');
   }
 }

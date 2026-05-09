@@ -5,6 +5,7 @@ import {
   signup,
   logout,
   refresh,
+  session,
   forgotPasswordHandler,
   confirmForgotPasswordHandler,
   resendConfirmationHandler,
@@ -16,6 +17,11 @@ import { authContracts } from '../contracts/auth.contracts.js';
 
 const router = express.Router();
 
+// NOTE: This limiter uses in-process MemoryStore. In Lambda each cold start and
+// each concurrent instance gets independent counters, so this cannot enforce
+// reliable per-client limits across instances. Production throttling is handled
+// at the API Gateway stage level (see infrastructure/terraform/modules/api_gateway).
+// This limiter still provides a meaningful guard in local/single-instance environments.
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -40,10 +46,13 @@ router.post('/logout', authLimiter, validateResponse(authContracts.logout), logo
 router.post('/refresh', authLimiter, validateResponse(authContracts.refresh), refresh);
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', authLimiter, validateResponse(authContracts.forgotPassword), forgotPasswordHandler);
+router.post('/forgot-password', authLimiter, validateRequest(authContracts.forgotPassword), validateResponse(authContracts.forgotPassword), forgotPasswordHandler);
 
 // POST /api/auth/confirm-forgot-password
-router.post('/confirm-forgot-password', authLimiter, validateResponse(authContracts.confirmForgotPassword), confirmForgotPasswordHandler);
+router.post('/confirm-forgot-password', authLimiter, validateRequest(authContracts.confirmForgotPassword), validateResponse(authContracts.confirmForgotPassword), confirmForgotPasswordHandler);
+
+// POST /api/auth/tokens — exchange client-side SRP tokens for httpOnly session cookies
+router.post('/tokens', authLimiter, validateRequest(authContracts.tokens), validateResponse(authContracts.tokens), session);
 
 // GET /api/auth/me
 router.get('/me', requireAuth, validateResponse(authContracts.getMe), getMe);

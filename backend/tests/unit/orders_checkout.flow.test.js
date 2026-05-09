@@ -13,12 +13,27 @@ import * as ordersService from '../../src/services/orders.service.js';
 describe('Orders / Checkout Flow (mocked services)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('GET /api/orders -> returns list of orders', async () => {
-    jest.spyOn(ordersService, 'fetchOrders').mockResolvedValue([{ orderId: 'o1', items: [] }]);
+  it('GET /api/orders -> returns paginated orders envelope', async () => {
+    jest.spyOn(ordersService, 'fetchOrders').mockResolvedValue({
+      orders: [{ orderId: 'o1', items: [] }],
+      nextCursor: null,
+    });
 
     const res = await request(app).get('/api/orders').set('Authorization', 'Bearer tok');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ orderId: 'o1', items: [] }]);
+    expect(res.body).toHaveProperty('orders');
+    expect(res.body.orders[0]).toHaveProperty('orderId', 'o1');
+    expect(res.body.nextCursor).toBeNull();
+  });
+
+  it('GET /api/orders -> forwards cursor query param to service', async () => {
+    jest.spyOn(ordersService, 'fetchOrders').mockResolvedValue({
+      orders: [],
+      nextCursor: null,
+    });
+
+    await request(app).get('/api/orders?cursor=abc123').set('Authorization', 'Bearer tok');
+    expect(ordersService.fetchOrders).toHaveBeenCalledWith('u1', 'abc123');
   });
 
   it('GET /api/orders/:orderId -> returns single order or 404', async () => {
@@ -30,7 +45,7 @@ describe('Orders / Checkout Flow (mocked services)', () => {
   });
 
   it('POST /api/orders -> creates order and returns 201', async () => {
-    const mockOrder = { orderId: 'o123', fullName: 'Jane Doe', addressId: 'addr1', items: [{ productId: 'p1', quantity: 1 }], paymentMethodId: 'demo' };
+    const mockOrder = { orderId: 'o123', status: 'confirmed', totalAmount: 99.99 };
     jest.spyOn(ordersService, 'createOrder').mockResolvedValue(mockOrder);
 
     const payload = {

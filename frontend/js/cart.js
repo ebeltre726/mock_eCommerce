@@ -2,6 +2,7 @@ import { isWishlisted, toggleWishlist } from './wishlist.js';
 import { apiFetch } from './api.js';
 import { products } from './products.js';
 import config from './config.js';
+import { esc, escAttr, isLoggedIn } from './utils.js';
 
 const MAX_QTY = 5;
 let cartState = [];
@@ -19,12 +20,10 @@ function clearCartState() {
 }
 
 async function loadCart() {
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isLoggedIn()) {
         try {
             cartState = await apiFetch('cart');
         } catch (err) {
-            if (err.status === 401) localStorage.removeItem('token');
             cartState = [];
         }
     } else {
@@ -80,8 +79,7 @@ async function addItemToCart(productId, quantity) {
         cartState.push({ productId, quantity: allowedQty });
     }
 
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isLoggedIn()) {
         try {
             await apiFetch('cart/add', {
                 method: 'POST',
@@ -107,8 +105,7 @@ async function removeItemFromCart(productId, quantity) {
         }
     }
 
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isLoggedIn()) {
         try {
             await apiFetch('cart/remove', {
                 method: 'POST',
@@ -202,17 +199,17 @@ async function renderCartProducts(container) {
         
         const base = import.meta.env?.BASE_URL ?? './';
         div.innerHTML = `
-            <label class="itemTitle">${p.name}</label>
+            <label class="itemTitle">${esc(p.name)}</label>
             <div class="imgContnr">
-                <img class="info" src="${base}info.png">
-                <label class="productDesc">${p.description || ''}</label>
-                <img class="closeProd hidden" src="${base}close.png">
-                <img class="wishlist-icon" src="${isWishlisted(item.productId) ? `${base}wl-selected.png` : `${base}wl-unselected.png`}" data-product-id="${item.productId}">
-                <img class="cartImage" src="${p.imageUrl || ''}">
+                <img class="info" src="${escAttr(base)}info.png">
+                <label class="productDesc">${esc(p.description || '')}</label>
+                <img class="closeProd hidden" src="${escAttr(base)}close.png">
+                <img class="wishlist-icon" src="${isWishlisted(item.productId) ? `${escAttr(base)}wl-selected.png` : `${escAttr(base)}wl-unselected.png`}" data-product-id="${escAttr(String(item.productId))}">
+                <img class="cartImage" src="${escAttr(p.imageUrl || '')}">
             </div>
-            <span class="cartQtyBadge ${item.quantity > 0 ? '' : 'hidden'}">x${item.quantity}</span>
+            <span class="cartQtyBadge ${item.quantity > 0 ? '' : 'hidden'}">x${esc(String(item.quantity))}</span>
             <button class="rmvCart">Remove from Cart</button>
-            <label class="cartProdPrice">$${p.price || 0}</label>
+            <label class="cartProdPrice">$${esc(String(p.price || 0))}</label>
         `;
 
         const wlIcon = div.querySelector('.wishlist-icon');

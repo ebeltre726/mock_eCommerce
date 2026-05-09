@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { dynamo } from '../db/dynamoClient.js';
 import env from '../config/env.js';
+import logger from '../utils/logger.js';
 
 const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
 const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
@@ -107,7 +108,7 @@ export async function removeAccount(userId, email) {
             })
         ).catch(err => {
             // Log but don't block — DynamoDB data should still be deleted
-            console.error('AdminDeleteUser error (non-fatal):', err.message);
+            logger.warn({ err: err.message }, 'AdminDeleteUser error (non-fatal)');
         }),
     ]);
 }
