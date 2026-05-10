@@ -5,6 +5,9 @@ export default {
         '^.+\\.js$': 'babel-jest',
     },
     transformIgnorePatterns: [
-        '/node_modules/(?!uuid|@aws-sdk/.*)',
+        '/node_modules/(?!uuid|@aws-sdk/.*|@smithy/.*)',
     ],
+    moduleNameMapper: {
+        '^file-type$': '<rootDir>/__mocks__/file-type.js',
+    },
 };

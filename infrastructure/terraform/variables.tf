@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "dynamodb_table" {
   description = "DynamoDB table name"
-  default     = "Furnituria"
+  default     = "Furnitria"
 }
 
 variable "frontend_bucket" {
@@ -29,6 +29,37 @@ variable "ecr_repo_name" {
 }
 
 variable "image_tag" {
-  description = "Docker image tag to deploy (set by CI to the Git SHA)"
-  default     = "latest"
+  description = "Docker image tag to deploy (set by CI to the Git SHA). No default — must be provided explicitly to prevent accidental :latest deploys."
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Root domain registered in Route 53 (e.g. furnitria.com)"
+  default     = "furnitria.com"
+}
+
+variable "force_destroy_data_buckets" {
+  description = "Allow terraform destroy to delete avatars/products bucket contents. Set true for dev/staging only."
+  type        = bool
+  default     = false
+}
+
+variable "force_destroy_frontend" {
+  description = "Allow terraform destroy to delete frontend bucket contents. Set true for dev/staging only."
+  type        = bool
+  default     = false
+}
+
+# ── WAF ───────────────────────────────────────────────────────────────────────
+variable "waf_auth_rate_limit" {
+  description = "Max requests per IP per 5-minute window to /api/auth/* (WAF CloudFront rule). AWS minimum is 100. Set to 0 to disable."
+  type        = number
+  default     = 300
+}
+
+# ── Cognito Email ─────────────────────────────────────────────────────────────
+variable "ses_email_arn" {
+  description = "SES verified identity ARN for Cognito email sending (removes the 50/day default limit). Set to a verified SES identity ARN in production; leave empty for dev/staging."
+  type        = string
+  default     = ""
 }

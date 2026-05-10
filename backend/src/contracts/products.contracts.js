@@ -18,18 +18,33 @@ const productSchema = Joi.object({
 }).unknown(true); // Allow unknown fields for flexibility
 
 export const productsContracts = {
+  // GET /api/products/batch?ids=id1,id2,...
+  getProductsBatch: {
+    request: {
+      query: Joi.object({
+        ids: Joi.string().required(),
+      }),
+    },
+    response: {
+      200: Joi.object().pattern(Joi.string(), productSchema),
+    },
+  },
+
   // GET /api/products
   getProducts: {
     request: {
       query: Joi.object({
         category: Joi.string().optional(),
-        search: Joi.string().optional(),
-        limit: Joi.number().optional(),
-        offset: Joi.number().optional(),
+        search:   Joi.string().optional(),
+        limit:    Joi.number().integer().min(1).max(100).optional(),
+        cursor:   Joi.string().optional(),
       }).unknown(true),
     },
     response: {
-      200: Joi.array().items(productSchema),
+      200: Joi.object({
+        items:      Joi.array().items(productSchema).required(),
+        nextCursor: Joi.string().allow(null).required(),
+      }),
     },
   },
 

@@ -4,17 +4,55 @@ on:
   push:
     branches: [main]
 
+# OIDC token required for aws-actions/configure-aws-credentials role assumption
+permissions:
+  id-token: write
+  contents: read
+
 env:
-  AWS_REGION:   us-east-1
-  ECR_REPO:     mock-ecommerce-backend
-  TF_DIR:       infrastructure/terraform
+  AWS_REGION: us-east-1
+  ECR_REPO:   mock-ecommerce-backend
+  TF_DIR:     infrastructure/terraform
 
 jobs:
+  # ──────────────────────────────────────────────────
+  # 0. Ensure the ECR repository exists before we try to push to it.
+  #    On first deploy the repo doesn't exist yet — Terraform normally creates
+  #    it, but the build job runs before Terraform.  We use the AWS CLI directly
+  #    rather than a targeted terraform apply -auto-approve to avoid plan-less
+  #    applies and the risk of partial state mutations.
+  #    The create-repository call is a no-op when the repo already exists.
+  # ──────────────────────────────────────────────────
+  bootstrap-ecr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_ECR }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPO }} 2>/dev/null \
+            || aws ecr create-repository \
+                 --repository-name ${{ env.ECR_REPO }} \
+                 --image-tag-mutability IMMUTABLE \
+                 --image-scanning-configuration scanOnPush=true
+
+      - name: Ensure ECR lifecycle policy is set
+        run: |
+          aws ecr put-lifecycle-policy \
+            --repository-name ${{ env.ECR_REPO }} \
+            --lifecycle-policy-text '{"rules":[{"rulePriority":1,"description":"Retain last 10 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
   # ──────────────────────────────────────────────────
   # 1. Build and push backend container image to ECR
   # ──────────────────────────────────────────────────
   build-backend:
     runs-on: ubuntu-latest
+    needs: bootstrap-ecr
 
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
@@ -25,9 +63,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BUILD }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         id: ecr-login
@@ -44,19 +81,13 @@ jobs:
         run: |
           docker build -t $REGISTRY/$ECR_REPO:$IMAGE_TAG ./backend
           docker push    $REGISTRY/$ECR_REPO:$IMAGE_TAG
-          # Also tag latest for convenience
-          docker tag  $REGISTRY/$ECR_REPO:$IMAGE_TAG $REGISTRY/$ECR_REPO:latest
-          docker push $REGISTRY/$ECR_REPO:latest
 
   # ──────────────────────────────────────────────────
-  # 2. Apply Terraform (updates Lambda to new image)
+  # 2a. Terraform plan — output saved as artifact for review
   # ──────────────────────────────────────────────────
-  terraform:
+  terraform-plan:
     runs-on: ubuntu-latest
     needs: build-backend
-
-    outputs:
-      cloudfront_url: ${{ steps.tf-output.outputs.cloudfront_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -64,9 +95,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_TF_PLAN }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -75,26 +105,39 @@ jobs:
       - name: Terraform init
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
-        env:
-          TF_VAR_image_tag: ${{ needs.build-backend.outputs.image_tag }}
 
-      - name: Terraform apply
+      - name: Terraform plan
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve -var="image_tag=${{ needs.build-backend.outputs.image_tag }}"
-        env:
-          TF_VAR_image_tag: ${{ needs.build-backend.outputs.image_tag }}
+        run: |
+          terraform plan \
+            -out=tfplan \
+            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}" \
+            -var="emailjs_service_id=${{ secrets.EMAILJS_SERVICE_ID }}" \
+            -var="emailjs_public_key=${{ secrets.EMAILJS_PUBLIC_KEY }}" \
+            -var="emailjs_template_contact=${{ secrets.EMAILJS_TEMPLATE_CONTACT }}" \
+            -var="emailjs_template_subscribed=${{ secrets.EMAILJS_TEMPLATE_SUBSCRIBED }}" \
+            -var="emailjs_template_unsubscribed=${{ secrets.EMAILJS_TEMPLATE_UNSUBSCRIBED }}"
 
-      - name: Capture CloudFront URL
-        id: tf-output
-        working-directory: ${{ env.TF_DIR }}
-        run: echo "cloudfront_url=$(terraform output -raw cloudfront_url)" >> $GITHUB_OUTPUT
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.run_id }}
+          path: ${{ env.TF_DIR }}/tfplan
+          retention-days: 1
 
   # ──────────────────────────────────────────────────
-  # 3. Build frontend and deploy to S3 + invalidate CDN
+  # 2b. Terraform apply — gated by 'production' environment approval
+  #     Configure required reviewers in: Settings → Environments → production
   # ──────────────────────────────────────────────────
-  deploy-frontend:
+  terraform-apply:
     runs-on: ubuntu-latest
-    needs: terraform
+    needs: [build-backend, terraform-plan]
+    environment: production
+
+    outputs:
+      cloudfront_url:       ${{ steps.tf-output.outputs.cloudfront_url }}
+      cognito_user_pool_id: ${{ steps.tf-output.outputs.cognito_user_pool_id }}
+      cognito_client_id:    ${{ steps.tf-output.outputs.cognito_client_id }}
 
     steps:
       - uses: actions/checkout@v4
@@ -102,15 +145,108 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_TF_APPLY }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.6"
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Download approved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ github.run_id }}
+          path: ${{ env.TF_DIR }}
+
+      - name: Terraform apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply tfplan
+
+      - name: Write secrets to SSM
+        run: |
+          aws ssm put-parameter \
+            --name "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY" \
+            --value "${{ secrets.EMAILJS_PRIVATE_KEY }}" \
+            --type SecureString \
+            --overwrite
+          aws ssm put-parameter \
+            --name "/mock-ecommerce/prod/STRIPE_SECRET_KEY" \
+            --value "${{ secrets.STRIPE_SECRET_KEY }}" \
+            --type SecureString \
+            --overwrite
+
+      - name: Capture Terraform outputs
+        id: tf-output
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          echo "cloudfront_url=$(terraform output -raw cloudfront_url)"             >> $GITHUB_OUTPUT
+          echo "cognito_user_pool_id=$(terraform output -raw cognito_user_pool_id)" >> $GITHUB_OUTPUT
+          echo "cognito_client_id=$(terraform output -raw cognito_client_id)"       >> $GITHUB_OUTPUT
+
+  # ──────────────────────────────────────────────────
+  # 3. Seed products into DynamoDB (idempotent — no-op if already seeded)
+  # ──────────────────────────────────────────────────
+  seed-products:
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_SEED }}
+          aws-region:     ${{ env.AWS_REGION }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package.json
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Seed products
+        working-directory: ./backend
+        run: node scripts/seed-products.js
+        env:
+          AWS_REGION:          ${{ env.AWS_REGION }}
+          DYNAMODB_TABLE:      Furnitria
+          S3_BUCKET_AVATARS:   ${{ secrets.S3_BUCKET_AVATARS }}
+          S3_BUCKET_PRODUCTS:  ${{ secrets.S3_BUCKET_PRODUCTS }}
+          STRIPE_SECRET_KEY:   placeholder   # not used by seed, satisfies env.js validation
+          COGNITO_USER_POOL_ID: placeholder  # not used by seed, satisfies env.js validation
+          COGNITO_CLIENT_ID:   placeholder   # not used by seed, satisfies env.js validation
+          ALLOWED_ORIGINS:     placeholder   # not used by seed, satisfies env.js validation
+
+  # ──────────────────────────────────────────────────
+  # 4. Build frontend and deploy to S3 + invalidate CDN
+  # ──────────────────────────────────────────────────
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: [terraform-apply, seed-products]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_FRONTEND }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend deps
         working-directory: ./frontend
@@ -119,19 +255,28 @@ jobs:
       - name: Build frontend
         working-directory: ./frontend
         env:
-          VITE_API_URL: ${{ needs.terraform.outputs.cloudfront_url }}/api
+          VITE_API_URL:              ${{ needs.terraform-apply.outputs.cloudfront_url }}/api
+          # Cognito identifiers are not secrets — safe to embed in the frontend bundle
+          VITE_COGNITO_USER_POOL_ID: ${{ needs.terraform-apply.outputs.cognito_user_pool_id }}
+          VITE_COGNITO_CLIENT_ID:    ${{ needs.terraform-apply.outputs.cognito_client_id }}
+          # Stripe publishable key is intentionally public — embedded in the frontend bundle
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Sync dist to S3
         run: |
+          # Pass 1: all non-HTML assets — content-addressed filenames; cache forever
           aws s3 sync frontend/dist s3://${{ secrets.FRONTEND_BUCKET }} \
             --delete \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "*.html"
-          # HTML files must not be cached so users always get the latest SPA shell
+          # Pass 2: HTML only — must revalidate so users always get the latest SPA shell.
+          # --exclude "*" + --include "*.html" scopes this pass to HTML files only;
+          # without --exclude "*" the --include is a no-op and all files get no-cache.
+          # No --delete here — the first pass already handled removals.
           aws s3 sync frontend/dist s3://${{ secrets.FRONTEND_BUCKET }} \
-            --delete \
             --cache-control "no-cache" \
+            --exclude "*" \
             --include "*.html"
 
       - name: Invalidate CloudFront cache

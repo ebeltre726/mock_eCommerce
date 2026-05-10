@@ -2,7 +2,12 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     root: '.',
-    base: './',
+    base: '/',
+    // amazon-cognito-identity-js references the Node.js `global` at module init time.
+    // Vite doesn't polyfill it, so we map it to the spec-standard globalThis.
+    define: {
+        global: 'globalThis',
+    },
     // public/ holds runtime-fetched assets (templates, icons) that Vite copies as-is
     publicDir: 'public',
     build: {

@@ -14,17 +14,15 @@ import * as cartService from '../../src/services/cart.service.js';
 describe('Products + Cart Flow (mocked services)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('GET /api/products -> returns product list', async () => {
-    const products = [{ id: 'p1', name: 'Chair' }];
-    jest.spyOn(productsService, 'fetchAllProducts').mockResolvedValue(products);
-    expect(jest.isMockFunction(productsService.fetchAllProducts)).toBe(true);
+  it('GET /api/products -> returns paginated product list', async () => {
+    const items = [{ id: 'p1', name: 'Chair' }];
+    jest.spyOn(productsService, 'fetchProductsPage').mockResolvedValue({ items, nextCursor: null });
 
     const res = await request(app).get('/api/products');
-    console.log('products res', res.status, res.body, res.text);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(products);
-    expect(productsService.fetchAllProducts).toHaveBeenCalled();
+    expect(res.body).toEqual({ items, nextCursor: null });
+    expect(productsService.fetchProductsPage).toHaveBeenCalled();
   });
 
   it('GET /api/products/:id -> returns single product or 404', async () => {

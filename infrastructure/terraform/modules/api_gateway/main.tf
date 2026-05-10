@@ -4,9 +4,9 @@ resource "aws_apigatewayv2_api" "main" {
 
   cors_configuration {
     # CORS handled at CloudFront level; this is a fallback for direct API access
-    allow_origins = ["*"]
+    allow_origins = var.allowed_origins
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "Authorization"]
+    allow_headers = ["Content-Type", "Authorization", "X-Access-Token"]
     max_age       = 300
   }
 }
@@ -31,6 +31,15 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.main.id
   name        = "$default"
   auto_deploy = true
+
+  # Stage-level throttling is the effective rate-limiting layer in Lambda deployments.
+  # Express rate limiters use in-process counters that reset on each cold start and
+  # are independent across concurrent Lambda instances, so they cannot enforce
+  # reliable per-client limits at scale.
+  default_route_settings {
+    throttling_rate_limit  = 50  # sustained requests/second
+    throttling_burst_limit = 100 # maximum concurrent requests
+  }
 }
 
 # Allow API Gateway to invoke the Lambda function

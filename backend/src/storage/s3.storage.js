@@ -1,15 +1,20 @@
 // storage/s3.storage.js
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
-  endpoint: process.env.S3_ENDPOINT,       // set for MinIO locally, unset for real AWS
-  forcePathStyle: true,                     // required for MinIO & path-style AWS
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
+  endpoint: process.env.S3_ENDPOINT,
+  forcePathStyle: !!process.env.S3_ENDPOINT,
+  // MinIO (local) uses its own credentials — not AWS keys.
+  // Production omits credentials entirely; the SDK resolves them via the
+  // Identity Center / IAM provider chain.
+  ...(process.env.S3_ENDPOINT && {
+    credentials: {
+      accessKeyId:     process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+      secretAccessKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    },
+  }),
 });
 
 function objectUrl(bucket, key) {
@@ -28,6 +33,15 @@ export const s3Storage = {
             ContentType: contentType,
         }));
         return objectUrl(bucket, key);
+    },
+
+    async getDownloadUrl(key, bucket = process.env.S3_BUCKET_AVATARS, expiresIn = 3600) {
+        const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+        return getSignedUrl(s3, command, { expiresIn });
+    },
+
+    async deleteObject(key, bucket = process.env.S3_BUCKET_AVATARS) {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },
 
     async getUploadUrl({ key, contentType, bucket = process.env.S3_BUCKET_AVATARS }) {

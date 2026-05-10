@@ -3,11 +3,31 @@ data "aws_caller_identity" "current" {}
 # ECR repository for backend container images
 resource "aws_ecr_repository" "backend" {
   name                 = var.ecr_repo_name
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
   }
+}
+
+# Keep the 10 most recent images; expire everything older.
+# IMMUTABLE tags mean every deploy adds a new image — without this the
+# registry grows unboundedly at ~$0.10/GB/month.
+resource "aws_ecr_lifecycle_policy" "backend" {
+  repository = aws_ecr_repository.backend.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Retain last 10 images"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
 }
 
 # IAM role assumed by the Lambda function
@@ -32,8 +52,17 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["dynamodb:*"]
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DescribeTable",
+        ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table}*"
       },
       {
@@ -47,13 +76,19 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect   = "Allow"
         Action   = ["ssm:GetParameter"]
-        Resource = [var.jwt_secret_arn, var.stripe_secret_arn]
+        Resource = [var.stripe_secret_arn, var.emailjs_private_key_arn]
       },
       {
-        # CloudWatch Logs
+        # Allow log group creation for this function only.
         Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Action   = ["logs:CreateLogGroup"]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mock-ecommerce-backend"
+      },
+      {
+        # Allow writing log streams and events within this function's log group.
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/mock-ecommerce-backend:*"
       }
     ]
   })
@@ -71,15 +106,24 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      NODE_ENV           = "production"
-      AWS_REGION_OVERRIDE = var.aws_region   # avoid conflict with reserved AWS_REGION
-      DYNAMODB_TABLE     = var.dynamodb_table
-      S3_BUCKET_AVATARS  = var.s3_bucket_avatars
-      S3_BUCKET_PRODUCTS = var.s3_bucket_products
-      ALLOWED_ORIGINS    = var.allowed_origins
-      # Secrets loaded at startup from SSM (avoids storing in plaintext env vars)
-      JWT_SECRET_SSM     = "/mock-ecommerce/prod/JWT_SECRET"
-      STRIPE_SECRET_SSM  = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
+      NODE_ENV             = "production"
+      DYNAMODB_TABLE       = var.dynamodb_table
+      S3_BUCKET_AVATARS    = var.s3_bucket_avatars
+      S3_BUCKET_PRODUCTS   = var.s3_bucket_products
+      ALLOWED_ORIGINS      = var.allowed_origins
+      # Cognito identifiers are not secrets — safe as plain env vars
+      COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+      COGNITO_CLIENT_ID    = var.cognito_client_id
+      # Secrets loaded at cold start from SSM — never stored as plaintext env vars
+      STRIPE_SECRET_SSM          = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
+      EMAILJS_PRIVATE_KEY_SSM    = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
+      # EmailJS non-secret config — safe as plaintext env vars
+      EMAIL_DRIVER                    = "emailjs"
+      EMAILJS_SERVICE_ID              = var.emailjs_service_id
+      EMAILJS_PUBLIC_KEY              = var.emailjs_public_key
+      EMAILJS_TEMPLATE_CONTACT        = var.emailjs_template_contact
+      EMAILJS_TEMPLATE_SUBSCRIBED     = var.emailjs_template_subscribed
+      EMAILJS_TEMPLATE_UNSUBSCRIBED   = var.emailjs_template_unsubscribed
     }
   }
 

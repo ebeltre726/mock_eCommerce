@@ -7,8 +7,8 @@ import Joi from 'joi';
 
 const cartItemSchema = Joi.object({
   productId: Joi.string().required(),
-  quantity: Joi.number().min(1).required(),
-}).unknown(true);
+  quantity: Joi.number().integer().min(1).required(),
+});
 
 export const cartContracts = {
   // GET /api/cart
@@ -26,8 +26,8 @@ export const cartContracts = {
     request: {
       body: Joi.object({
         productId: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-      }).unknown(true),
+        quantity: Joi.number().integer().min(1).required(),
+      }),
     },
     response: {
       200: cartItemSchema,
@@ -45,8 +45,8 @@ export const cartContracts = {
     request: {
       body: Joi.object({
         productId: Joi.string().required(),
-        quantity: Joi.number().min(1).required(),
-      }).unknown(true),
+        quantity: Joi.number().integer().min(1).required(),
+      }),
     },
     response: {
       200: cartItemSchema,

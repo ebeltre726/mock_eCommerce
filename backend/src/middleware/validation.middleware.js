@@ -2,6 +2,7 @@
  * Validation Middleware
  * Validates requests against API contracts
  */
+import logger from '../utils/logger.js';
 
 export function validateRequest(contract) {
   return (req, res, next) => {
@@ -27,7 +28,7 @@ export function validateRequest(contract) {
     if (contract.request?.body) {
       const { error, value } = contract.request.body.validate(req.body, {
         abortEarly: false,
-        stripUnknown: false, // Allow unknown fields for flexibility
+        stripUnknown: true,
       });
 
       if (error) {
@@ -81,12 +82,7 @@ export function validateRequest(contract) {
     }
 
     if (errors.length > 0) {
-      console.error('❌ [Validation] Request validation failed:', {
-        path: req.path,
-        method: req.method,
-        body: req.body,
-        errors: errors,
-      });
+      logger.warn({ path: req.path, method: req.method, errors }, 'Request validation failed');
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
@@ -103,6 +99,8 @@ export function validateRequest(contract) {
  */
 export function validateResponse(contract) {
   return (req, res, next) => {
+    if (process.env.NODE_ENV === 'production') return next();
+
     const originalJson = res.json.bind(res);
 
     res.json = function (data) {
@@ -116,7 +114,7 @@ export function validateResponse(contract) {
           });
 
           if (error) {
-            console.warn(`[API Contract Warning] Response validation failed for status ${statusCode}:`, error.message);
+            logger.warn({ statusCode, err: error.message }, 'Response validation failed (contract mismatch)');
           }
         }
       }

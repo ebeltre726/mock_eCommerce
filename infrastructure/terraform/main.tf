@@ -8,11 +8,13 @@ terraform {
     }
   }
 
-  # Remote state — create this S3 bucket manually once before first apply
+  # Remote state — create the S3 bucket and DynamoDB table manually once before first apply
   backend "s3" {
-    bucket = "mock-ecommerce-tf-state"
-    key    = "prod/terraform.tfstate"
-    region = "us-east-1"
+    bucket         = "mock-ecommerce-tf-state"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "mock-ecommerce-tf-locks"
+    encrypt        = true
   }
 }
 
@@ -32,42 +34,121 @@ module "dynamodb" {
 }
 
 module "s3" {
-  source              = "./modules/s3"
-  frontend_bucket     = var.frontend_bucket
-  avatars_bucket      = var.s3_bucket_avatars
-  products_bucket     = var.s3_bucket_products
+  source                     = "./modules/s3"
+  frontend_bucket            = var.frontend_bucket
+  avatars_bucket             = var.s3_bucket_avatars
+  products_bucket            = var.s3_bucket_products
+  force_destroy_data_buckets = var.force_destroy_data_buckets
+  force_destroy_frontend     = var.force_destroy_frontend
+}
+
+module "cognito" {
+  source         = "./modules/cognito"
+  aws_region     = var.aws_region
+  dynamodb_table = var.dynamodb_table
+  ecr_repo_name  = var.ecr_repo_name
+  image_tag      = var.image_tag
+  ses_email_arn  = var.ses_email_arn
 }
 
 module "lambda" {
-  source             = "./modules/lambda"
-  ecr_repo_name      = var.ecr_repo_name
-  image_tag          = var.image_tag
-  aws_region         = var.aws_region
-  dynamodb_table     = var.dynamodb_table
-  s3_bucket_avatars  = var.s3_bucket_avatars
-  s3_bucket_products = var.s3_bucket_products
-  allowed_origins    = "https://${module.cloudfront.domain_name}"
-  jwt_secret_arn     = aws_ssm_parameter.jwt_secret.arn
-  stripe_secret_arn  = aws_ssm_parameter.stripe_secret.arn
+  source              = "./modules/lambda"
+  ecr_repo_name       = var.ecr_repo_name
+  image_tag           = var.image_tag
+  aws_region          = var.aws_region
+  dynamodb_table      = var.dynamodb_table
+  s3_bucket_avatars   = var.s3_bucket_avatars
+  s3_bucket_products  = var.s3_bucket_products
+  allowed_origins     = "https://${var.domain_name}"
+  stripe_secret_arn           = aws_ssm_parameter.stripe_secret.arn
+  emailjs_private_key_arn     = aws_ssm_parameter.emailjs_private_key.arn
+  cognito_user_pool_id = module.cognito.user_pool_id
+  cognito_client_id   = module.cognito.client_id
+  emailjs_service_id            = var.emailjs_service_id
+  emailjs_public_key            = var.emailjs_public_key
+  emailjs_template_contact      = var.emailjs_template_contact
+  emailjs_template_subscribed   = var.emailjs_template_subscribed
+  emailjs_template_unsubscribed = var.emailjs_template_unsubscribed
 }
 
 module "api_gateway" {
-  source           = "./modules/api_gateway"
+  source            = "./modules/api_gateway"
   lambda_invoke_arn = module.lambda.invoke_arn
   lambda_arn        = module.lambda.arn
+  # var.domain_name is a root variable with no module dependency, so using it here
+  # avoids the cloudfront→api_gateway→cloudfront cycle while still restricting origins.
+  allowed_origins   = ["https://${var.domain_name}", "https://www.${var.domain_name}"]
+}
+
+module "route53" {
+  source      = "./modules/route53"
+  providers   = { aws = aws, aws.us_east_1 = aws.us_east_1 }
+  domain_name = var.domain_name
 }
 
 module "cloudfront" {
-  source               = "./modules/cloudfront"
-  providers            = { aws.us_east_1 = aws.us_east_1 }
-  frontend_bucket_id   = module.s3.frontend_bucket_id
+  source                 = "./modules/cloudfront"
+  providers              = { aws.us_east_1 = aws.us_east_1 }
+  frontend_bucket_id     = module.s3.frontend_bucket_id
   frontend_bucket_domain = module.s3.frontend_bucket_regional_domain
-  api_gateway_url      = module.api_gateway.endpoint
+  products_bucket_id     = module.s3.products_bucket_id
+  products_bucket_domain = module.s3.products_bucket_regional_domain
+  avatars_bucket_domain  = module.s3.avatars_bucket_regional_domain
+  api_gateway_url        = module.api_gateway.endpoint
+  acm_certificate_arn    = module.route53.certificate_arn
+  domain_aliases         = [var.domain_name, "www.${var.domain_name}"]
+  waf_auth_rate_limit    = var.waf_auth_rate_limit
 }
 
-# Secrets in SSM Parameter Store (free tier; set values via AWS Console or CLI after first apply)
-resource "aws_ssm_parameter" "jwt_secret" {
-  name  = "/mock-ecommerce/prod/JWT_SECRET"
+# Route 53 alias records — kept in root to avoid a circular dependency between
+# the route53 module (cert) and the cloudfront module (distribution domain).
+resource "aws_route53_record" "apex_a" {
+  zone_id = module.route53.zone_id
+  name    = var.domain_name
+  type    = "A"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "apex_aaaa" {
+  zone_id = module.route53.zone_id
+  name    = var.domain_name
+  type    = "AAAA"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_a" {
+  zone_id = module.route53.zone_id
+  name    = "www.${var.domain_name}"
+  type    = "A"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_aaaa" {
+  zone_id = module.route53.zone_id
+  name    = "www.${var.domain_name}"
+  type    = "AAAA"
+  alias {
+    name                   = module.cloudfront.domain_name
+    zone_id                = module.cloudfront.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# Stripe secret in SSM (SecureString — set via AWS Console or CLI after first apply)
+resource "aws_ssm_parameter" "stripe_secret" {
+  name  = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
   type  = "SecureString"
   value = "REPLACE_ME"   # update via: aws ssm put-parameter --name ... --value <secret> --overwrite
 
@@ -76,8 +157,11 @@ resource "aws_ssm_parameter" "jwt_secret" {
   }
 }
 
-resource "aws_ssm_parameter" "stripe_secret" {
-  name  = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
+# EmailJS private key in SSM (SecureString).
+# Value is written by the deploy workflow via `aws ssm put-parameter --overwrite`
+# before terraform apply, keeping it out of the tfplan artifact entirely.
+resource "aws_ssm_parameter" "emailjs_private_key" {
+  name  = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
   type  = "SecureString"
   value = "REPLACE_ME"
 

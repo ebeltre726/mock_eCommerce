@@ -6,6 +6,7 @@ export const overlayModule = (() => {
   let _abortController = new AbortController();
   const templateCache = {};
   let _closeCallbacks = [];
+  let _currentTarget = null;
 
   const moduleMap = {
       products: () => import('./products.js').then(m => m.initProducts()),
@@ -13,6 +14,7 @@ export const overlayModule = (() => {
       account:  () => import('./account.js').then(m => m.initAccount()),
       login:    () => import('./login.js').then(m => m.initLogin()),
       signup:   () => import('./signup.js').then(m => m.initSignup()),
+      forgotpw: () => import('./forgotpw.js').then(m => m.initForgotPassword()),
       contact:  () => import('./contact.js').then(m => m.initContact()),
       cart:     () => import('./cart.js').then(m => {
         const container = document.querySelector('.cartContents');
@@ -21,24 +23,31 @@ export const overlayModule = (() => {
       }),
   };
 
-    function close() {
-        _abortController.abort(); 
-        _abortController = new AbortController();  
-        _closeCallbacks.forEach(fn => fn());
-        _closeCallbacks = [];
-        overlay.classList.remove('active');
-        overlayBackground.classList.remove('active');
-        contentDiv.innerHTML = '';
+  function close() {
+      _abortController.abort();
+      _abortController = new AbortController();
+      _closeCallbacks.forEach(fn => fn());
+      _closeCallbacks = [];
+      _currentTarget = null;
+      overlay.classList.remove('active');
+      overlayBackground.classList.remove('active');
+      contentDiv.innerHTML = '';
   }
 
+  // Re-runs the module init for the current target without re-fetching the template.
+  // Useful when data changes and the panel needs to reinitialise in place.
   function refresh(target) {
-    if (contentDiv.innerHTML && _currentTarget === target) {
-        initTemplate(target); // re-run init without re-fetching template
-    }
+      if (contentDiv.innerHTML && _currentTarget === target) {
+          initTemplate(target);
+      }
   }
 
   function registerCloseCallback(fn) {
       _closeCallbacks.push(fn);
+  }
+
+  function getSignal() {
+      return _abortController.signal;
   }
 
   function showOverlay() {
@@ -51,6 +60,8 @@ export const overlayModule = (() => {
   }
 
   function loadTemplate(target) {
+      _currentTarget = target;
+
       if (templateCache[target]) {
           contentDiv.innerHTML = templateCache[target];
           showOverlay();
@@ -58,7 +69,7 @@ export const overlayModule = (() => {
           return;
       }
 
-      fetch(`/frontend/public/templates/${target}.html`)
+      fetch(`/templates/${target}.html`)
           .then(res => {
               if (!res.ok) throw new Error('Template not found');
               return res.text();
@@ -77,8 +88,17 @@ export const overlayModule = (() => {
   }
 
   function open(target, onClose = null) {
-    if (onClose) _closeCallbacks.push(onClose);
-    loadTemplate(target);
+      _closeCallbacks = [];
+      if (onClose) _closeCallbacks.push(onClose);
+
+      // If the overlay is already visible and showing this target, don't reload
+      // the template — doing so would destroy all mounted panel event listeners.
+      // The caller can use overlayModule.refresh(target) for an explicit re-init.
+      if (_currentTarget === target && overlay.classList.contains('active')) {
+          return;
+      }
+
+      loadTemplate(target);
   }
 
   function init() {
@@ -90,9 +110,10 @@ export const overlayModule = (() => {
       }
   }
 
-  return { init, open, close };
+  return { init, open, close, refresh, registerCloseCallback, getSignal };
 })();
 
+// Re-exported for callers that need to abort pending fetches when the overlay closes.
 export function getOverlaySignal() {
-    return _abortController.signal;
+    return overlayModule.getSignal();
 }

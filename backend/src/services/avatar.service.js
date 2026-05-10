@@ -1,27 +1,31 @@
 import sharp from "sharp";
 import { storage } from "../storage/index.js";
 import { dynamo } from "../db/dynamoClient.js";
-import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { validateFile } from "../utils/validateFile.js";
+import logger from "../utils/logger.js";
+import env from "../config/env.js";
 
-const TABLE_NAME = 'Furnituria';
+const TABLE_NAME = env.DYNAMODB_TABLE;
 
 export async function uploadAvatar(userId, file) {
-  console.log('Starting avatar upload for user:', userId);
-  validateFile(file);
-  console.log('File validation passed');
+  await validateFile(file);
+
+  const existing = await dynamo.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
+    ProjectionExpression: 'avatar',
+  }));
+  const oldKey = existing.Item?.avatar ?? null;
 
   const buffer = await sharp(file.buffer)
     .resize(300, 300, { fit: "cover" })
     .toFormat("webp")
     .toBuffer();
-  console.log('Image processing completed, buffer size:', buffer.length);
 
   const key = `avatars/${userId}-${Date.now()}.webp`;
-  console.log('Generated key:', key);
 
-  const imageUrl = await storage.uploadImage(buffer, key);
-  console.log('Storage upload completed, URL:', imageUrl);
+  await storage.uploadImage(buffer, key);
 
   await dynamo.send(new UpdateCommand({
     TableName: TABLE_NAME,
@@ -31,10 +35,18 @@ export async function uploadAvatar(userId, file) {
     },
     UpdateExpression: "SET avatar = :a",
     ExpressionAttributeValues: {
-      ":a": imageUrl,
+      ":a": key,
     },
   }));
-  console.log('Database update completed');
 
-  return imageUrl;
+  // Best-effort: delete the previous avatar so stale objects don't accumulate.
+  if (oldKey && oldKey !== key) {
+    storage.deleteObject(oldKey).catch(err =>
+      logger.warn({ oldKey, err: err.message }, '[avatar] failed to delete old object')
+    );
+  }
+
+  // Always return a presigned URL (not the plain objectUrl from uploadImage) because
+  // the avatars bucket is private — the plain S3 URL returns 403 for unauthenticated requests.
+  return storage.getDownloadUrl(key);
 }

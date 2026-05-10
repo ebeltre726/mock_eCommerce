@@ -6,10 +6,9 @@ const client = new DynamoDBClient({
     region: env.AWS_REGION,
     ...(env.DYNAMODB_ENDPOINT && {
         endpoint: env.DYNAMODB_ENDPOINT,
-        credentials: {
-            accessKeyId:     env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-        },
+        // DynamoDB Local requires non-empty credentials but doesn't validate them.
+        // Do not use real keys here — SSO/IAM handles production auth via the SDK provider chain.
+        credentials: { accessKeyId: 'local', secretAccessKey: 'local' },
     }),
 });
 

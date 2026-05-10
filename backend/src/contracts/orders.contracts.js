@@ -7,10 +7,10 @@ import Joi from 'joi';
 
 const orderItemSchema = Joi.object({
   productId: Joi.string().required(),
-  quantity: Joi.number().min(1).required(),
+  quantity: Joi.number().integer().min(1).required(),
   price: Joi.number().optional(),
   lineTotal: Joi.number().optional(),
-}).unknown(true);
+});
 
 const shippingAddressSchema = Joi.object({
   street: Joi.string().optional(),
@@ -18,7 +18,7 @@ const shippingAddressSchema = Joi.object({
   state: Joi.string().optional(),
   postal: Joi.string().optional(),
   country: Joi.string().optional(),
-}).unknown(true);
+});
 
 const orderSchema = Joi.object({
   orderId: Joi.string().required(),
@@ -31,13 +31,16 @@ const orderSchema = Joi.object({
   totalAmount: Joi.number().optional(),
   createdAt: Joi.date().optional(),
   updatedAt: Joi.date().optional(),
-}).unknown(true);
+});
 
 export const ordersContracts = {
   // GET /api/orders
   getOrders: {
     response: {
-      200: Joi.array().items(orderSchema),
+      200: Joi.object({
+        orders:     Joi.array().items(orderSchema).required(),
+        nextCursor: Joi.string().allow(null).required(),
+      }),
       401: Joi.object({
         error: Joi.string().required(),
       }).unknown(true),
@@ -67,18 +70,27 @@ export const ordersContracts = {
     request: {
       body: Joi.object({
         fullName: Joi.string().required(),
-        addressId: Joi.string().required(),
+        addressId: Joi.string().optional(),
+        shippingAddress: Joi.object({
+          line1:   Joi.string().required(),
+          line2:   Joi.string().optional().allow(''),
+          city:    Joi.string().required(),
+          state:   Joi.string().required(),
+          zip:     Joi.string().required(),
+          country: Joi.string().optional(),
+        }).optional(),
         paymentMethodId: Joi.string().optional(),
+        saveCard:   Joi.boolean().optional(),
         items: Joi.array()
           .items(
             Joi.object({
               productId: Joi.string().required(),
-              quantity: Joi.number().min(1).required(),
-            }).unknown(true)
+              quantity: Joi.number().integer().min(1).max(99).required(),
+            })
           )
           .min(1)
           .required(),
-      }).unknown(true),
+      }).or('addressId', 'shippingAddress'),
     },
     response: {
       201: Joi.object({

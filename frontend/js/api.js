@@ -1,24 +1,4 @@
-// ============================================================
-// api.js — Shared API utility
-//
-// All authenticated requests go through apiFetch.
-// To switch environments, update API_BASE here only.
-// When you add a bundler (e.g. Vite), replace the constant with:
-//   const API_BASE = import.meta.env.VITE_API_URL;
-// ============================================================
-
 import config from './config.js';
-
-/**
- * Authenticated fetch wrapper.
- * - Attaches the JWT from localStorage to every request
- * - Throws a typed AuthError on 401 so callers can redirect to login
- * - Throws a generic Error on any other non-ok response
- *
- * @param {string} endpoint  - Path after the base URL, e.g. 'account/overview'
- * @param {RequestInit} [options] - Optional fetch options (method, body, etc.)
- * @returns {Promise<any>} Parsed JSON response
- */
 
 export class AuthError extends Error {
     constructor() {
@@ -27,71 +7,46 @@ export class AuthError extends Error {
     }
 }
 
-/*
-export async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-
-    const isFormData = options.body instanceof FormData;
-
-    const res = await fetch(`${API_BASE}/${endpoint}`, {
-        ...options,
-        headers: {
-            Authorization: `Bearer ${token}`,
-            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-            ...options.headers,
-        },
-    });
-
-    if (res.status === 401) {
-        localStorage.removeItem('token');
-        throw new AuthError();
-    }
-
-    if (!res.ok) {
-        let message = `API error: ${res.status}`;
-        try {
-            const body = await res.json();
-            if (body.error) message += ` — ${body.error}`;
-        } catch (_) {}
-        throw new Error(message);
-    }
-
-    const contentType = res.headers.get('content-type');
-
-    if (!contentType || !contentType.includes('application/json')) {
-        return null;
-    }
-
-    return res.json();
-}
-*/
-
 export async function apiFetch(path, options = {}) {
-    const token = localStorage.getItem('token');
-    const res   = await fetch(`${config.apiBase}/${path}`, {
-        ...options,
-        signal: options.signal, // caller can pass AbortController signal
+    const { _isRetry, ...fetchOptions } = options;
+
+    const res = await fetch(`${config.apiBase}/${path}`, {
+        ...fetchOptions,
+        credentials: 'include',
+        signal: fetchOptions.signal,
         headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-            ...options.headers,
+            ...fetchOptions.headers,
         },
     });
 
     if (res.status === 401) {
-        localStorage.removeItem('token');
+        // Attempt a silent token refresh once before giving up.
+        // _isRetry prevents infinite loops if the refresh endpoint itself 401s.
+        if (!_isRetry) {
+            try {
+                await apiFetch('auth/refresh', {
+                    method:   'POST',
+                    _isRetry: true,
+                });
+                // New tokens are in cookies — retry the original request.
+                return apiFetch(path, { ...options, _isRetry: true });
+            } catch (_) {
+                // Refresh failed — fall through and throw AuthError
+            }
+        }
+
         throw new AuthError();
     }
 
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const err  = new Error(body.error ?? `Request failed: ${res.status}`);
-        err.status = res.status; // attach status so callers can check it
+        err.status = res.status;
         throw err;
     }
 
     const contentType = res.headers.get('content-type');
-
     if (!contentType || !contentType.includes('application/json')) {
         return null;
     }
@@ -99,18 +54,28 @@ export async function apiFetch(path, options = {}) {
     return res.json();
 }
 
-export async function apiFetchForm(path, formData) {
-    const token = localStorage.getItem('token');
+export async function apiFetchForm(path, formData, { _isRetry } = {}) {
     const res = await fetch(`${config.apiBase}/${path}`, {
-        method: 'POST',
-        headers: {
-            ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: formData,
+        method:      'POST',
+        credentials: 'include',
+        body:        formData,
     });
+
+    if (res.status === 401) {
+        if (!_isRetry) {
+            try {
+                await apiFetch('auth/refresh', { method: 'POST', _isRetry: true });
+                return apiFetchForm(path, formData, { _isRetry: true });
+            } catch (_) {
+                // Refresh failed — fall through and throw AuthError
+            }
+        }
+        throw new AuthError();
+    }
+
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const err = new Error(body.error ?? `Request failed: ${res.status}`);   
+        const err = new Error(body.error ?? `Request failed: ${res.status}`);
         err.status = res.status;
         throw err;
     }

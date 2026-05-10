@@ -124,6 +124,7 @@
 .ctaButtons {
     display: flex;
     justify-content: space-around;
+    gap: 2rem;
 }
 
 .ctaButton {
@@ -1188,10 +1189,17 @@
 .panel-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     top: 0;
     position: sticky;
     background-color: beige;
-    padding: 1% 3% 0;
+    padding: 1% 3% 1% 10px;
+}
+
+.header-action-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .btn-primary {
@@ -1472,6 +1480,10 @@
     gap: 2rem;
 }
 
+.addressContainer.hidden {
+    display: none;
+}
+
 #address-form-title {
     font-size: 1.5rem;
 }
@@ -1492,6 +1504,7 @@
 
 .address-form input {
     height: 30px;
+    width: 100%;
     font-family: var(--nav-font);
 }
 
@@ -1617,6 +1630,10 @@
     justify-content: center;
     align-items: center;
     padding-bottom: 3%;
+}
+
+.return-form.hidden {
+    display: none;
 }
 
 .return-form .form-group {
@@ -1802,6 +1819,12 @@
     border-radius: 5px;
 }
 
+#save-settings-btn, .add-address-btn,
+.initiate-return-btn, .add-card-btn {
+    width: 150px;
+    height: 40px;
+}
+
 #delete-account-btn {
     height: 50px;
     padding: 0 5%;
@@ -1951,7 +1974,7 @@
 
 /* PAYMENT OVERLAY */
 /* ─────────────────────────────────────────────────────────────
-   checkout.css  —  Furnituria checkout panel
+   checkout.css  —  Furnitria checkout panel
    Relies on CSS variables from your main style.css:
      --accent, --border, --radius, --text-dim,
      --surface, --surface2, --font-body, --nav-font,
@@ -2240,6 +2263,36 @@
     font-size: 0.72rem;
     line-height: 1.5;
     color: #8a7040;
+}
+
+.demoNotice .testCardTable {
+    display: block;
+    margin: 0.4rem 0 0.2rem;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    color: #8a7040;
+}
+
+.demoNotice .testCardTable td {
+    padding: 0.1rem 0.6rem 0.1rem 0;
+    vertical-align: top;
+}
+
+.demoNotice .testCardTable td:first-child {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.demoNotice.panel-notice {
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.demoNoticeSmall {
+    display: block;
+    font-size: 0.68rem;
+    color: #a08050;
+    margin-top: 0.1rem;
 }
 
 .demoIcon {
@@ -2657,6 +2710,20 @@
     color: var(--accent);
 }
 
+.site-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem;
+    font-family: var(--nav-font);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: black;
+    z-index: 10;
+    pointer-events: none;
+}
+
 /* Spinner */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
@@ -3021,4 +3088,5 @@
     .overlayBanner {
         justify-content: center;
     }
-}*/
+}
+*/

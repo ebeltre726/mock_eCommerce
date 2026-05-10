@@ -17,19 +17,14 @@ import { storage }      from './src/storage/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import fs               from 'fs/promises';
 import path             from 'path';
-import { fileURLToPath } from 'url';
-import bcrypt from 'bcrypt';
-
-const TABLE_NAME = 'Furnituria';
+const TABLE_NAME = 'Furnitria';
 const USER_ID = 'u001';
 const MOCK_EMAIL = 'jane.doe@email.com';
-const MOCK_PASSWORD = 'password123';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MOCK_PASSWORD = 'N/A — managed by Cognito';
 
 const client = new DynamoDBClient({
   region: 'us-east-1',
-  endpoint: 'http://localhost:8000',
+  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000',
   credentials: { accessKeyId: 'dummy', secretAccessKey: 'dummy' },
 });
 
@@ -38,23 +33,33 @@ const docClient = DynamoDBDocumentClient.from(client);
 const tableConfig = {
   TableName: TABLE_NAME,
   AttributeDefinitions: [
-    { AttributeName: 'PK', AttributeType: 'S' },
-    { AttributeName: 'SK', AttributeType: 'S' },
-    { AttributeName: 'GSI1PK', AttributeType: 'S' },
-    { AttributeName: 'GSI1SK', AttributeType: 'S' },
+    { AttributeName: 'PK',         AttributeType: 'S' },
+    { AttributeName: 'SK',         AttributeType: 'S' },
+    { AttributeName: 'GSI1PK',     AttributeType: 'S' },
+    { AttributeName: 'GSI1SK',     AttributeType: 'S' },
+    { AttributeName: 'entityType', AttributeType: 'S' },
   ],
   KeySchema: [
     { AttributeName: 'PK', KeyType: 'HASH' },
     { AttributeName: 'SK', KeyType: 'RANGE' },
   ],
-  GlobalSecondaryIndexes: [{
-    IndexName: 'GSI1',
-    KeySchema: [
-      { AttributeName: 'GSI1PK', KeyType: 'HASH' },
-      { AttributeName: 'GSI1SK', KeyType: 'RANGE' },
-    ],
-    Projection: { ProjectionType: 'ALL' },
-  }],
+  GlobalSecondaryIndexes: [
+    {
+      IndexName: 'GSI1',
+      KeySchema: [
+        { AttributeName: 'GSI1PK', KeyType: 'HASH' },
+        { AttributeName: 'GSI1SK', KeyType: 'RANGE' },
+      ],
+      Projection: { ProjectionType: 'ALL' },
+    },
+    {
+      IndexName: 'EntityTypeIndex',
+      KeySchema: [
+        { AttributeName: 'entityType', KeyType: 'HASH' },
+      ],
+      Projection: { ProjectionType: 'ALL' },
+    },
+  ],
   BillingMode: 'PAY_PER_REQUEST',
 };
 
@@ -88,7 +93,7 @@ export async function seedProducts() {
         { id: 'chair-6',  name: 'Tan Netted Chair',               description: 'A tan-colored netted chair with a metal skeleton and a C-shape design.',                                                                                         filename: 'nettedchair.jpg',      price: 14.99 },
         { id: 'chair-7',  name: 'Cushioned Stool Chair',          description: 'A black stool chair with a brown cushion and backrest. Has four legs with supports.',                                                                             filename: 'stoolchair.jpg',       price: 14.99 },
         { id: 'chair-8',  name: 'Wood Office Chair',              description: 'Sturdy, wood office chair. Our cheapest product, but most durable. Encouraged for simple use cases.',                                                             filename: 'woodofficechair.jpg',  price:  9.99 },
-        { id: 'chair-9',  name: 'Sun-Glazed Chair',               description: 'A Furnituria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.',            filename: 'sunglazedchair.jpg',   price: 34.99 },
+        { id: 'chair-9',  name: 'Sun-Glazed Chair',               description: 'A Furnitria classic. Our sun-glazed chair with high quality polished wood and three curved tripod-like legs adds an aesthetic touch to your setup.',            filename: 'sunglazedchair.jpg',   price: 34.99 },
         { id: 'chair-10', name: 'Plain White Chair',              description: 'A sturdy and durable plain all-white chair. One of our most purchased products.',                                                                                 filename: 'whitechair.jpg',       price:  9.99 },
         { id: 'chair-11', name: 'Old-Fashioned Wood Chair',       description: 'A sturdy, old-fashioned wood chair with traditional design and leg supports.',                                                                                    filename: 'woodchair.jpg',        price: 19.99 },
     ];
@@ -139,7 +144,7 @@ async function waitForTableDeletion() {
 }
 
 async function uploadSeedImage(filename) {
-    const localPath   = path.join(__dirname, 'seed-images', filename);
+    const localPath   = path.resolve('seed-images', filename);
     const key         = `products/${filename}`;
     const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
     const url         = await storage.uploadImage(
@@ -208,14 +213,12 @@ export async function seedAddress(userId, address = {}) {
 export async function seedUser(user = {}) {
   console.log('\n🔧 Seeding USER (PROFILE)...');
 
-  const userId = user.userId || USER_ID;
-  const email = user.email || MOCK_EMAIL;
-  const plainPassword = user.password || MOCK_PASSWORD;
+  const userId    = user.userId    || USER_ID;
+  const email     = user.email     || MOCK_EMAIL;
   const firstName = user.firstName || 'Jane';
-  const lastName = user.lastName || 'Doe';
+  const lastName  = user.lastName  || 'Doe';
 
-  const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
+  // Passwords are managed by Cognito — no password field in DynamoDB
   const userItem = {
     PK: `USER#${userId}`,
     SK: 'PROFILE',
@@ -227,7 +230,6 @@ export async function seedUser(user = {}) {
     email,
     firstName,
     lastName,
-    password: hashedPassword,
     termsConditions: true,
     dateCreated: new Date().toISOString(),
     avatar: 'http://localhost:3000/images/avatar.png',
