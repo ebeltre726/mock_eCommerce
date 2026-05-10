@@ -223,6 +223,7 @@ resource "aws_iam_role_policy" "tf_apply" {
           "s3:GetBucketWebsite", "s3:GetLifecycleConfiguration",
           "s3:GetBucketObjectLockConfiguration", "s3:GetBucketRequestPayment",
           "s3:GetBucketLogging", "s3:GetBucketAcl", "s3:GetAccelerateConfiguration",
+          "s3:GetReplicationConfiguration",
         ]
         Resource = [
           "arn:aws:s3:::mock-ecommerce-frontend",
