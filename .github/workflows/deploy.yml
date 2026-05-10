@@ -162,17 +162,22 @@ jobs:
           name: tfplan-${{ github.run_id }}
           path: ${{ env.TF_DIR }}
 
-      - name: Write EmailJS private key to SSM
+      - name: Terraform apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply tfplan
+
+      - name: Write secrets to SSM
         run: |
           aws ssm put-parameter \
             --name "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY" \
             --value "${{ secrets.EMAILJS_PRIVATE_KEY }}" \
             --type SecureString \
             --overwrite
-
-      - name: Terraform apply
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform apply tfplan
+          aws ssm put-parameter \
+            --name "/mock-ecommerce/prod/STRIPE_SECRET_KEY" \
+            --value "${{ secrets.STRIPE_SECRET_KEY }}" \
+            --type SecureString \
+            --overwrite
 
       - name: Capture Terraform outputs
         id: tf-output
