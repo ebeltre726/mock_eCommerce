@@ -114,7 +114,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   description = "Per-IP rate limiting for auth endpoints"
   scope       = "CLOUDFRONT"
 
-  default_action { allow {} }
+  default_action {
+    allow {}
+  }
 
   dynamic "rule" {
     for_each = local.enable_auth_waf ? [1] : []
@@ -122,7 +124,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
       name     = "AuthEndpointRateLimit"
       priority = 1
 
-      action { block {} }
+      action {
+        block {}
+      }
 
       statement {
         rate_based_statement {
