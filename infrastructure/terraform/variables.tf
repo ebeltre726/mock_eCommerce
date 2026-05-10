@@ -63,3 +63,21 @@ variable "ses_email_arn" {
   type        = string
   default     = ""
 }
+
+# ── EmailJS ───────────────────────────────────────────────────────────────────
+# Values supplied via GitHub Secrets → terraform-plan -var flags in deploy.yml.
+variable "emailjs_service_id" {
+  type = string
+}
+variable "emailjs_public_key" {
+  type = string
+}
+variable "emailjs_template_contact" {
+  type = string
+}
+variable "emailjs_template_subscribed" {
+  type = string
+}
+variable "emailjs_template_unsubscribed" {
+  type = string
+}
