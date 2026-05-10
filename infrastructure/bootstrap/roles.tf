@@ -205,7 +205,7 @@ resource "aws_iam_role_policy" "tf_apply" {
           "dynamodb:CreateTable", "dynamodb:DeleteTable", "dynamodb:DescribeTable",
           "dynamodb:UpdateTable", "dynamodb:ListTagsOfResource", "dynamodb:TagResource",
           "dynamodb:UntagResource", "dynamodb:DescribeTimeToLive",
-          "dynamodb:DescribeContinuousBackups",
+          "dynamodb:DescribeContinuousBackups", "dynamodb:UpdateContinuousBackups",
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/Furnitria*"
       },
@@ -222,7 +222,7 @@ resource "aws_iam_role_policy" "tf_apply" {
           "s3:GetBucketCORS", "s3:PutBucketCORS",
           "s3:GetBucketWebsite", "s3:GetLifecycleConfiguration",
           "s3:GetBucketObjectLockConfiguration", "s3:GetBucketRequestPayment",
-          "s3:GetBucketLogging", "s3:GetBucketAcl",
+          "s3:GetBucketLogging", "s3:GetBucketAcl", "s3:GetAccelerateConfiguration",
         ]
         Resource = [
           "arn:aws:s3:::mock-ecommerce-frontend",
@@ -271,7 +271,7 @@ resource "aws_iam_role_policy" "tf_apply" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameter", "ssm:PutParameter", "ssm:DeleteParameter",
+          "ssm:GetParameter", "ssm:GetParameters", "ssm:PutParameter", "ssm:DeleteParameter",
           "ssm:AddTagsToResource", "ssm:ListTagsForResource",
         ]
         Resource = "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/mock-ecommerce/*"
@@ -302,6 +302,7 @@ resource "aws_iam_role_policy" "tf_apply" {
           "cloudfront:DeleteResponseHeadersPolicy", "cloudfront:GetResponseHeadersPolicy",
           "cloudfront:CreateFunction", "cloudfront:UpdateFunction",
           "cloudfront:DeleteFunction", "cloudfront:GetFunction", "cloudfront:PublishFunction",
+          "cloudfront:DescribeFunction",
           "cloudfront:CreateInvalidation",
           "cloudfront:ListTagsForResource", "cloudfront:TagResource", "cloudfront:UntagResource",
         ]
