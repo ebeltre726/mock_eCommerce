@@ -2710,6 +2710,20 @@
     color: var(--accent);
 }
 
+.site-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem;
+    font-family: var(--nav-font);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: black;
+    z-index: 10;
+    pointer-events: none;
+}
+
 /* Spinner */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
@@ -3074,4 +3088,5 @@
     .overlayBanner {
         justify-content: center;
     }
-}*/
+}
+*/
