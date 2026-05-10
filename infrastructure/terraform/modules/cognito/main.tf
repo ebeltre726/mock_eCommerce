@@ -41,7 +41,10 @@ resource "aws_cognito_user_pool" "main" {
     name                     = "given_name"
     required                 = true
     mutable                  = true
-    string_attribute_constraints { min_length = 1; max_length = 64 }
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 64
+    }
   }
 
   schema {
@@ -49,7 +52,10 @@ resource "aws_cognito_user_pool" "main" {
     name                     = "family_name"
     required                 = true
     mutable                  = true
-    string_attribute_constraints { min_length = 1; max_length = 64 }
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 64
+    }
   }
 
   # Optional TOTP MFA — users opt in via account settings
