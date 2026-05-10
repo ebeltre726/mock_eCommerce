@@ -135,7 +135,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
           # Only count requests to auth endpoints, not the whole site.
           scope_down_statement {
             byte_match_statement {
-              field_to_match { uri_path {} }
+              field_to_match {
+                uri_path {}
+              }
               positional_constraint = "STARTS_WITH"
               search_string         = "/api/auth/"
               text_transformation {
