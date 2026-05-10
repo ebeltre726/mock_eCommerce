@@ -8,7 +8,7 @@ export const traceStore = new AsyncLocalStorage();
 
 const base = pino({
     level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
-    base: { service: 'furnituria-api' },
+    base: { service: 'furnitria-api' },
     ...(process.env.NODE_ENV !== 'production' && {
         transport: {
             target: 'pino-pretty',

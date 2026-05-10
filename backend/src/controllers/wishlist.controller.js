@@ -3,9 +3,11 @@ import logger from '../utils/logger.js';
 
 export async function getWishlist(req, res) {
     try {
-        const data = await fetchWishlist(req.user.userId);
-        res.json(data);
+        const cursor = req.query.cursor ?? null;
+        const { items, nextCursor } = await fetchWishlist(req.user.userId, cursor);
+        res.json({ items, nextCursor });
     } catch (err) {
+        if (err.statusCode === 400) return res.status(400).json({ error: err.message });
         logger.error({ err }, 'getWishlist error');
         res.status(500).json({ error: 'Failed to retrieve wishlist' });
     }

@@ -37,6 +37,9 @@ export async function deleteAddress(req, res) {
         await removeAddress(req.user.userId, req.params.addressId);
         res.status(204).send();
     } catch (err) {
+        if (err.message === 'Address not found') {
+            return res.status(404).json({ error: 'Address not found' });
+        }
         logger.error({ err }, 'deleteAddress error');
         res.status(500).json({ error: 'Failed to remove address' });
     }

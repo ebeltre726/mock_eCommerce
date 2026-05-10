@@ -16,7 +16,10 @@ import logger from '../utils/logger.js';
 // without a round-trip and without exposing any sensitive value.
 function cookieBase() {
   const isProd = process.env.NODE_ENV === 'production';
-  return { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/' };
+  // Frontend and API share the same CloudFront domain, so 'lax' is sufficient in
+  // production and prevents cookies from being sent in third-party cross-site contexts.
+  // 'none' would be required only if the API were on a different domain — it is not.
+  return { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' };
 }
 
 function setAuthCookies(res, { token, accessToken, refreshToken }) {
@@ -195,7 +198,11 @@ export async function getMe(req, res) {
     res.json(user);
   } catch (err) {
     logger.error({ err }, 'getMe error');
-    const isInfra = err.name?.includes('DynamoDB') || err.$metadata !== undefined;
+    // AWS SDK v3 errors carry $metadata with the HTTP status code.
+    // A 5xx from DynamoDB means the service is degraded — surface a 503.
+    // Anything else (404 from item not found, etc.) falls through to 404.
+    const awsStatus = err.$metadata?.httpStatusCode;
+    const isInfra = awsStatus !== undefined && awsStatus >= 500;
     res.status(isInfra ? 503 : 404).json({ error: isInfra ? 'Service temporarily unavailable' : 'Account not found' });
   }
 }

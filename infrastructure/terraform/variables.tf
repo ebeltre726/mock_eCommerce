@@ -63,12 +63,3 @@ variable "ses_email_arn" {
   type        = string
   default     = ""
 }
-
-# ── EmailJS ───────────────────────────────────────────────────────────────────
-# Set via GitHub secrets → passed to the Lambda as environment variables.
-# Leave blank to disable email sending (the emailjs driver silently skips when unset).
-variable "emailjs_service_id"            { type = string; default = "" }
-variable "emailjs_public_key"            { type = string; default = "" }
-variable "emailjs_template_contact"      { type = string; default = "" }
-variable "emailjs_template_subscribed"   { type = string; default = "" }
-variable "emailjs_template_unsubscribed" { type = string; default = "" }

@@ -2,8 +2,9 @@ import { dynamo } from '../db/dynamoClient.js';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger.js';
+import env from '../config/env.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE = env.DYNAMODB_TABLE;
 
 export async function sendMessage({ firstName, lastName, email, emailMessage }) {
     if (!firstName || !lastName || !email || !emailMessage) {

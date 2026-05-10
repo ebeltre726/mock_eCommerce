@@ -16,7 +16,7 @@ import { accountNavModule } from './navbarModule.js';
 import { overlayModule } from './overlay.js';
 import { apiFetch, apiFetchForm, AuthError } from './api.js';
 import { mountStripeElements, unmountStripeElements, tokeniseCard } from './stripe.js';
-import { syncWishlistRemoval } from './wishlist.js';
+import { syncWishlistRemoval, refreshWishlistIcons } from './wishlist.js';
 import { esc, escAttr, isLoggedIn } from './utils.js';
 
 const panelTemplateCache = {};
@@ -607,7 +607,7 @@ async function renderSettings(contentPane, settings) {
             // GlobalSignOut failed — cookies are cleared by the server regardless
             console.warn('[logout] server-side signout failed:', err.message);
         }
-        overlayModule.close();
+        window.location.reload();
     });
 
     contentPane.querySelector('#change-password-btn').addEventListener('click', async () => {
@@ -653,7 +653,7 @@ async function renderSettings(contentPane, settings) {
     });
 }
 
-async function renderWishlist(contentPane, items) {
+async function renderWishlist(contentPane, { items }) {
     const list = contentPane.querySelector('#wishlist-list');
     const count = contentPane.querySelector('#wishlist-count');
 
@@ -815,7 +815,10 @@ function removeWishlistItem(id, contentPane) {
 
         apiFetch(`account/wishlist/${id}`, { method: 'DELETE' })
             .then(() => {
-                if (productId) syncWishlistRemoval(productId);
+                if (productId) {
+                    syncWishlistRemoval(productId);
+                    refreshWishlistIcons();
+                }
                 item?.remove();
                 const list      = contentPane.querySelector('#wishlist-list');
                 const countEl   = contentPane.querySelector('#wishlist-count');

@@ -1,8 +1,9 @@
 import { PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 import { v4 as uuidv4 } from 'uuid';
+import env from '../config/env.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE = env.DYNAMODB_TABLE;
 
 // ─── Shape helpers ────────────────────────────────────────────────────────────
 // DB stores: street, postal (legacy field names)
@@ -138,11 +139,19 @@ export async function patchAddress(userId, addressId, fields) {
 // ─── Remove ───────────────────────────────────────────────────────────────────
 
 export async function removeAddress(userId, addressId) {
-    await dynamo.send(new DeleteCommand({
-        TableName: TABLE,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: `ADDRESS#${addressId}`,
-        },
-    }));
+    try {
+        await dynamo.send(new DeleteCommand({
+            TableName: TABLE,
+            Key: {
+                PK: `USER#${userId}`,
+                SK: `ADDRESS#${addressId}`,
+            },
+            ConditionExpression: 'attribute_exists(PK)',
+        }));
+    } catch (err) {
+        if (err.name === 'ConditionalCheckFailedException') {
+            throw new Error('Address not found', { cause: err });
+        }
+        throw err;
+    }
 }

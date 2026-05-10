@@ -1,8 +1,9 @@
 import { GetCommand, PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
 import { storage } from '../storage/index.js';
+import env from '../config/env.js';
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE_NAME = env.DYNAMODB_TABLE;
 
 // ======================
 // ENSURE USER PROFILE

@@ -3,6 +3,7 @@ process.env.NODE_ENV              = 'test';
 process.env.AWS_REGION            = 'us-east-1';
 process.env.AWS_ACCESS_KEY_ID     = 'minioadmin';
 process.env.AWS_SECRET_ACCESS_KEY = 'minioadmin';
+process.env.DYNAMODB_TABLE        = 'Furnitria';
 process.env.S3_BUCKET_AVATARS     = 'avatars';
 process.env.S3_BUCKET_PRODUCTS    = 'products';
 process.env.S3_ENDPOINT           = 'http://localhost:9000';

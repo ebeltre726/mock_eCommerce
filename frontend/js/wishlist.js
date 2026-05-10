@@ -12,7 +12,7 @@ export function isWishlisted(productId) {
 export async function loadWishlistState() {
     if (isLoggedIn()) {
         try {
-            const items = await apiFetch('account/wishlist');
+            const { items } = await apiFetch('account/wishlist');
             items.forEach(item => wishlistMap.set(item.productId, item.itemId));
         } catch (err) {
             if (!(err instanceof AuthError)) console.error('Failed to load wishlist state', err);
@@ -57,6 +57,15 @@ export async function toggleWishlist(productId, iconEl) {
     }
 }
 
+export function refreshWishlistIcons() {
+    const base = import.meta.env?.BASE_URL ?? './';
+    document.querySelectorAll('.wishlist-icon[data-product-id]').forEach(icon => {
+        icon.src = wishlistMap.has(icon.dataset.productId)
+            ? `${base}wl-selected.png`
+            : `${base}wl-unselected.png`;
+    });
+}
+
 // Called by the account panel when removing an item by itemId (not productId).
 // Keeps wishlistMap and localStorage in sync without making another API call.
 export function syncWishlistRemoval(productId) {
@@ -80,7 +89,7 @@ export async function mergeWishlistOnLogin() {
     }
     wishlistMap.clear();
     try {
-        const items = await apiFetch('account/wishlist');
+        const { items } = await apiFetch('account/wishlist');
         items.forEach(item => wishlistMap.set(item.productId, item.itemId));
     } catch (err) {
         console.error('Failed to reload wishlist after merge', err);

@@ -2,7 +2,7 @@ import { CognitoUserPool, CognitoUser, AuthenticationDetails } from 'amazon-cogn
 import { overlayModule }         from './overlay.js';
 import { cartModule }            from './cart.js';
 import { apiFetch }              from './api.js';
-import { mergeWishlistOnLogin }  from './wishlist.js';
+import { mergeWishlistOnLogin, refreshWishlistIcons } from './wishlist.js';
 import config                    from './config.js';
 
 // SRP auth communicates directly with Cognito — the password never transits the backend.
@@ -117,6 +117,7 @@ export function initLogin() {
             // Auth cookies are now set. The browser sends them automatically.
             await cartModule.mergeCartsOnLogin();
             await mergeWishlistOnLogin();
+            refreshWishlistIcons();
             overlayModule.open('account');
 
         } catch (err) {

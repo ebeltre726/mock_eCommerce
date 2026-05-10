@@ -45,7 +45,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Start services
-        working-directory: ./backend
         run: docker compose up -d dynamodb-local minio minio-init
 
       - name: Wait for DynamoDB
@@ -92,5 +91,4 @@ jobs:
 
       - name: Tear down services
         if: always()
-        working-directory: ./backend
         run: docker compose down -v

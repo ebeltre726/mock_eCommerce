@@ -1,5 +1,5 @@
 // settings.service.js
-import { GetCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand, QueryCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import {
   CognitoIdentityProviderClient,
   ChangePasswordCommand,
@@ -11,7 +11,7 @@ import { dynamo } from '../db/dynamoClient.js';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE = env.DYNAMODB_TABLE;
 const cognito = new CognitoIdentityProviderClient({ region: env.AWS_REGION });
 
 export async function fetchSettings(userId) {
@@ -78,22 +78,37 @@ export async function updatePassword(userId, currentPassword, newPassword, acces
 }
 
 export async function removeAllUserData(userId) {
-    // Query all items for this user
-    const result = await dynamo.send(new QueryCommand({
-        TableName: TABLE,
-        KeyConditionExpression: 'PK = :pk',
-        ExpressionAttributeValues: { ':pk': `USER#${userId}` },
-    }));
+    // Paginate through all items for this user and delete in BatchWriteItem
+    // chunks of 25 (DynamoDB limit). This avoids Lambda timeout on heavy accounts
+    // and avoids the per-item DeleteCommand fan-out of the old implementation.
+    let lastKey;
+    do {
+        const result = await dynamo.send(new QueryCommand({
+            TableName: TABLE,
+            KeyConditionExpression: 'PK = :pk',
+            ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+            ProjectionExpression: 'PK, SK',
+            Limit: 100,
+            ...(lastKey && { ExclusiveStartKey: lastKey }),
+        }));
 
-    // Delete all user items in parallel
-    await Promise.all(
-        (result.Items || []).map(item =>
-            dynamo.send(new DeleteCommand({
-                TableName: TABLE,
-                Key: { PK: item.PK, SK: item.SK },
-            }))
-        )
-    );
+        const items = result.Items ?? [];
+        lastKey = result.LastEvaluatedKey;
+
+        // Delete in BatchWriteItem chunks of 25
+        for (let i = 0; i < items.length; i += 25) {
+            let unprocessed = items.slice(i, i + 25).map(item => ({
+                DeleteRequest: { Key: { PK: item.PK, SK: item.SK } },
+            }));
+
+            for (let attempt = 0; attempt < 3 && unprocessed.length; attempt++) {
+                const batchResult = await dynamo.send(new BatchWriteCommand({
+                    RequestItems: { [TABLE]: unprocessed },
+                }));
+                unprocessed = batchResult.UnprocessedItems?.[TABLE] ?? [];
+            }
+        }
+    } while (lastKey);
 }
 
 // email is needed because Cognito's AdminDeleteUser identifies users by username (= email).

@@ -54,12 +54,25 @@ export async function apiFetch(path, options = {}) {
     return res.json();
 }
 
-export async function apiFetchForm(path, formData) {
+export async function apiFetchForm(path, formData, { _isRetry } = {}) {
     const res = await fetch(`${config.apiBase}/${path}`, {
         method:      'POST',
         credentials: 'include',
         body:        formData,
     });
+
+    if (res.status === 401) {
+        if (!_isRetry) {
+            try {
+                await apiFetch('auth/refresh', { method: 'POST', _isRetry: true });
+                return apiFetchForm(path, formData, { _isRetry: true });
+            } catch (_) {
+                // Refresh failed — fall through and throw AuthError
+            }
+        }
+        throw new AuthError();
+    }
+
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const err = new Error(body.error ?? `Request failed: ${res.status}`);

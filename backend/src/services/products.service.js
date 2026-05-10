@@ -1,8 +1,9 @@
 // products.service.js
 import { QueryCommand, GetCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
+import env from '../config/env.js';
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE = env.DYNAMODB_TABLE;
 
 export async function fetchProductsPage({ cursor, limit = 24 } = {}) {
     const exclusiveStartKey = cursor

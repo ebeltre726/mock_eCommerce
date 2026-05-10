@@ -1,10 +1,11 @@
 // cart.service.js
 import { GetCommand, PutCommand, DeleteCommand, QueryCommand, UpdateCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../db/dynamoClient.js';
+import env from '../config/env.js';
 
 const OCC_RETRIES = 3;
 
-const TABLE = process.env.DYNAMODB_TABLE ?? 'Furnitria';
+const TABLE = env.DYNAMODB_TABLE;
 const MAX_PER_ITEM = 5;
 
 export async function getCart(userId) {
