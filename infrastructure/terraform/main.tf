@@ -159,7 +159,7 @@ resource "aws_ssm_parameter" "stripe_secret" {
 
 # EmailJS private key in SSM (SecureString).
 # Value is written by the deploy workflow via `aws ssm put-parameter --overwrite`
-# before terraform apply, keeping it out of the tfplan artifact entirely.
+# after terraform apply. ignore_changes prevents Terraform from reverting it to REPLACE_ME.
 resource "aws_ssm_parameter" "emailjs_private_key" {
   name  = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
   type  = "SecureString"

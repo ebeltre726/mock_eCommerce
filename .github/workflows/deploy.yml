@@ -111,12 +111,7 @@ jobs:
         run: |
           terraform plan \
             -out=tfplan \
-            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}" \
-            -var="emailjs_service_id=${{ secrets.EMAILJS_SERVICE_ID }}" \
-            -var="emailjs_public_key=${{ secrets.EMAILJS_PUBLIC_KEY }}" \
-            -var="emailjs_template_contact=${{ secrets.EMAILJS_TEMPLATE_CONTACT }}" \
-            -var="emailjs_template_subscribed=${{ secrets.EMAILJS_TEMPLATE_SUBSCRIBED }}" \
-            -var="emailjs_template_unsubscribed=${{ secrets.EMAILJS_TEMPLATE_UNSUBSCRIBED }}"
+            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}"
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -145,8 +140,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_TF_APPLY }}
-          aws-region:     ${{ env.AWS_REGION }}
+          role-to-assume:        ${{ secrets.AWS_ROLE_ARN_TF_APPLY }}
+          aws-region:            ${{ env.AWS_REGION }}
+          role-session-duration: 7200
 
       - uses: hashicorp/setup-terraform@v3
         with:
