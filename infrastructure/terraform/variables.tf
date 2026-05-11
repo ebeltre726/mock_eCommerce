@@ -65,7 +65,8 @@ variable "ses_email_arn" {
 }
 
 # ── EmailJS ───────────────────────────────────────────────────────────────────
-# Values supplied via GitHub Secrets → terraform-plan -var flags in deploy.yml.
+# Non-secret config — safe to commit. Only EMAILJS_PRIVATE_KEY is sensitive
+# and is stored in SSM, written by the deploy workflow after apply.
 variable "emailjs_service_id" {
   type = string
 }

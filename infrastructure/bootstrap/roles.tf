@@ -170,8 +170,9 @@ resource "aws_iam_role_policy" "tf_plan_state" {
 # ─────────────────────────────────────────────
 
 resource "aws_iam_role" "tf_apply" {
-  name               = "mock-ecommerce-gha-tf-apply"
-  assume_role_policy = jsonencode(local.trust.production)
+  name                 = "mock-ecommerce-gha-tf-apply"
+  assume_role_policy   = jsonencode(local.trust.production)
+  max_session_duration = 7200
 }
 
 resource "aws_iam_role_policy" "tf_apply" {
