@@ -379,7 +379,102 @@ resource "aws_iam_role_policy" "tf_apply" {
 }
 
 # ─────────────────────────────────────────────
-# 5. Seed
+# 5. Bootstrap Apply
+# Applies this (bootstrap) workspace from CI whenever infrastructure/bootstrap/**
+# changes on main.  Scoped to exactly the resources this workspace owns.
+# ─────────────────────────────────────────────
+
+resource "aws_iam_role" "bootstrap_apply" {
+  name               = "mock-ecommerce-gha-bootstrap-apply"
+  assume_role_policy = jsonencode(local.trust.main)
+}
+
+resource "aws_iam_role_policy" "bootstrap_apply" {
+  role = aws_iam_role.bootstrap_apply.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # ── State backend (read/write state file + acquire lock) ──────
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject", "s3:PutObject",
+          "s3:ListBucket", "s3:GetBucketLocation",
+          "s3:GetEncryptionConfiguration",
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.state_bucket}",
+          "arn:aws:s3:::${var.state_bucket}/*",
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/${var.lock_table}"
+      },
+      # ── S3 state bucket (Terraform-managed resource) ──────────────
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket", "s3:DeleteBucket",
+          "s3:GetBucketLocation", "s3:GetBucketTagging", "s3:PutBucketTagging",
+          "s3:GetBucketVersioning", "s3:PutBucketVersioning",
+          "s3:GetEncryptionConfiguration", "s3:PutEncryptionConfiguration",
+          "s3:GetBucketPublicAccessBlock", "s3:PutBucketPublicAccessBlock",
+          "s3:ListBucket",
+          "s3:GetBucketObjectLockConfiguration", "s3:GetBucketRequestPayment",
+          "s3:GetBucketLogging", "s3:GetBucketAcl", "s3:GetAccelerateConfiguration",
+          "s3:GetReplicationConfiguration", "s3:GetLifecycleConfiguration",
+          "s3:GetBucketWebsite",
+        ]
+        Resource = "arn:aws:s3:::${var.state_bucket}"
+      },
+      # ── DynamoDB lock table (Terraform-managed resource) ──────────
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:CreateTable", "dynamodb:DeleteTable", "dynamodb:DescribeTable",
+          "dynamodb:UpdateTable", "dynamodb:ListTagsOfResource", "dynamodb:TagResource",
+          "dynamodb:DescribeTimeToLive", "dynamodb:DescribeContinuousBackups",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/${var.lock_table}"
+      },
+      # ── GitHub Actions OIDC provider ──────────────────────────────
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateOpenIDConnectProvider", "iam:DeleteOpenIDConnectProvider",
+          "iam:GetOpenIDConnectProvider", "iam:UpdateOpenIDConnectProvider",
+          "iam:TagOpenIDConnectProvider", "iam:UntagOpenIDConnectProvider",
+          "iam:ListOpenIDConnectProviderTags",
+        ]
+        Resource = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      # ── All GHA IAM roles and their inline policies ───────────────
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:UpdateRole",
+          "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy",
+          "iam:ListRolePolicies", "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+          "iam:ListAttachedRolePolicies", "iam:PassRole",
+          "iam:TagRole", "iam:UntagRole", "iam:ListInstanceProfilesForRole",
+        ]
+        Resource = "arn:aws:iam::${local.account_id}:role/mock-ecommerce-*"
+      },
+      # ── STS — needed for data.aws_caller_identity ─────────────────
+      {
+        Effect   = "Allow"
+        Action   = ["sts:GetCallerIdentity"]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# ─────────────────────────────────────────────
+# 7. Seed
 # Runs seed-products.js after terraform-apply to populate DynamoDB and S3.
 # ─────────────────────────────────────────────
 
@@ -413,7 +508,7 @@ resource "aws_iam_role_policy" "seed" {
 }
 
 # ─────────────────────────────────────────────
-# 6. Frontend
+# 8. Frontend
 # Syncs the built Vite bundle to S3 and invalidates the CloudFront cache.
 # ─────────────────────────────────────────────
 

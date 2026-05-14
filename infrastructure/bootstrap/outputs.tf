@@ -29,3 +29,8 @@ output "AWS_ROLE_ARN_FRONTEND" {
   description = "deploy-frontend job → GitHub Secret: AWS_ROLE_ARN_FRONTEND"
   value       = aws_iam_role.frontend.arn
 }
+
+output "AWS_ROLE_ARN_BOOTSTRAP_APPLY" {
+  description = "bootstrap-apply job → GitHub Secret: AWS_ROLE_ARN_BOOTSTRAP_APPLY"
+  value       = aws_iam_role.bootstrap_apply.arn
+}
