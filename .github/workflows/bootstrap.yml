@@ -1,0 +1,40 @@
+name: Bootstrap Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - infrastructure/bootstrap/**
+
+# OIDC token required for aws-actions/configure-aws-credentials role assumption
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  bootstrap-apply:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BOOTSTRAP_APPLY }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.6"
+
+      - name: Terraform init
+        working-directory: infrastructure/bootstrap
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: infrastructure/bootstrap
+        run: terraform apply -auto-approve

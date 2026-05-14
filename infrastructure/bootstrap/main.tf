@@ -8,10 +8,17 @@ terraform {
     }
   }
 
-  # Intentionally local state — this workspace creates the S3 bucket and
-  # DynamoDB table that the main workspace's remote backend depends on,
-  # so it cannot itself use a remote backend.
-  # Keep terraform.tfstate somewhere safe (e.g. a password manager) after apply.
+  # State lives in the same S3 bucket that this workspace creates, using a
+  # separate key so it never collides with the main workspace state.
+  # On a brand-new environment the bucket doesn't exist yet: run once with
+  # local state, then `terraform init -migrate-state` to move it here.
+  backend "s3" {
+    bucket         = "mock-ecommerce-tf-state"
+    key            = "bootstrap/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "mock-ecommerce-tf-locks"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
