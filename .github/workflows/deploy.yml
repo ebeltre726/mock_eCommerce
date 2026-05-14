@@ -142,7 +142,7 @@ jobs:
         with:
           role-to-assume:        ${{ secrets.AWS_ROLE_ARN_TF_APPLY }}
           aws-region:            ${{ env.AWS_REGION }}
-          role-session-duration: 7200
+          role-duration-seconds: 7200
 
       - uses: hashicorp/setup-terraform@v3
         with:
