@@ -35,6 +35,14 @@ jobs:
         working-directory: infrastructure/bootstrap
         run: terraform init
 
+      - name: Terraform validate
+        working-directory: infrastructure/bootstrap
+        run: terraform validate
+
+      - name: Terraform plan
+        working-directory: infrastructure/bootstrap
+        run: terraform plan -out=tfplan -lock-timeout=300s
+
       - name: Terraform apply
         working-directory: infrastructure/bootstrap
-        run: terraform apply -auto-approve
+        run: terraform apply tfplan

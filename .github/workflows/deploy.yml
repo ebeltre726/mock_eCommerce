@@ -158,6 +158,17 @@ jobs:
           name: tfplan-${{ github.run_id }}
           path: ${{ env.TF_DIR }}
 
+      - name: Pre-flight DNS delegation check
+        run: |
+          DOMAIN="furnitria.com"
+          NS=$(dig +short NS "$DOMAIN" @8.8.8.8 2>/dev/null | head -1)
+          if [ -n "$NS" ] && ! echo "$NS" | grep -qi "awsdns"; then
+            echo "::error::$DOMAIN is not delegated to Route 53 (current NS: $NS)."
+            echo "::error::ACM certificate validation will time out. Update your domain registrar to use the Route 53 nameservers shown in 'terraform output name_servers', then re-run this workflow."
+            exit 1
+          fi
+          echo "DNS delegation OK ($NS)"
+
       - name: Terraform apply
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply tfplan

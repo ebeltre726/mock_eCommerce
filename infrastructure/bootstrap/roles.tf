@@ -422,6 +422,7 @@ resource "aws_iam_role_policy" "bootstrap_apply" {
           "s3:GetBucketVersioning", "s3:PutBucketVersioning",
           "s3:GetEncryptionConfiguration", "s3:PutEncryptionConfiguration",
           "s3:GetBucketPublicAccessBlock", "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketPolicy",
           "s3:ListBucket",
           "s3:GetBucketObjectLockConfiguration", "s3:GetBucketRequestPayment",
           "s3:GetBucketLogging", "s3:GetBucketAcl", "s3:GetAccelerateConfiguration",
@@ -445,7 +446,7 @@ resource "aws_iam_role_policy" "bootstrap_apply" {
         Effect = "Allow"
         Action = [
           "iam:CreateOpenIDConnectProvider", "iam:DeleteOpenIDConnectProvider",
-          "iam:GetOpenIDConnectProvider", "iam:UpdateOpenIDConnectProvider",
+          "iam:GetOpenIDConnectProvider", "iam:UpdateOpenIDConnectProviderThumbprint",
           "iam:TagOpenIDConnectProvider", "iam:UntagOpenIDConnectProvider",
           "iam:ListOpenIDConnectProviderTags",
         ]
