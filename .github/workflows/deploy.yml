@@ -79,8 +79,12 @@ jobs:
           REGISTRY:  ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ steps.meta.outputs.tag }}
         run: |
-          docker build -t $REGISTRY/$ECR_REPO:$IMAGE_TAG ./backend
-          docker push    $REGISTRY/$ECR_REPO:$IMAGE_TAG
+          if aws ecr describe-images --repository-name $ECR_REPO --image-ids imageTag=$IMAGE_TAG 2>/dev/null; then
+            echo "Image $ECR_REPO:$IMAGE_TAG already exists in ECR, skipping build"
+          else
+            docker build -t $REGISTRY/$ECR_REPO:$IMAGE_TAG ./backend
+            docker push    $REGISTRY/$ECR_REPO:$IMAGE_TAG
+          fi
 
   # ──────────────────────────────────────────────────
   # 2a. Terraform plan — output saved as artifact for review
