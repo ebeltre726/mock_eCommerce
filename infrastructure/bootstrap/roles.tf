@@ -423,6 +423,7 @@ resource "aws_iam_role_policy" "bootstrap_apply" {
           "s3:GetEncryptionConfiguration", "s3:PutEncryptionConfiguration",
           "s3:GetBucketPublicAccessBlock", "s3:PutBucketPublicAccessBlock",
           "s3:GetBucketPolicy",
+          "s3:GetBucketCORS",
           "s3:ListBucket",
           "s3:GetBucketObjectLockConfiguration", "s3:GetBucketRequestPayment",
           "s3:GetBucketLogging", "s3:GetBucketAcl", "s3:GetAccelerateConfiguration",
