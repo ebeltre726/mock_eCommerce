@@ -156,12 +156,6 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
 
-      - name: Download approved plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ github.run_id }}
-          path: ${{ env.TF_DIR }}
-
       - name: Pre-flight DNS delegation check
         run: |
           DOMAIN="furnitria.com"
@@ -175,7 +169,10 @@ jobs:
 
       - name: Terraform apply
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply tfplan
+        run: |
+          terraform plan -out=tfplan \
+            -var="image_tag=${{ needs.build-backend.outputs.image_tag }}"
+          terraform apply tfplan
 
       - name: Write secrets to SSM
         run: |
