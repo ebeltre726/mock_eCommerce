@@ -1,6 +1,5 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import serverlessExpress from '@vendia/serverless-express';
-import app from './src/app.js';
 import { verifier } from './src/middleware/auth.middleware.js';
 
 // Resolved once per cold start; reused across warm invocations.
@@ -28,6 +27,11 @@ async function getHandler() {
       fetchSSMParameter(ssm, process.env.EMAILJS_PRIVATE_KEY_SSM)
         .then(v => { process.env.EMAILJS_PRIVATE_KEY = v; }),
   ]);
+
+  // app.js is imported here rather than at the top of this file so that
+  // stripe.js (which reads STRIPE_SECRET_KEY at module initialisation time)
+  // is loaded only after the SSM fetch above has populated the key.
+  const { default: app } = await import('./src/app.js');
 
   // Pre-warm the Cognito JWKS cache during cold start so the first
   // authenticated request doesn't pay the ~100ms JWKS fetch latency.
