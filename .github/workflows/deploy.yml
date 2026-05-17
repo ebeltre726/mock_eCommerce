@@ -270,7 +270,7 @@ jobs:
       - name: Build frontend
         working-directory: ./frontend
         env:
-          VITE_API_URL:              ${{ needs.terraform-apply.outputs.cloudfront_url }}/api
+          VITE_API_URL:              /api
           # Cognito identifiers are not secrets — safe to embed in the frontend bundle
           VITE_COGNITO_USER_POOL_ID: ${{ needs.terraform-apply.outputs.cognito_user_pool_id }}
           VITE_COGNITO_CLIENT_ID:    ${{ needs.terraform-apply.outputs.cognito_client_id }}

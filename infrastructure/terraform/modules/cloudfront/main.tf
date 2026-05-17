@@ -77,7 +77,7 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       # approach would require server-side rendering support.
       # All other directives follow strict least-privilege.
       # cognito-idp.*.amazonaws.com is required by amazon-cognito-identity-js for SRP auth.
-      content_security_policy = "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://${var.products_bucket_domain} https://${var.avatars_bucket_domain}; connect-src 'self' https://api.stripe.com https://q.stripe.com https://cognito-idp.*.amazonaws.com; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self'; object-src 'none'; base-uri 'self'"
+      content_security_policy = "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://${var.products_bucket_domain} https://${var.avatars_bucket_domain}; connect-src 'self' https://api.stripe.com https://q.stripe.com https://m.stripe.com https://m.stripe.network https://cognito-idp.*.amazonaws.com; frame-src https://js.stripe.com https://hooks.stripe.com; form-action 'self'; object-src 'none'; base-uri 'self'"
       override = true
     }
     content_type_options {

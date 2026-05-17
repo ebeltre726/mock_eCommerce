@@ -145,14 +145,18 @@ async function waitForTableDeletion() {
 
 async function uploadSeedImage(filename) {
     const localPath   = path.resolve('seed-images', filename);
-    const key         = `products/${filename}`;
+    // Key must match the CloudFront /product-images/* behavior so the distribution
+    // can serve the object. The S3 bucket is private (OAC); direct S3 URLs never
+    // work from the browser, so we store a relative path instead.
+    const key         = `product-images/${filename}`;
     const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
-    const url         = await storage.uploadImage(
+    await storage.uploadImage(
         await fs.readFile(localPath),
         key,
         contentType,
         process.env.S3_BUCKET_PRODUCTS,
     );
+    const url = `/product-images/${filename}`;
     console.log(`[seed] uploaded ${filename} → ${url}`);
     return url;
 }
