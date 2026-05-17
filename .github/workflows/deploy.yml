@@ -139,9 +139,10 @@ jobs:
     environment: production
 
     outputs:
-      cloudfront_url:       ${{ steps.tf-output.outputs.cloudfront_url }}
-      cognito_user_pool_id: ${{ steps.tf-output.outputs.cognito_user_pool_id }}
-      cognito_client_id:    ${{ steps.tf-output.outputs.cognito_client_id }}
+      cloudfront_url:            ${{ steps.tf-output.outputs.cloudfront_url }}
+      cloudfront_distribution_id: ${{ steps.tf-output.outputs.cloudfront_distribution_id }}
+      cognito_user_pool_id:      ${{ steps.tf-output.outputs.cognito_user_pool_id }}
+      cognito_client_id:         ${{ steps.tf-output.outputs.cognito_client_id }}
 
     steps:
       - uses: actions/checkout@v4
@@ -196,9 +197,10 @@ jobs:
         id: tf-output
         working-directory: ${{ env.TF_DIR }}
         run: |
-          echo "cloudfront_url=$(terraform output -raw cloudfront_url)"             >> $GITHUB_OUTPUT
-          echo "cognito_user_pool_id=$(terraform output -raw cognito_user_pool_id)" >> $GITHUB_OUTPUT
-          echo "cognito_client_id=$(terraform output -raw cognito_client_id)"       >> $GITHUB_OUTPUT
+          echo "cloudfront_url=$(terraform output -raw cloudfront_url)"                         >> $GITHUB_OUTPUT
+          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+          echo "cognito_user_pool_id=$(terraform output -raw cognito_user_pool_id)"             >> $GITHUB_OUTPUT
+          echo "cognito_client_id=$(terraform output -raw cognito_client_id)"                   >> $GITHUB_OUTPUT
 
   # ──────────────────────────────────────────────────
   # 3. Seed products into DynamoDB (idempotent — no-op if already seeded)
@@ -295,5 +297,5 @@ jobs:
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id ${{ needs.terraform-apply.outputs.cloudfront_distribution_id }} \
             --paths "/*"
