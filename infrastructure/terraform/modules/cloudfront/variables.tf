@@ -17,6 +17,12 @@ variable "domain_aliases" {
   default     = []
 }
 
+variable "aws_region" {
+  description = "AWS region for region-specific CSP directives (e.g. Cognito endpoint)."
+  type        = string
+  default     = "us-east-1"
+}
+
 variable "waf_auth_rate_limit" {
   description = "Maximum requests per IP per 5-minute window to /api/auth/* before WAF blocks. AWS minimum is 100. Set to 0 to disable the auth rate-limiting rule."
   type        = number

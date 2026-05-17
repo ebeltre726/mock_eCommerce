@@ -1,14 +1,9 @@
-FROM node:20-alpine
-
-WORKDIR /app
+FROM public.ecr.aws/lambda/nodejs:20
 
 COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY . .
 
-RUN addgroup -S app && adduser -S app -G app
-USER app
-
-# Lambda container images run the handler; local dev uses server.js via npm start
-CMD ["node", "server.js"]
+# Handler entry point for Lambda (overridden from Terraform image_config, kept here for clarity)
+CMD ["lambda.handler"]

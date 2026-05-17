@@ -97,6 +97,7 @@ module "cloudfront" {
   api_gateway_url        = module.api_gateway.endpoint
   acm_certificate_arn    = module.route53.certificate_arn
   domain_aliases         = [var.domain_name, "www.${var.domain_name}"]
+  aws_region             = var.aws_region
   waf_auth_rate_limit    = var.waf_auth_rate_limit
 }
 
