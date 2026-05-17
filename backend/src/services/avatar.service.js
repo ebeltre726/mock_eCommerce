@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import { storage } from "../storage/index.js";
 import { dynamo } from "../db/dynamoClient.js";
 import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
@@ -18,6 +17,10 @@ export async function uploadAvatar(userId, file) {
   }));
   const oldKey = existing.Item?.avatar ?? null;
 
+  // Dynamic import: sharp is a native addon that must not be loaded at module
+  // initialisation time — doing so crashes the Lambda process before any logs
+  // can be written. Loading it here confines the native binding to the call site.
+  const { default: sharp } = await import('sharp');
   const buffer = await sharp(file.buffer)
     .resize(300, 300, { fit: "cover" })
     .toFormat("webp")
