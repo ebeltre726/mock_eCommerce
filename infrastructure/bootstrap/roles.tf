@@ -105,6 +105,7 @@ resource "aws_iam_role_policy" "build" {
           "ecr:PutImage",
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer",
+          "ecr:DescribeImages",
         ]
         Resource = "arn:aws:ecr:${var.aws_region}:${local.account_id}:repository/mock-ecommerce-backend"
       },

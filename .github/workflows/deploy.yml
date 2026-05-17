@@ -79,7 +79,12 @@ jobs:
           REGISTRY:  ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ steps.meta.outputs.tag }}
         run: |
-          if aws ecr describe-images --repository-name $ECR_REPO --image-ids imageTag=$IMAGE_TAG 2>/dev/null; then
+          EXISTING=$(aws ecr batch-get-image \
+            --repository-name $ECR_REPO \
+            --image-ids imageTag=$IMAGE_TAG \
+            --query 'images[0].imageId.imageTag' \
+            --output text 2>/dev/null)
+          if [ "$EXISTING" = "$IMAGE_TAG" ]; then
             echo "Image $ECR_REPO:$IMAGE_TAG already exists in ECR, skipping build"
           else
             docker build -t $REGISTRY/$ECR_REPO:$IMAGE_TAG ./backend
