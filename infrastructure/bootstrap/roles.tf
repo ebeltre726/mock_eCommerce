@@ -497,9 +497,13 @@ resource "aws_iam_role_policy" "seed" {
         Action = [
           "dynamodb:PutItem",
           "dynamodb:GetItem",
+          "dynamodb:Query",
           "dynamodb:DescribeTable",
         ]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/Furnitria"
+        Resource = [
+          "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/Furnitria",
+          "arn:aws:dynamodb:${var.aws_region}:${local.account_id}:table/Furnitria/index/*",
+        ]
       },
       {
         Effect = "Allow"
