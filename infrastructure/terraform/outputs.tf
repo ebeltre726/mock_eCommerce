@@ -8,6 +8,11 @@ output "cloudfront_url" {
   value       = "https://${module.cloudfront.domain_name}"
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID — used by CI to create cache invalidations"
+  value       = module.cloudfront.distribution_id
+}
+
 output "route53_name_servers" {
   description = "Set these NS records at your registrar to delegate DNS to Route 53"
   value       = module.route53.name_servers
