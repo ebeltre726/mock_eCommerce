@@ -10,6 +10,30 @@ export const verifier = CognitoJwtVerifier.create({
   clientId: env.COGNITO_CLIENT_ID,
 });
 
+export async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token =
+    req.cookies?.id_token ??
+    (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const payload = await verifier.verify(token);
+    req.user = {
+      userId:    payload.sub,
+      email:     payload.email,
+      firstName: payload.given_name,
+    };
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
 export async function requireAuth(req, res, next) {
   // Cookie-based auth (browser) takes precedence over the Authorization header
   // so that httpOnly cookies are used when available.  The header path remains
