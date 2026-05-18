@@ -10,6 +10,10 @@ jest.mock("../../src/middleware/auth.middleware.js", () => ({
     req.user = { userId: "u003", email: "pay@example.com", firstName: "Pay" };
     next();
   },
+  optionalAuth: (req, _res, next) => {
+    req.user = { userId: "u003", email: "pay@example.com", firstName: "Pay" };
+    next();
+  },
 }));
 
 // Stripe not available in CI — mock all calls made by addPayment / removePayment

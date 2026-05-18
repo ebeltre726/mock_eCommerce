@@ -10,6 +10,10 @@ jest.mock("../../src/middleware/auth.middleware.js", () => ({
     req.user = { userId: "u002", email: "order@example.com", firstName: "Order" };
     next();
   },
+  optionalAuth: (req, _res, next) => {
+    req.user = { userId: "u002", email: "order@example.com", firstName: "Order" };
+    next();
+  },
 }));
 
 describe("Orders Flow", () => {

@@ -7,6 +7,10 @@ jest.mock('../../src/middleware/auth.middleware.js', () => ({
     req.user = { userId: 'cognito-sub-u1', email: 'a@b.com', firstName: 'A' };
     next();
   },
+  optionalAuth: (req, res, next) => {
+    req.user = { userId: 'cognito-sub-u1', email: 'a@b.com', firstName: 'A' };
+    next();
+  },
 }));
 
 jest.mock('../../src/services/auth.service.js', () => ({
