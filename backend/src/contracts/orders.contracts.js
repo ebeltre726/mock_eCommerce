@@ -79,6 +79,7 @@ export const ordersContracts = {
           zip:     Joi.string().required(),
           country: Joi.string().optional(),
         }).optional(),
+        guestEmail: Joi.string().email().optional(),
         paymentMethodId: Joi.string().optional(),
         saveCard:   Joi.boolean().optional(),
         items: Joi.array()

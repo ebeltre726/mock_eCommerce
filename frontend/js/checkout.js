@@ -26,9 +26,10 @@ export async function initCheckout() {
         // Load in parallel — UI degrades gracefully if either fails
         await Promise.all([loadSavedAddresses(), loadSavedCards()]);
     } else {
-        // Guests have no account — hide save options so they're never offered
+        // Guests have no account — hide save options, show email field
         document.getElementById('saveAddressRow').style.display = 'none';
         document.getElementById('saveCardRow').style.display    = 'none';
+        document.getElementById('guestEmailRow').style.display  = '';
     }
 
     bindCheckoutEvents();
@@ -51,6 +52,7 @@ export function teardownCheckout() {
     setDisplay('newCardSection',  '');
     setDisplay('saveAddressRow',  '');
     setDisplay('saveCardRow',     '');
+    setDisplay('guestEmailRow',   'none');
 
     hideStatus();
 }
@@ -232,8 +234,12 @@ async function handleSubmit(e) {
         const fullName    = document.getElementById('fullName').value.trim();
         const saveAddress = document.getElementById('saveAddressCheck')?.checked ?? false;
         const saveCard    = document.getElementById('saveCardCheck')?.checked ?? false;
+        const guestEmail  = !isLoggedIn()
+            ? (document.getElementById('guestEmail')?.value.trim() ?? '')
+            : undefined;
 
         if (!fullName) throw new Error('Please enter your full name.');
+        if (guestEmail !== undefined && !guestEmail) throw new Error('Please enter your email address.');
 
         const addressPayload = await resolveAddress(saveAddress);
         let order;
@@ -242,11 +248,12 @@ async function handleSubmit(e) {
             order = await submitSavedCard({
                 stripePaymentMethodId: _selectedStripeMethodId,
                 fullName,
+                guestEmail,
                 ...addressPayload,
                 items,  // validated non-empty above
             });
         } else {
-            order = await submitNewCard({ fullName, ...addressPayload, saveCard, items });
+            order = await submitNewCard({ fullName, guestEmail, ...addressPayload, saveCard, items });
         }
 
         document.getElementById('statusOverlay').dataset.success = 'true';

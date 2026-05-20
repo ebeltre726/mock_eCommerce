@@ -16,6 +16,10 @@ jest.mock('../../src/middleware/auth.middleware.js', () => ({
     req.user = { userId: 'test001', email: 'test@example.com', firstName: 'Test' };
     next();
   },
+  optionalAuth: (req, res, next) => {
+    req.user = { userId: 'test001', email: 'test@example.com', firstName: 'Test' };
+    next();
+  },
 }));
 
 // ── Mock the Cognito SDK — not available in CI ────────────────────────────────

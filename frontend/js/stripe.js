@@ -73,7 +73,7 @@ export function unmountStripeElements() {
 
 // ─── Tokenise a new card and submit order ─────────────────────────────────────
 
-export async function submitNewCard({ fullName, addressId, shippingAddress, saveCard, items }) {
+export async function submitNewCard({ fullName, addressId, shippingAddress, saveCard, items, guestEmail }) {
     if (!_cardNumber) throw new Error('Card elements are not mounted.');
 
     const stripe = getStripe();
@@ -91,6 +91,7 @@ export async function submitNewCard({ fullName, addressId, shippingAddress, save
         ...(addressId ? { addressId } : { shippingAddress }),
         items,
         saveCard,
+        ...(guestEmail ? { guestEmail } : {}),
     };
 
     return apiFetch('orders', { method: 'POST', body: JSON.stringify(body) });
@@ -98,7 +99,7 @@ export async function submitNewCard({ fullName, addressId, shippingAddress, save
 
 // ─── Submit order with a saved Stripe payment method ─────────────────────────
 
-export async function submitSavedCard({ stripePaymentMethodId, fullName, addressId, shippingAddress, items }) {
+export async function submitSavedCard({ stripePaymentMethodId, fullName, addressId, shippingAddress, items, guestEmail }) {
     return apiFetch('orders', {
         method: 'POST',
         body: JSON.stringify({
@@ -107,6 +108,7 @@ export async function submitSavedCard({ stripePaymentMethodId, fullName, address
             ...(addressId ? { addressId } : { shippingAddress }),
             items,
             saveCard: false,
+            ...(guestEmail ? { guestEmail } : {}),
         }),
     });
 }

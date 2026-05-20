@@ -5,6 +5,10 @@ jest.mock('../../src/middleware/auth.middleware.js', () => ({
     req.user = { userId: 'u1', email: 'test@example.com' };
     next();
   },
+  optionalAuth: (req, res, next) => {
+    req.user = { userId: 'u1', email: 'test@example.com' };
+    next();
+  },
 }));
 
 import app from '../../src/app.js';
