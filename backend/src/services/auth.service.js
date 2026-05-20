@@ -148,13 +148,13 @@ export async function confirmSignup(email, code) {
     return { message: 'Account verified! You can now sign in.' };
   } catch (err) {
     if (err instanceof CodeMismatchException) {
-      throw new Error('Incorrect verification code. Please check your email and try again.');
+      throw new Error('Incorrect verification code. Please check your email and try again.', { cause: err });
     }
     if (err instanceof ExpiredCodeException) {
-      throw new Error('That code has expired. Please request a new one.');
+      throw new Error('That code has expired. Please request a new one.', { cause: err });
     }
     if (err instanceof LimitExceededException) {
-      throw new Error('Too many attempts. Please wait before trying again.');
+      throw new Error('Too many attempts. Please wait before trying again.', { cause: err });
     }
     throw err;
   }
