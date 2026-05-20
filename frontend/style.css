@@ -1972,6 +1972,200 @@
     cursor: pointer;
 }
 
+/* VERIFICATION CODE PANEL — shared between login & signup */
+
+.form-error,
+.inline-error {
+    font-size: 0.8rem;
+    color: darkred;
+    font-family: var(--nav-font);
+    min-height: 1em;
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Login verify panel — slots into the left column of .signin-wrapper */
+.verify-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 50%;
+    text-align: center;
+    padding: 0 4%;
+}
+
+.verify-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+/* Use a dedicated class so it wins over inherited logo font from .overlay-content */
+.verify-heading {
+    font-size: 1.3rem !important;
+    font-family: var(--nav-font) !important;
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: none !important;
+}
+
+.verify-panel h2 {
+    font-size: 1.3rem;
+    font-family: var(--nav-font);
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: none;
+}
+
+.signin-sub {
+    font-size: 0.78rem;
+    color: #555;
+    line-height: 1.45;
+    font-family: var(--nav-font);
+}
+
+/* Signup verify panel — full-width within .signup-modal */
+.signup-verify-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    text-align: center;
+    padding: 5% 6%;
+    width: 100%;
+}
+
+.signup-verify-heading {
+    font-size: 1.5rem !important;
+    font-family: var(--nav-font) !important;
+    font-weight: 700;
+    text-shadow: none !important;
+}
+
+.signup-verify-sub {
+    font-size: 0.78rem;
+    color: #555;
+    max-width: 290px;
+    line-height: 1.45;
+    font-family: var(--nav-font);
+}
+
+/* 6-digit OTP input row */
+.otp-group {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    margin: 0.1rem 0;
+}
+
+.otp-input {
+    width: 38px;
+    height: 48px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-family: var(--nav-font);
+    font-weight: 600;
+    border: 2.5px solid black;
+    border-radius: 6px;
+    background-color: beige;
+    caret-color: transparent;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+}
+
+.otp-input:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.otp-input.otp-filled {
+    background-color: tan;
+}
+
+/* Disabled state for action buttons */
+.signin-btn[disabled],
+.signup-verify-btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.signup-verify-btn {
+    width: 55%;
+    padding: 0.5rem 0;
+    background-color: tan;
+    transition: background-color 0.25s ease;
+    border: 3px solid black;
+    border-radius: 4px;
+    font-family: var(--nav-font);
+    font-size: 0.9rem;
+    cursor: pointer;
+    height: 35px;
+}
+
+.signup-verify-btn:hover:not([disabled]) {
+    background-color: beige;
+    cursor: pointer;
+}
+
+.verify-resend-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--nav-font);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    color: inherit;
+    transition: color 0.2s ease;
+}
+
+.verify-resend-btn:hover:not([disabled]) {
+    color: black;
+}
+
+.verify-resend-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Back link inside login verify panel */
+.verify-back-link {
+    background: none;
+    border: none;
+    font-family: var(--nav-font);
+    font-size: 0.75rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.verify-back-link:hover {
+    color: black;
+}
+
+/* Error messages inside verify panels */
+.verify-panel .form-error,
+.signup-verify-panel .form-error {
+    font-size: 0.78rem;
+    color: darkred;
+    min-height: 1em;
+    font-family: var(--nav-font);
+}
+
+/* signup-wrapper: center the signup-modal card */
+.signup-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* PAYMENT OVERLAY */
 /* ─────────────────────────────────────────────────────────────
    checkout.css  —  Furnitria checkout panel
@@ -3011,6 +3205,25 @@
     }
     #login-form {
         gap: .75rem;
+    }
+    .verify-panel {
+        width: 100%;
+        padding: 0 3%;
+        gap: 0.55rem;
+    }
+    .verify-heading {
+        font-size: 1.4rem !important;
+    }
+    .otp-input {
+        width: 34px;
+        height: 44px;
+        font-size: 1.15rem;
+    }
+    .otp-group {
+        gap: 4px;
+    }
+    .signin-btn {
+        width: 60%;
     }
     .extras {
         font-size: .95rem;

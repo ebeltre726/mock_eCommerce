@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import {
   login,
   signup,
+  confirmSignupHandler,
   logout,
   refresh,
   session,
@@ -35,6 +36,9 @@ router.post('/login', authLimiter, validateRequest(authContracts.login), validat
 
 // POST /api/auth/signup
 router.post('/signup', authLimiter, validateRequest(authContracts.signup), validateResponse(authContracts.signup), signup);
+
+// POST /api/auth/confirm-signup
+router.post('/confirm-signup', authLimiter, validateRequest(authContracts.confirmSignup), validateResponse(authContracts.confirmSignup), confirmSignupHandler);
 
 // POST /api/auth/resend-confirmation
 router.post('/resend-confirmation', authLimiter, validateRequest(authContracts.resendConfirmation), validateResponse(authContracts.resendConfirmation), resendConfirmationHandler);

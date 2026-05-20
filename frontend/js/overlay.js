@@ -7,6 +7,7 @@ export const overlayModule = (() => {
   const templateCache = {};
   let _closeCallbacks = [];
   let _currentTarget = null;
+  let _isLoading = false;
 
   const moduleMap = {
       products: () => import('./products.js').then(m => m.initProducts()),
@@ -29,6 +30,7 @@ export const overlayModule = (() => {
       _closeCallbacks.forEach(fn => fn());
       _closeCallbacks = [];
       _currentTarget = null;
+      _isLoading = false;
       overlay.classList.remove('active');
       overlayBackground.classList.remove('active');
       contentDiv.innerHTML = '';
@@ -61,8 +63,10 @@ export const overlayModule = (() => {
 
   function loadTemplate(target) {
       _currentTarget = target;
+      _isLoading = true;
 
       if (templateCache[target]) {
+          _isLoading = false;
           contentDiv.innerHTML = templateCache[target];
           showOverlay();
           initTemplate(target);
@@ -75,12 +79,14 @@ export const overlayModule = (() => {
               return res.text();
           })
           .then(html => {
+              _isLoading = false;
               templateCache[target] = html;
               contentDiv.innerHTML = html;
               showOverlay();
               initTemplate(target);
           })
           .catch(err => {
+              _isLoading = false;
               console.error(err);
               contentDiv.innerHTML = '<p>Template not found.</p>';
               showOverlay();
@@ -94,7 +100,7 @@ export const overlayModule = (() => {
       // If the overlay is already visible and showing this target, don't reload
       // the template — doing so would destroy all mounted panel event listeners.
       // The caller can use overlayModule.refresh(target) for an explicit re-init.
-      if (_currentTarget === target && overlay.classList.contains('active')) {
+      if (_currentTarget === target && (overlay.classList.contains('active') || _isLoading)) {
           return;
       }
 

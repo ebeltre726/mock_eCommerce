@@ -40,6 +40,20 @@ export const authContracts = {
     },
   },
 
+  // POST /api/auth/confirm-signup
+  confirmSignup: {
+    request: {
+      body: Joi.object({
+        email: Joi.string().email().required(),
+        code:  Joi.string().length(6).pattern(/^\d+$/).required(),
+      }),
+    },
+    response: {
+      200: Joi.object({ message: Joi.string().required() }).unknown(true),
+      400: Joi.object({ error: Joi.string().required() }).unknown(true),
+    },
+  },
+
   // POST /api/auth/resend-confirmation
   resendConfirmation: {
     request: {

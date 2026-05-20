@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
   SignUpCommand,
+  ConfirmSignUpCommand,
   ResendConfirmationCodeCommand,
   ForgotPasswordCommand,
   ConfirmForgotPasswordCommand,
@@ -125,6 +126,35 @@ export async function signupUser({ firstName, lastName, email, password, termsCo
         'Password does not meet requirements: minimum 8 characters, must include uppercase, lowercase, number, and special character.',
         { cause: err }
       );
+    }
+    throw err;
+  }
+}
+
+// ======================
+// CONFIRM SIGNUP (verify code)
+// ======================
+export async function confirmSignup(email, code) {
+  if (!email || !code) throw new Error('Email and code are required.');
+
+  try {
+    await cognito.send(
+      new ConfirmSignUpCommand({
+        ClientId:         env.COGNITO_CLIENT_ID,
+        Username:         email.trim().toLowerCase(),
+        ConfirmationCode: code.trim(),
+      })
+    );
+    return { message: 'Account verified! You can now sign in.' };
+  } catch (err) {
+    if (err instanceof CodeMismatchException) {
+      throw new Error('Incorrect verification code. Please check your email and try again.');
+    }
+    if (err instanceof ExpiredCodeException) {
+      throw new Error('That code has expired. Please request a new one.');
+    }
+    if (err instanceof LimitExceededException) {
+      throw new Error('Too many attempts. Please wait before trying again.');
     }
     throw err;
   }
