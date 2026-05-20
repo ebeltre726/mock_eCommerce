@@ -17,8 +17,8 @@ export async function initProducts() {
     products = [];
     nextCursor = null;
     isFetching = false;
-    setupObserver();
     await fetchProducts();
+    setupObserver();
     setupEventDelegation();
 }
 

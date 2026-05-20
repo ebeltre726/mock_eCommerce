@@ -3,42 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Furnitria | Login</title>
+    <title>Furnitria | Sign Up</title>
 </head>
 <body>
     <div class="signup-wrapper">
-          <div class="signup-modal">
+
+        <!-- Step 1: registration form -->
+        <div class="signup-modal" id="signup-step1">
             <h2>Sign Up</h2>
 
-            <form id="signup-form" >
-
+            <form id="signup-form">
               <div class="form-grid">
-                <input type="text" name="firstName" placeholder="First Name" required />
-                <input type="text" name="lastName" placeholder="Last Name" required />
-            
-                <input type="email" name="email" placeholder="Email Address" required />
-                <input type="email" name="confirmEmail" placeholder="Confirm Email Address" required />
-            
-                <input type="password" name="password" placeholder="Password" required />
-                <input type="password" name="confirmPassword" placeholder="Confirm Password" required />
-                <p id="signup-error" class="error-msg"></p>
+                <input type="text"     name="firstName"       placeholder="First Name"             required />
+                <input type="text"     name="lastName"        placeholder="Last Name"              required />
+                <input type="email"    name="email"           placeholder="Email Address"          required />
+                <input type="email"    name="confirmEmail"    placeholder="Confirm Email Address"  required />
+                <input type="password" name="password"        placeholder="Password"               required />
+                <input type="password" name="confirmPassword" placeholder="Confirm Password"       required />
+                <p id="signup-error" class="error-msg" style="grid-column: 1/-1;"></p>
               </div>
-            
+
               <div class="terms">
                 <input type="checkbox" id="terms" required />
-                <label for="terms">I agree to the Terms & Conditions</label>
+                <label for="terms">I agree to the Terms &amp; Conditions</label>
               </div>
-            
-              <button type="submit" class="signup-btn" id="createAcc">
-                Create Account
-              </button>
-            
+
+              <button type="submit" class="signup-btn" id="createAcc">Create Account</button>
+
               <p class="login-link">
-                Already have an account? <button id="login-btn">Sign In</button>
+                Already have an account? <button id="login-btn" type="button">Sign In</button>
               </p>
-            
             </form>
-          </div>
-          </div>
+        </div>
+
+        <!-- Step 2: email verification (hidden until signup succeeds) -->
+        <div class="signup-verify-panel hidden" id="signup-verify-step">
+            <div class="verify-icon" aria-hidden="true">&#9993;</div>
+            <h2 class="signup-verify-heading">Check Your Email</h2>
+            <p class="signup-verify-sub" id="signup-verify-sub">
+                We sent a 6-digit code to your email. Enter it below to activate your account.
+            </p>
+
+            <div class="otp-group" role="group" aria-label="Verification code">
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5" />
+                <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
+            </div>
+
+            <p class="form-error" id="signup-verify-error" aria-live="polite"></p>
+
+            <button class="signup-verify-btn" id="signup-verify-btn" type="button">Verify &amp; Sign In</button>
+
+            <button class="verify-resend-btn" id="signup-resend-btn" type="button">Resend code</button>
+        </div>
+
+    </div>
 </body>
 </html>

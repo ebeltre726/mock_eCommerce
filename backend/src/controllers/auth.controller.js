@@ -1,6 +1,7 @@
 import {
   loginUser,
   signupUser,
+  confirmSignup,
   logoutUser,
   refreshTokens,
   forgotPassword,
@@ -81,6 +82,20 @@ export async function signup(req, res) {
   }
 }
 
+export async function confirmSignupHandler(req, res) {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and code are required' });
+    }
+    const result = await confirmSignup(email, code);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, 'confirmSignup error');
+    res.status(400).json({ error: err.message || 'Verification failed' });
+  }
+}
+
 export async function resendConfirmationHandler(req, res) {
   try {
     const { email } = req.body;
@@ -98,9 +113,7 @@ export async function resendConfirmationHandler(req, res) {
 
 export async function logout(req, res) {
   try {
-    // access_token cookie is required for GlobalSignOut; fall back to the
-    // X-Access-Token header so existing API clients are not broken.
-    const accessToken = req.cookies?.access_token ?? req.headers['x-access-token'];
+    const accessToken = req.cookies?.access_token;
     await logoutUser(accessToken);
     clearAuthCookies(res);
     res.json({ success: true, message: 'Logged out' });
@@ -112,8 +125,7 @@ export async function logout(req, res) {
 
 export async function refresh(req, res) {
   try {
-    // Prefer cookie; fall back to body for non-browser API clients.
-    const refreshToken = req.cookies?.refresh_token ?? req.body?.refreshToken;
+    const refreshToken = req.cookies?.refresh_token;
     if (!refreshToken) {
       return res.status(401).json({ error: 'Refresh token is required' });
     }
