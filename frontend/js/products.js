@@ -120,23 +120,7 @@ function setupEventDelegation() {
     const container = document.querySelector('.productsContainer');
     if (!container) return;
 
-    container.addEventListener('click', e => {
-        const target = e.target;
-
-        // Info button handling only — cart clicks handled by cart.js handleClick
-        if (target.classList.contains('info')) {
-            const productDiv = target.closest('.cartProduct');
-            const desc = productDiv?.querySelector('.productDesc');
-            const closeBtn = productDiv?.querySelector('.closeProd');
-            if (desc) desc.classList.toggle('hidden');
-            if (closeBtn) closeBtn.classList.toggle('hidden');
-        }
-
-        if (target.classList.contains('closeProd')) {
-            const productDiv = target.closest('.cartProduct');
-            const desc = productDiv?.querySelector('.productDesc');
-            target.classList.add('hidden');
-            if (desc) desc.classList.add('hidden');
-        }
-    });
+    // Info/close button clicks are handled globally by productinfo.js
+    // (document-level delegation, active/hidden class via .productDesc.active).
+    // No local handler needed here — a second handler would conflict.
 }

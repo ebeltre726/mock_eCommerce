@@ -18,7 +18,7 @@ export const overlayModule = (() => {
       forgotpw: () => import('./forgotpw.js').then(m => m.initForgotPassword()),
       contact:  () => import('./contact.js').then(m => m.initContact()),
       cart:     () => import('./cart.js').then(m => {
-        const container = document.querySelector('.cartContents');
+        const container = document.querySelector('.cartContentsInner');
         if (!container) return;
         m.cartModule.renderCartProducts(container);
       }),
@@ -61,14 +61,21 @@ export const overlayModule = (() => {
       moduleMap[target]?.().catch(err => console.error(`Failed to init ${target}:`, err));
   }
 
+  function showLoadingSpinner() {
+      contentDiv.innerHTML = '<div class="overlay-loading"><div class="overlay-spinner"></div></div>';
+  }
+
   function loadTemplate(target) {
       _currentTarget = target;
       _isLoading = true;
 
+      // Open immediately with a spinner so the button feels responsive
+      showLoadingSpinner();
+      showOverlay();
+
       if (templateCache[target]) {
           _isLoading = false;
           contentDiv.innerHTML = templateCache[target];
-          showOverlay();
           initTemplate(target);
           return;
       }
@@ -79,17 +86,16 @@ export const overlayModule = (() => {
               return res.text();
           })
           .then(html => {
+              if (_currentTarget !== target) return; // overlay switched before this resolved
               _isLoading = false;
               templateCache[target] = html;
               contentDiv.innerHTML = html;
-              showOverlay();
               initTemplate(target);
           })
           .catch(err => {
               _isLoading = false;
               console.error(err);
               contentDiv.innerHTML = '<p>Template not found.</p>';
-              showOverlay();
           });
   }
 

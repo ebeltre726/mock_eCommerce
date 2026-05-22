@@ -74,7 +74,9 @@ function showVerifyPanel(email) {
     if (!verifyStep) return;
 
     if (subText) {
-        subText.textContent = `We sent a 6-digit code to ${email}. Enter it below to activate your account.`;
+        subText.innerHTML =
+            `We sent a 6-digit code to ${email}. Enter it below to activate your account.` +
+            `<span class="spam-hint">Don't see it? Check your spam folder.</span>`;
     }
 
     step1?.classList.add('hidden');
@@ -91,7 +93,7 @@ function showVerifyPanel(email) {
         submitVerifyCode(email, inputs, errorEl, verifyBtn)
     );
 
-    wireResendBtn(resendBtn, email, errorEl);
+    wireResendBtn(resendBtn, email, errorEl, subText);
 }
 
 async function submitVerifyCode(email, inputs, errorEl, btn) {
@@ -157,7 +159,7 @@ function wireOtpInputs(inputs) {
     inputs[0]?.focus();
 }
 
-function wireResendBtn(btn, email, errorEl) {
+function wireResendBtn(btn, email, errorEl, subEl) {
     if (!btn) return;
     btn.addEventListener('click', async () => {
         const orig = btn.textContent;
@@ -170,6 +172,11 @@ function wireResendBtn(btn, email, errorEl) {
                 body:   JSON.stringify({ email }),
             });
             btn.textContent = 'Sent!';
+            if (subEl) {
+                subEl.innerHTML =
+                    `New code sent to ${email}.` +
+                    `<span class="spam-hint">Check your spam folder if you don't see it.</span>`;
+            }
             setTimeout(() => {
                 btn.textContent = orig;
                 btn.disabled    = false;
