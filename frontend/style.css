@@ -24,6 +24,11 @@
     padding: 0;
 }
 
+button {
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .hero {
     background-image: url('hero.jpg');
     background-size: cover;
@@ -42,6 +47,7 @@
     padding: 1rem 2rem;
     width: 100%;
     gap: 6rem;
+    z-index: 1000;
 }
 
 .navbar a {
@@ -554,6 +560,9 @@
     justify-content: center;
     align-items: center;
     gap: .5rem;
+    height: 100%;       /* fill .content exactly so it never overflows */
+    width: 100%;
+    overflow: hidden;   /* belt-and-suspenders: nothing escapes the container */
 }
 
 .cartHeader {
@@ -566,10 +575,8 @@
     z-index: 600;
     top: 0;
     padding-left: 5%;
-    padding-top: 10px;
-    padding-bottom: 10px;
     padding-right: 5%;
-    height: 20%;
+    flex-shrink: 0;     /* natural height, never compressed by flex */
 }
 
 .cartHeader h2 {
@@ -580,7 +587,7 @@
 .checkoutBtn {
     background-color: tan;
     width: 200px;
-    height: 50px;
+    height: 35px;
     border: 3px solid black;
     transition: background-color .3s ease;
     font-size: 1.25rem;
@@ -602,20 +609,28 @@
 .cartContents {
     background-color: tan;
     border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;;
+    border-bottom-right-radius: 10px;
     margin-top: 2%;
     margin-left: 3%;
     margin-right: 3%;
     margin-bottom: 3%;
+    overflow-y: scroll;
+    flex: 1;            /* grow to fill space left after header + hr */
+    min-height: 0;      /* allow flex child to shrink and scroll internally */
+    width: 90%;
+}
+
+/* Inner wrapper receives all padding and grid styles.
+   Keeping these off the scroll container fixes the browser bug where
+   overflow-y: scroll silently drops bottom padding from the scrollable area. */
+.cartContentsInner {
     padding: 40px;
     display: grid;
     grid-template-columns: repeat(auto-fill, 250px);
     justify-content: center;
-    overflow-y: scroll;
-    height: 100%;
-    width: 90%;
     gap: 50px;
     align-items: center;
+    width: 100%;
 }
 
 .itemTitle {
@@ -1822,7 +1837,7 @@
 #save-settings-btn, .add-address-btn,
 .initiate-return-btn, .add-card-btn {
     width: 150px;
-    height: 40px;
+    height: 45px;
 }
 
 #delete-account-btn {
@@ -2050,6 +2065,14 @@
     color: #555;
     max-width: 290px;
     line-height: 1.45;
+    font-family: var(--nav-font);
+}
+
+.spam-hint {
+    display: block;
+    font-size: 0.68rem;
+    color: #999;
+    margin-top: 0.25rem;
     font-family: var(--nav-font);
 }
 
@@ -2495,6 +2518,84 @@
     margin-top: 1px;
 }
 
+/* ── Collapsible test-mode strip (payment panel) ────────────────────────── */
+.demo-strip {
+    background: #fdf8ec;
+    border: 1px solid #e8d9a8;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.72rem;
+    color: #8a7040;
+    margin-bottom: 0.5rem;
+    list-style: none;   /* removes <details> default marker in some browsers */
+}
+
+.demo-strip-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-family: var(--nav-font);
+    color: #8a7040;
+    user-select: none;
+    list-style: none;   /* removes <summary> default marker */
+}
+
+/* hide the native disclosure triangle in all browsers */
+.demo-strip-toggle::-webkit-details-marker { display: none; }
+.demo-strip-toggle::marker               { display: none; }
+
+.demo-strip-toggle:hover {
+    background: #f7f0d8;
+}
+
+.demo-strip-label {
+    flex: 1;
+}
+
+.demo-strip-icon {
+    flex-shrink: 0;
+}
+
+/* Animated body via max-height — toggled by JS adding/removing .open */
+.demo-strip-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.25s ease;
+    padding: 0 0.75rem;
+}
+
+.demo-strip-body.open {
+    max-height: 200px;
+    padding: 0 0.75rem 0.6rem;
+}
+
+.demo-strip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    color: #8a7040;
+    margin-bottom: 0.3rem;
+}
+
+.demo-strip-table td {
+    padding: 0.1rem 0.6rem 0.1rem 0;
+    vertical-align: top;
+}
+
+.demo-strip-table td:first-child {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.demo-strip-hint {
+    display: block;
+    font-size: 0.68rem;
+    color: #a08050;
+}
+
 .cardErrors {
     font-size: 0.75rem;
     color: var(--danger);
@@ -2928,6 +3029,73 @@
     animation: spin 0.7s linear infinite;
 }
 
+/* Overlay-level loading state (shown immediately on open, replaced by template) */
+.overlay-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+}
+
+.overlay-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+/* Panel-level loading state (shown inside account contentPane while auth/me is pending) */
+.panel-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+}
+
+/* ── Custom Scrollbars ───────────────────────────────────────────────────
+   Thin accent-coloured thumb on a transparent track — unobtrusive but
+   still a clear signifier. Uses --accent so it stays in sync with the
+   design system. .autofillRail is intentionally hidden — left alone.
+──────────────────────────────────────────────────────────────────────── */
+
+.content,
+.cartContents,
+.contentPane {
+    scrollbar-width: thin;                        /* Firefox */
+    scrollbar-color: grey transparent;   /* Firefox: thumb track */
+}
+
+.content::-webkit-scrollbar,
+.cartContents::-webkit-scrollbar,
+.contentPane::-webkit-scrollbar {
+    width: 4px;
+}
+
+.content::-webkit-scrollbar-track,
+.cartContents::-webkit-scrollbar-track,
+.contentPane::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb,
+.cartContents::-webkit-scrollbar-thumb,
+.contentPane::-webkit-scrollbar-thumb {
+    background-color: grey;
+    border-radius: 99px;
+}
+
+.content::-webkit-scrollbar-thumb:hover,
+.cartContents::-webkit-scrollbar-thumb:hover,
+.contentPane::-webkit-scrollbar-thumb:hover {
+    background-color: grey;
+}
+
 /* MEDIA QUERIES */
 @media (max-width: 1200px) {
     .logo {
@@ -3178,6 +3346,13 @@
     .checkoutTitle {
         font-size: 1.25rem;
     }
+    .demo-strip {
+        width: 75%;
+        margin: auto;
+    }
+    .demo-strip-table {
+        font-size: .6rem;
+    }
 }
 
 @media (max-width: 650px) {
@@ -3246,10 +3421,6 @@
     #dividingLine {
         display: none;
     }
-
-    .cartHeader h2 {
-        font-size: 1.5rem;
-    }
     .checkoutBtn {
         width: 150px;
         height: 50px;
@@ -3257,6 +3428,9 @@
 }
 
 @media (max-width: 450px){
+    .cart-your {
+        display: none;
+    }
     .extras {
         flex-direction: column;
         gap: .75rem;
@@ -3285,7 +3459,51 @@
         flex-direction: column;
         gap: 1rem;
     }
+    .checkoutBtn {
+        height: 35px;
+        font-size: 1rem;
+    }
+    .navPanel.show {
+        width: 250px;
+    }
+    .add-address-btn {
+        height: 60px;
+    }
+    #logout-btn {
+        width: 200px;
+        font-size: 1rem;
+    }
+    #delete-account-btn {
+        width: 200px;
+        font-size: 1rem;
+    }
+    #save-settings-btn {
+        width: 100px;
+    }
 }
+
+@media (max-width: 350px) {
+    .productsContainer {
+        grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+    }
+    .cartContentsInner {
+        grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+        padding: 3%;
+    }
+    .imgContnr {
+        width: 100%;
+    }
+    .cartImage {
+        width: 100%;
+    }
+    .productsContainer {
+        padding: 3%;
+    }
+    .productsHeader {
+        font-size: .6rem;
+    }
+}
+
 
 /*@media (max-width: 740px) {
     .bannerNav .bannerItems a {

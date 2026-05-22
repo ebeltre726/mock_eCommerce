@@ -382,7 +382,7 @@ function showCartError(message) {
     err.className   = 'cart-inline-error';
     err.textContent = message;
     // Adjust selector to match your cart container
-    document.querySelector('.cartContents')?.appendChild(err);
+    document.querySelector('.cartContentsInner')?.appendChild(err);
     setTimeout(() => err.remove(), 3000);
 }
 

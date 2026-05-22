@@ -26,6 +26,15 @@ const panelTemplateCache = {};
 // ============================================================
 
 export async function initAccount() {
+    // Hide the shell while auth is pending so the user never sees a blank
+    // navPanel + empty contentPane before we know whether they're logged in.
+    const navPanel    = document.querySelector('.navPanel');
+    const contentPane = document.querySelector('.contentPane');
+
+    if (navPanel)    navPanel.style.visibility    = 'hidden';
+    if (contentPane) contentPane.innerHTML =
+        '<div class="panel-loading"><div class="statusSpinner"></div></div>';
+
     let user;
     try {
         user = await apiFetch('auth/me');
@@ -37,23 +46,22 @@ export async function initAccount() {
         if (err instanceof AuthError || err.status === 404) {
             overlayModule.open(isLoggedIn() ? 'login' : 'signup');
         } else {
-            const pane = document.querySelector('.content');
-            if (pane) pane.innerHTML = '<p class="panel-error">Could not load your account. Please try again.</p>';
+            if (navPanel)    navPanel.style.visibility = '';
+            if (contentPane) contentPane.innerHTML =
+                '<p class="panel-error">Could not load your account. Please try again.</p>';
             console.error('[account] init error:', err);
         }
         return;
     }
-
-    const navPanel = document.querySelector('.navPanel');
-    const contentPane = document.querySelector('.contentPane');
 
     if (!navPanel || !contentPane) {
         console.error('Account UI elements not found in DOM');
         return;
     }
 
+    navPanel.style.visibility = '';
     accountNavModule.init();
-    setupAccountUI(navPanel, contentPane, user); // pass user in directly
+    setupAccountUI(navPanel, contentPane, user);
 }
 
 // ============================================================
@@ -229,6 +237,18 @@ async function renderOverview(contentPane, user) {
 
 async function renderPaymentMethods(contentPane, methods) {
     unmountStripeElements(); // ensure no Stripe elements are mounted before rendering the list
+
+    // Wire the demo strip toggle animation.
+    // <details> handles open/close state natively; we mirror it onto .demo-strip-body
+    // via an .open class so the max-height transition fires smoothly.
+    const demoStrip = contentPane.querySelector('.demo-strip');
+    const demoBody  = contentPane.querySelector('.demo-strip-body');
+    if (demoStrip && demoBody) {
+        demoStrip.addEventListener('toggle', () => {
+            demoBody.classList.toggle('open', demoStrip.open);
+        });
+    }
+
     const list = contentPane.querySelector('#card-list');
  
     // methods shape from payment.service.js: toPublicMethod()
@@ -641,13 +661,24 @@ async function renderSettings(contentPane, settings) {
     });
 
     contentPane.querySelector('#delete-account-btn').addEventListener('click', async () => {
+        const passwordInput = contentPane.querySelector('#delete-account-password');
+        const password = passwordInput?.value ?? '';
+        if (!password) {
+            showInlineError(contentPane, 'delete-account-btn', 'Please enter your password to confirm.');
+            return;
+        }
         confirmAction('Are you sure you want to delete your account? This cannot be undone.', async () => {
             try {
-                await apiFetch('account', { method: 'DELETE' });
+                await apiFetch('account', {
+                    method: 'DELETE',
+                    body: JSON.stringify({ password }),
+                });
                 overlayModule.close();
             } catch (err) {
                 console.error('Failed to delete account:', err);
-                showInlineError(contentPane, 'delete-account-btn', 'Failed to delete account. Please try again.');
+                showInlineError(contentPane, 'delete-account-btn', err.message ?? 'Failed to delete account. Please try again.');
+            } finally {
+                if (passwordInput) passwordInput.value = '';
             }
         });
     });
