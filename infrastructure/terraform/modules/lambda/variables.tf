@@ -22,9 +22,6 @@ variable "allowed_origins" {
 variable "stripe_secret_arn" {
   type = string
 }
-variable "emailjs_private_key_arn" {
-  type = string
-}
 variable "cognito_user_pool_id" {
   type = string
 }
@@ -32,25 +29,16 @@ variable "cognito_client_id" {
   type = string
 }
 
-# EmailJS non-secret config — safe as plaintext env vars.
-# The private key is stored in SSM and loaded at cold start (see lambda.js).
-variable "emailjs_service_id" {
-  type    = string
-  default = ""
+# SES — transactional email
+variable "ses_identity_arn" {
+  description = "ARN of the verified SES domain identity — scopes the ses:SendEmail IAM permission"
+  type        = string
 }
-variable "emailjs_public_key" {
-  type    = string
-  default = ""
+variable "ses_from_address" {
+  description = "Verified sender address (e.g. noreply@furnitria.com)"
+  type        = string
 }
-variable "emailjs_template_contact" {
-  type    = string
-  default = ""
-}
-variable "emailjs_template_subscribed" {
-  type    = string
-  default = ""
-}
-variable "emailjs_template_unsubscribed" {
-  type    = string
-  default = ""
+variable "ses_contact_to_address" {
+  description = "Address that receives contact form submissions"
+  type        = string
 }

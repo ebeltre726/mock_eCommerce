@@ -1,5 +1,2 @@
-emailjs_service_id            = "service_gmdoneo"
-emailjs_public_key            = "ZTLPq8WAmQpJUSJ1i"
-emailjs_template_contact      = "template_xa1okh8"
-emailjs_template_subscribed   = "template_nd2y612"
-emailjs_template_unsubscribed = "template_z0qcgn1"
+ses_from_address       = "noreply@furnitria.com"
+ses_contact_to_address = "your-inbox@example.com"   # replace with your verified contact email

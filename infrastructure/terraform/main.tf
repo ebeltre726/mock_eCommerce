@@ -51,24 +51,28 @@ module "cognito" {
   ses_email_arn  = var.ses_email_arn
 }
 
+module "ses" {
+  source                 = "./modules/ses"
+  domain_name            = var.domain_name
+  route53_zone_id        = module.route53.zone_id
+  ses_contact_to_address = var.ses_contact_to_address
+}
+
 module "lambda" {
-  source              = "./modules/lambda"
-  ecr_repo_name       = var.ecr_repo_name
-  image_tag           = var.image_tag
-  aws_region          = var.aws_region
-  dynamodb_table      = var.dynamodb_table
-  s3_bucket_avatars   = var.s3_bucket_avatars
-  s3_bucket_products  = var.s3_bucket_products
-  allowed_origins     = "https://${var.domain_name}"
-  stripe_secret_arn           = aws_ssm_parameter.stripe_secret.arn
-  emailjs_private_key_arn     = aws_ssm_parameter.emailjs_private_key.arn
+  source               = "./modules/lambda"
+  ecr_repo_name        = var.ecr_repo_name
+  image_tag            = var.image_tag
+  aws_region           = var.aws_region
+  dynamodb_table       = var.dynamodb_table
+  s3_bucket_avatars    = var.s3_bucket_avatars
+  s3_bucket_products   = var.s3_bucket_products
+  allowed_origins      = "https://${var.domain_name}"
+  stripe_secret_arn    = aws_ssm_parameter.stripe_secret.arn
   cognito_user_pool_id = module.cognito.user_pool_id
-  cognito_client_id   = module.cognito.client_id
-  emailjs_service_id            = var.emailjs_service_id
-  emailjs_public_key            = var.emailjs_public_key
-  emailjs_template_contact      = var.emailjs_template_contact
-  emailjs_template_subscribed   = var.emailjs_template_subscribed
-  emailjs_template_unsubscribed = var.emailjs_template_unsubscribed
+  cognito_client_id    = module.cognito.client_id
+  ses_identity_arn     = module.ses.domain_identity_arn
+  ses_from_address     = var.ses_from_address
+  ses_contact_to_address = var.ses_contact_to_address
 }
 
 module "api_gateway" {
@@ -158,15 +162,3 @@ resource "aws_ssm_parameter" "stripe_secret" {
   }
 }
 
-# EmailJS private key in SSM (SecureString).
-# Value is written by the deploy workflow via `aws ssm put-parameter --overwrite`
-# after terraform apply. ignore_changes prevents Terraform from reverting it to REPLACE_ME.
-resource "aws_ssm_parameter" "emailjs_private_key" {
-  name  = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
-  type  = "SecureString"
-  value = "REPLACE_ME"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}

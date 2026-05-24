@@ -76,7 +76,12 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect   = "Allow"
         Action   = ["ssm:GetParameter"]
-        Resource = [var.stripe_secret_arn, var.emailjs_private_key_arn]
+        Resource = [var.stripe_secret_arn]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ses:SendEmail", "ses:SendRawEmail"]
+        Resource = var.ses_identity_arn
       },
       {
         # Allow log group creation for this function only.
@@ -115,15 +120,10 @@ resource "aws_lambda_function" "backend" {
       COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       COGNITO_CLIENT_ID    = var.cognito_client_id
       # Secrets loaded at cold start from SSM — never stored as plaintext env vars
-      STRIPE_SECRET_SSM          = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
-      EMAILJS_PRIVATE_KEY_SSM    = "/mock-ecommerce/prod/EMAILJS_PRIVATE_KEY"
-      # EmailJS non-secret config — safe as plaintext env vars
-      EMAIL_DRIVER                    = "emailjs"
-      EMAILJS_SERVICE_ID              = var.emailjs_service_id
-      EMAILJS_PUBLIC_KEY              = var.emailjs_public_key
-      EMAILJS_TEMPLATE_CONTACT        = var.emailjs_template_contact
-      EMAILJS_TEMPLATE_SUBSCRIBED     = var.emailjs_template_subscribed
-      EMAILJS_TEMPLATE_UNSUBSCRIBED   = var.emailjs_template_unsubscribed
+      STRIPE_SECRET_SSM      = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
+      # SES transactional email — IAM role grants ses:SendEmail on ses_identity_arn
+      SES_FROM_ADDRESS       = var.ses_from_address
+      SES_CONTACT_TO_ADDRESS = var.ses_contact_to_address
     }
   }
 
