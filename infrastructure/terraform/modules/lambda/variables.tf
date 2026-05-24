@@ -30,9 +30,9 @@ variable "cognito_client_id" {
 }
 
 # SES — transactional email
-variable "ses_identity_arn" {
-  description = "ARN of the verified SES domain identity — scopes the ses:SendEmail IAM permission"
-  type        = string
+variable "ses_identity_arns" {
+  description = "ARNs of the verified SES identities the Lambda may send from/to — scopes ses:SendEmail to exactly these identities"
+  type        = list(string)
 }
 variable "ses_from_address" {
   description = "Verified sender address (e.g. noreply@furnitria.com)"

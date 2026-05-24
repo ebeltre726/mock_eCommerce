@@ -3058,6 +3058,15 @@ button {
     min-height: 180px;
 }
 
+/* Products-level loading state — spans all grid columns while the first API page is in flight */
+.products-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 0;
+}
+
 /* ── Custom Scrollbars ───────────────────────────────────────────────────
    Thin accent-coloured thumb on a transparent track — unobtrusive but
    still a clear signifier. Uses --accent so it stays in sync with the
