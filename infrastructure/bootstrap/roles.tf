@@ -369,6 +369,21 @@ resource "aws_iam_role_policy" "tf_apply" {
         ]
         Resource = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/aws/lambda/mock-ecommerce-*"
       },
+      # ── SES ──────────────────────────────────────────────────────────
+      {
+        # SES identity actions are not resource-scopeable — must be "*"
+        Effect = "Allow"
+        Action = [
+          "ses:VerifyDomainIdentity",
+          "ses:VerifyDomainDkim",
+          "ses:VerifyEmailIdentity",
+          "ses:GetIdentityVerificationAttributes",
+          "ses:GetIdentityDkimAttributes",
+          "ses:DeleteIdentity",
+          "ses:ListIdentities",
+        ]
+        Resource = "*"
+      },
       # ── STS — needed for data.aws_caller_identity in modules ─────
       {
         Effect   = "Allow"
