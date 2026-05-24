@@ -22,13 +22,16 @@ export async function updateNewsletter(req, res) {
         const current = await fetchNewsletter(req.user.userId);
         const updated = await patchNewsletter(req.user.userId, { subscribed, topics });
 
-        // Fire-and-forget — email failure must not fail the preferences save
+        // Await the email before responding — Lambda freezes the execution context the
+        // moment the HTTP response is sent, so a fire-and-forget Promise is silently
+        // abandoned. .catch() prevents an SES failure from rolling back a successful
+        // preferences save.
         const wasSubscribed = current.subscribed ?? false;
         if (!wasSubscribed && subscribed) {
-            sendNewsletterSubscribed({ email: req.user.email, firstName: req.user.firstName })
+            await sendNewsletterSubscribed({ email: req.user.email, firstName: req.user.firstName })
                 .catch(err => logger.error({ err }, '[email] newsletter subscribed send failed'));
         } else if (wasSubscribed && !subscribed) {
-            sendNewsletterUnsubscribed({ email: req.user.email, firstName: req.user.firstName })
+            await sendNewsletterUnsubscribed({ email: req.user.email, firstName: req.user.firstName })
                 .catch(err => logger.error({ err }, '[email] newsletter unsubscribed send failed'));
         }
 
