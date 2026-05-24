@@ -64,21 +64,14 @@ variable "ses_email_arn" {
   default     = ""
 }
 
-# ── EmailJS ───────────────────────────────────────────────────────────────────
-# Non-secret config — safe to commit. Only EMAILJS_PRIVATE_KEY is sensitive
-# and is stored in SSM, written by the deploy workflow after apply.
-variable "emailjs_service_id" {
-  type = string
+# ── SES Application Email ─────────────────────────────────────────────────────
+variable "ses_from_address" {
+  description = "Verified SES sender address for transactional emails (e.g. noreply@furnitria.com)"
+  type        = string
+  default     = "noreply@furnitria.com"
 }
-variable "emailjs_public_key" {
-  type = string
-}
-variable "emailjs_template_contact" {
-  type = string
-}
-variable "emailjs_template_subscribed" {
-  type = string
-}
-variable "emailjs_template_unsubscribed" {
-  type = string
+
+variable "ses_contact_to_address" {
+  description = "Address that receives contact form submissions. Must be verified in SES sandbox (one-time manual step)."
+  type        = string
 }

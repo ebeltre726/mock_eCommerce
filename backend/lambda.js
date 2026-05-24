@@ -15,17 +15,13 @@ async function fetchSSMParameter(ssm, name) {
 async function getHandler() {
   if (_handler) return _handler;
 
-  // Load all SSM-backed secrets in parallel at cold start so no plaintext
-  // secrets are ever stored in Lambda environment variables.
+  // Load SSM-backed secrets at cold start so no plaintext secrets are ever
+  // stored in Lambda environment variables.
   const ssm = new SSMClient({ region: process.env.AWS_REGION });
   await Promise.all([
     process.env.STRIPE_SECRET_SSM &&
       fetchSSMParameter(ssm, process.env.STRIPE_SECRET_SSM)
         .then(v => { process.env.STRIPE_SECRET_KEY = v; }),
-
-    process.env.EMAILJS_PRIVATE_KEY_SSM &&
-      fetchSSMParameter(ssm, process.env.EMAILJS_PRIVATE_KEY_SSM)
-        .then(v => { process.env.EMAILJS_PRIVATE_KEY = v; }),
   ]);
 
   // app.js is imported here rather than at the top of this file so that
