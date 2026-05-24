@@ -7,8 +7,11 @@ export async function sendContactMessage(req, res) {
         const { firstName, lastName, email, emailMessage } = req.body;
         await sendMessage({ firstName, lastName, email, emailMessage });
 
-        // Fire-and-forget — email failure must not fail the stored message
-        sendContactNotification({ firstName, lastName, email, emailMessage })
+        // Await the email before responding — Lambda freezes the execution context the
+        // moment the response is sent, so a fire-and-forget Promise is silently abandoned.
+        // .catch() keeps an SES failure from rejecting the outer try/catch so the stored
+        // message still returns 200 even when email delivery fails.
+        await sendContactNotification({ firstName, lastName, email, emailMessage })
             .catch(err => logger.error({ err }, '[email] contact notification send failed'));
 
         res.status(200).json({ success: true, message: 'Message sent successfully' });
