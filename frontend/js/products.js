@@ -17,6 +17,14 @@ export async function initProducts() {
     products = [];
     nextCursor = null;
     isFetching = false;
+
+    // Show a spinner immediately so the empty grid doesn't confuse users
+    // while the first API page is in flight.
+    const container = document.querySelector('.productsContainer');
+    if (container) {
+        container.innerHTML = '<div class="products-loading"><div class="overlay-spinner"></div></div>';
+    }
+
     await fetchProducts();
     setupObserver();
     setupEventDelegation();
@@ -44,7 +52,10 @@ function renderProduct(p) {
     const container = document.querySelector(".productsContainer");
     const sentinel = document.getElementById("productMarker");
     if (!container || !sentinel) return;
-  
+
+    // Remove the loading spinner the moment the first card is about to render
+    container.querySelector('.products-loading')?.remove();
+
     const div = document.createElement("div");
     div.classList.add("cartProduct");
     div.dataset.productId = p.id;

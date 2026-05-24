@@ -70,7 +70,7 @@ module "lambda" {
   stripe_secret_arn    = aws_ssm_parameter.stripe_secret.arn
   cognito_user_pool_id = module.cognito.user_pool_id
   cognito_client_id    = module.cognito.client_id
-  ses_identity_arn     = module.ses.domain_identity_arn
+  ses_identity_arns    = [module.ses.domain_identity_arn, module.ses.email_identity_arn]
   ses_from_address     = var.ses_from_address
   ses_contact_to_address = var.ses_contact_to_address
 }

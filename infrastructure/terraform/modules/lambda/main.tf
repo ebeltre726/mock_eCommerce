@@ -79,9 +79,13 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Resource = [var.stripe_secret_arn]
       },
       {
+        # SES evaluates ses:SendEmail against both the FROM (domain) identity and
+        # the TO (email) identity when the recipient is a verified SES identity in
+        # the same account. Both ARNs must be explicitly allowed — a single domain
+        # ARN is insufficient, but a wildcard is broader than necessary.
         Effect   = "Allow"
         Action   = ["ses:SendEmail", "ses:SendRawEmail"]
-        Resource = var.ses_identity_arn
+        Resource = var.ses_identity_arns
       },
       {
         # Allow log group creation for this function only.
@@ -121,7 +125,7 @@ resource "aws_lambda_function" "backend" {
       COGNITO_CLIENT_ID    = var.cognito_client_id
       # Secrets loaded at cold start from SSM — never stored as plaintext env vars
       STRIPE_SECRET_SSM      = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
-      # SES transactional email — IAM role grants ses:SendEmail on ses_identity_arn
+      # SES transactional email — IAM role grants ses:SendEmail on ses_identity_arns
       SES_FROM_ADDRESS       = var.ses_from_address
       SES_CONTACT_TO_ADDRESS = var.ses_contact_to_address
     }
