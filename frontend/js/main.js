@@ -10,12 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     menuModule.init();
     overlayModule.init();
 
-    await loadWishlistState();
-    await initProducts();
-    cartModule.init();
-    window.cartModule = cartModule;
-    productInfoModule.init();
-    
+    // Register the click handler immediately — before any async work — so
+    // ctaButton and nav clicks are never missed during product/wishlist loading.
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-target]');
         if (!btn?.dataset.target) return;
@@ -32,4 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             overlayModule.open(target);
         }
     });
+
+    await loadWishlistState();
+    await initProducts();
+    cartModule.init();
+    window.cartModule = cartModule;
+    productInfoModule.init();
 });
