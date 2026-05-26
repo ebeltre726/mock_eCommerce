@@ -68,6 +68,40 @@ export async function sendNewsletterUnsubscribed({ email, firstName }) {
     });
 }
 
+export async function sendOrderShipped({ email, firstName, orderId }) {
+    const name = escHtml(firstName ?? 'there');
+    const id   = escHtml(orderId);
+    return send({
+        to:      email,
+        subject: `Your Furnitria order #${orderId} has shipped!`,
+        html:    `<p>Hi ${name},</p><p>Great news — your order <strong>#${id}</strong> is on its way. You can track the status in your account under <em>Order History</em>.</p><p>Thank you for shopping with Furnitria.</p>`,
+        text:    `Hi ${name},\n\nYour order #${orderId} has shipped! Check your account Order History for updates.\n\nThank you for shopping with Furnitria.`,
+    });
+}
+
+export async function sendOrderDelivered({ email, firstName, orderId }) {
+    const name = escHtml(firstName ?? 'there');
+    const id   = escHtml(orderId);
+    return send({
+        to:      email,
+        subject: `Your Furnitria order #${orderId} has been delivered`,
+        html:    `<p>Hi ${name},</p><p>Your order <strong>#${id}</strong> has been delivered. We hope you love your new furniture!</p><p>If anything is wrong, you can initiate a return from your account page within 30 days.</p>`,
+        text:    `Hi ${name},\n\nYour order #${orderId} has been delivered. We hope you love it!\n\nIf anything is wrong, you can start a return from your account within 30 days.`,
+    });
+}
+
+export async function sendRefundProcessed({ email, firstName, orderId, refundAmount }) {
+    const name   = escHtml(firstName ?? 'there');
+    const id     = escHtml(orderId);
+    const amount = escHtml(String(refundAmount));
+    return send({
+        to:      email,
+        subject: `Your Furnitria refund of $${refundAmount} has been processed`,
+        html:    `<p>Hi ${name},</p><p>Your refund of <strong>$${amount}</strong> for order <strong>#${id}</strong> has been processed and will appear on your original payment method within 5–10 business days.</p>`,
+        text:    `Hi ${name},\n\nYour refund of $${refundAmount} for order #${orderId} has been processed. Allow 5–10 business days for it to appear on your statement.`,
+    });
+}
+
 export async function sendContactNotification({ firstName, lastName, email, emailMessage }) {
     const to = process.env.SES_CONTACT_TO_ADDRESS;
     if (!to) {

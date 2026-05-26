@@ -1,11 +1,14 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import env from '../config/env.js';
 
+// Read directly from process.env rather than through env.js so that the background
+// processor Lambdas (orderProcessor, returnProcessor) can import this module without
+// triggering env.js's strict startup guards for vars they don't need (S3, Cognito, etc.).
+// AWS_REGION is always present in a Lambda execution environment.
 const client = new DynamoDBClient({
-    region: env.AWS_REGION,
-    ...(env.DYNAMODB_ENDPOINT && {
-        endpoint: env.DYNAMODB_ENDPOINT,
+    region: process.env.AWS_REGION,
+    ...(process.env.DYNAMODB_ENDPOINT && {
+        endpoint: process.env.DYNAMODB_ENDPOINT,
         // DynamoDB Local requires non-empty credentials but doesn't validate them.
         // Do not use real keys here — SSO/IAM handles production auth via the SDK provider chain.
         credentials: { accessKeyId: 'local', secretAccessKey: 'local' },

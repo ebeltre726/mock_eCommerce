@@ -1406,7 +1406,127 @@ button {
     margin: 10px 0;
     font-style: italic;
     letter-spacing: .05rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
 }
+
+/* ── Order status badge colours ────────────────────────────────────────── */
+.status-pending_payment  { background: rgba(136,136,136,.18); color: #aaa; }
+.status-confirmed        { background: rgba(200,169,110,.18); color: var(--accent); }
+.status-processing       { background: rgba(92,184,212,.18);  color: #5cb8d4; }
+.status-shipped          { background: rgba(124,135,245,.18); color: #7c87f5; }
+.status-delivered        { background: rgba(92,184,122,.18);  color: var(--success); }
+.status-cancelled        { background: rgba(224,92,92,.18);   color: var(--danger); }
+.status-return_initiated { background: rgba(224,92,92,.12);   color: #e08c5c; }
+
+/* ── Return status badge colours ───────────────────────────────────────── */
+.status-pending          { background: rgba(136,136,136,.18); color: #aaa; }
+.status-approved         { background: rgba(200,169,110,.18); color: var(--accent); }
+.status-refunded         { background: rgba(92,184,122,.18);  color: var(--success); }
+.status-refund-failed    { background: rgba(224,92,92,.18);   color: var(--danger); }
+
+/* ── Order fulfilment progress bar ─────────────────────────────────────── */
+.order-progress {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    gap: 0;
+    width: 80%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-radius: 0 0 12px 12px;
+    position: relative;
+}
+
+/* connector line between dots */
+.order-progress::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(12.5% + 8px);
+    right: calc(12.5% + 8px);
+    height: 2px;
+    background: var(--border);
+    transform: translateY(-50%);
+    z-index: 0;
+}
+
+.progress-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+}
+
+.step-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    transition: background .25s, border-color .25s;
+}
+
+.step-label {
+    font-size: .72rem;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+    transition: color .25s;
+}
+
+/* completed step */
+.progress-step.step-done .step-dot {
+    background: var(--success);
+    border-color: var(--success);
+}
+.progress-step.step-done .step-label { color: var(--success); }
+
+/* active (current) step */
+.progress-step.step-active .step-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(200,169,110,.25);
+}
+.progress-step.step-active .step-label {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ── Return timeline (reuses progress bar styles) ──────────────────────── */
+.return-progress {
+    border-radius: 8px;
+    margin-top: 8px;
+    width: 100%;
+    max-width: 480px;
+    padding: 10px 16px;
+}
+
+.return-timeline-failed {
+    margin-top: 8px;
+    font-size: .82rem;
+    color: var(--danger);
+    background: rgba(224,92,92,.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(224,92,92,.3);
+}
+
+.refund-amount {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.return-item-name { font-weight: 500; }
+.return-date      { color: var(--text-dim); font-size: .85rem; }
 
 .order-header {
     display: flex;
