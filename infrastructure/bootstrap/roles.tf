@@ -367,11 +367,22 @@ resource "aws_iam_role_policy" "tf_apply" {
       {
         Effect = "Allow"
         Action = [
-          "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
+          "logs:CreateLogGroup", "logs:DeleteLogGroup",
           "logs:PutRetentionPolicy", "logs:DeleteRetentionPolicy",
+          # Legacy tagging API (provider < 5.x)
           "logs:ListTagsLogGroup", "logs:TagLogGroup", "logs:UntagLogGroup",
+          # Current tagging API (provider ~> 5.0)
+          "logs:ListTagsForResource", "logs:TagResource", "logs:UntagResource",
         ]
         Resource = "arn:aws:logs:${var.aws_region}:${local.account_id}:log-group:/aws/lambda/mock-ecommerce-*"
+      },
+      {
+        # DescribeLogGroups is a List action — IAM does not allow scoping it to
+        # a specific log group ARN; the resource constraint is silently ignored.
+        # Same pattern as ssm:DescribeParameters below.
+        Effect   = "Allow"
+        Action   = ["logs:DescribeLogGroups"]
+        Resource = "*"
       },
       # ── SES ──────────────────────────────────────────────────────────
       {
