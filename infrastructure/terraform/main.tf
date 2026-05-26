@@ -58,6 +58,29 @@ module "ses" {
   ses_contact_to_address = var.ses_contact_to_address
 }
 
+
+module "scheduler" {
+  source = "./modules/scheduler"
+
+  environment         = var.environment
+  aws_region          = var.aws_region
+  # Processors reuse the same ECR image as the API Lambda; the CMD override in
+  # image_config selects the correct handler entry point per function.
+  image_uri           = "${module.lambda.ecr_repository_url}:${var.image_tag}"
+  dynamodb_table_name = module.dynamodb.table_name
+  dynamodb_table_arn  = module.dynamodb.table_arn
+  ses_from_address    = var.ses_from_address
+  ses_identity_arn    = module.ses.domain_identity_arn
+  stripe_ssm_param    = var.stripe_ssm_param
+  stripe_ssm_param_arn = aws_ssm_parameter.stripe_secret.arn
+
+  # Demo-mode accelerated delays (comment out for production timings)
+  order_processing_delay_ms = 120000   # 2 min
+  order_shipped_delay_ms    = 300000   # 5 min
+  order_delivered_delay_ms  = 600000   # 10 min
+  return_approval_delay_ms  = 180000   # 3 min
+}
+
 module "lambda" {
   source               = "./modules/lambda"
   ecr_repo_name        = var.ecr_repo_name

@@ -335,6 +335,26 @@ async function saveCard(contentPane) {
     }
 }
 
+// Order lifecycle steps in display order.  Steps up to and including the
+// current status are rendered as "completed"; the current step is "active".
+const ORDER_STEPS = ['confirmed', 'processing', 'shipped', 'delivered'];
+const ORDER_STEP_LABELS = {
+    confirmed:  'Confirmed',
+    processing: 'Processing',
+    shipped:    'Shipped',
+    delivered:  'Delivered',
+};
+
+function buildOrderProgress(status) {
+    if (!ORDER_STEPS.includes(status)) return '';
+    const currentIdx = ORDER_STEPS.indexOf(status);
+    const steps = ORDER_STEPS.map((step, i) => {
+        const cls = i < currentIdx ? 'step-done' : i === currentIdx ? 'step-active' : 'step-pending';
+        return `<li class="progress-step ${cls}"><span class="step-dot"></span><span class="step-label">${ORDER_STEP_LABELS[step]}</span></li>`;
+    }).join('');
+    return `<ul class="order-progress">${steps}</ul>`;
+}
+
 async function renderOrderHistory(contentPane, data) {
     const list   = contentPane.querySelector('#order-list');
     const filter = contentPane.querySelector('#order-status-filter');
@@ -348,8 +368,9 @@ async function renderOrderHistory(contentPane, data) {
                 <div class="order-header">
                     <span class="order-number">Order #${esc(order.orderId)}</span>
                     <span class="order-date">${formatDate(order.createdAt)}</span>
-                    <span class="order-status status-${escAttr(order.status)}">${esc(capitalize(order.status))}</span>
+                    <span class="order-status status-${escAttr(order.status)}">${esc(orderStatusLabel(order.status))}</span>
                 </div>
+                ${buildOrderProgress(order.status)}
                 <ul class="order-items-list">
                     ${order.items.map(item => `
                         <li class="order-line-item">
@@ -472,23 +493,46 @@ async function renderAddresses(contentPane, { addresses, nextCursor }) {
         .addEventListener('click', () => saveAddress(localAddresses, renderList, contentPane));
 }
 
+// Return lifecycle steps shown as a timeline under each return card.
+const RETURN_STEPS = ['Pending', 'Approved', 'Refunded'];
+const RETURN_STEP_LABELS = { Pending: 'Pending', Approved: 'Approved', Refunded: 'Refunded' };
+
+function buildReturnTimeline(ret) {
+    if (ret.status === 'refund_failed') {
+        return `<div class="return-timeline-failed">Refund failed: ${esc(ret.refundFailReason ?? 'contact support')}</div>`;
+    }
+    const currentIdx = RETURN_STEPS.indexOf(ret.status);
+    if (currentIdx === -1) return '';
+    const steps = RETURN_STEPS.map((step, i) => {
+        const cls = i < currentIdx ? 'step-done' : i === currentIdx ? 'step-active' : 'step-pending';
+        return `<li class="progress-step ${cls}"><span class="step-dot"></span><span class="step-label">${RETURN_STEP_LABELS[step]}</span></li>`;
+    }).join('');
+    return `<ul class="order-progress return-progress">${steps}</ul>`;
+}
+
 async function renderReturns(contentPane, { returns, orders }) {
     const list        = contentPane.querySelector('#returns-list');
     const orderSelect = contentPane.querySelector('#return-order-select');
 
-    list.innerHTML = returns.length ? returns.map(ret => `
+    list.innerHTML = returns.length ? returns.map(ret => {
+        const statusCls = escAttr(ret.status.toLowerCase().replace(' ', '-'));
+        const refundLine = ret.status === 'Refunded'
+            ? `<span class="refund-amount">Refund: $${esc(String(parseFloat(ret.refundAmount).toFixed(2)))}</span>`
+            : '';
+        return `
         <li class="return-item">
             <div class="return-header">
                 <span class="return-order">Order #${esc(ret.orderNumber)}</span>
-                <span class="return-status status-${escAttr(ret.status.toLowerCase().replace(' ', '-'))}">${esc(ret.status)}</span>
+                <span class="return-status status-${statusCls}">${esc(ret.status)}</span>
             </div>
             <div class="return-details">
-                <span>${esc(ret.item)}</span>
-                <span>Refund: $${esc(String(ret.refundAmount))}</span>
-                <span>Initiated: ${formatDate(ret.dateInitiated)}</span>
+                <span class="return-item-name">${esc(ret.item)}</span>
+                ${refundLine}
+                <span class="return-date">Initiated: ${formatDate(ret.dateInitiated)}</span>
             </div>
-        </li>
-    `).join('') : '<li class="empty-state">No returns or refunds.</li>';
+            ${buildReturnTimeline(ret)}
+        </li>`;
+    }).join('') : '<li class="empty-state">No returns or refunds.</li>';
 
     // Populate order dropdown
     orders.forEach(order => {
@@ -943,6 +987,20 @@ function formatDate(dateStr) {
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const ORDER_STATUS_LABELS = {
+    pending_payment:  'Pending Payment',
+    confirmed:        'Confirmed',
+    processing:       'Processing',
+    shipped:          'Shipped',
+    delivered:        'Delivered',
+    cancelled:        'Cancelled',
+    return_initiated: 'Return Initiated',
+};
+
+function orderStatusLabel(status) {
+    return ORDER_STATUS_LABELS[status] ?? capitalize(status.replace(/_/g, ' '));
 }
 
 function confirmAction(message, onConfirm) {

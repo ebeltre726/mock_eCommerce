@@ -21,7 +21,7 @@ export async function initiateReturn(req, res) {
         if (!orderId || !item || !reason) {
             return res.status(400).json({ error: 'orderId, item, and reason are required' });
         }
-        const newReturn = await createReturn(req.user.userId, { orderId, orderNumber, itemId, item, reason, notes });
+        const newReturn = await createReturn(req.user.userId, req.user.email, { orderId, orderNumber, itemId, item, reason, notes }, req.user.firstName ?? '');
         res.status(201).json(newReturn);
     } catch (err) {
         if (err.message === 'Order not found') {

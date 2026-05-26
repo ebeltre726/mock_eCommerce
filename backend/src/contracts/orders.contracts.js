@@ -20,6 +20,22 @@ const shippingAddressSchema = Joi.object({
   country: Joi.string().optional(),
 });
 
+// All reachable states for an order across its lifecycle.
+// pending_payment  → confirmed → processing → shipped → delivered
+// Any status may transition to cancelled.
+const ORDER_STATUSES = [
+  'pending_payment',
+  'confirmed',
+  'processing',
+  'shipped',
+  'delivered',
+  'cancelled',
+  'return_initiated',
+];
+
+// All reachable states for a return.
+const RETURN_STATUSES = ['Pending', 'Approved', 'Refunded', 'refund_failed'];
+
 const orderSchema = Joi.object({
   orderId: Joi.string().required(),
   userId: Joi.string().optional(),
@@ -27,7 +43,7 @@ const orderSchema = Joi.object({
   shippingAddress: shippingAddressSchema.optional(),
   items: Joi.array().items(orderItemSchema).optional(),
   paymentMethodId: Joi.string().optional(),
-  status: Joi.string().optional(),
+  status: Joi.string().valid(...ORDER_STATUSES).optional(),
   totalAmount: Joi.number().optional(),
   createdAt: Joi.date().optional(),
   updatedAt: Joi.date().optional(),

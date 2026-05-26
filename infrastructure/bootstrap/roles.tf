@@ -255,6 +255,10 @@ resource "aws_iam_role_policy" "tf_apply" {
           "lambda:ListVersionsByFunction", "lambda:PublishVersion",
           "lambda:ListTags", "lambda:TagResource", "lambda:UntagResource",
           "lambda:GetFunctionCodeSigningConfig",
+          # Required by aws_lambda_function_event_invoke_config (DLQ / retry config)
+          "lambda:PutFunctionEventInvokeConfig",
+          "lambda:GetFunctionEventInvokeConfig",
+          "lambda:DeleteFunctionEventInvokeConfig",
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:${local.account_id}:function:mock-ecommerce-*"
       },
@@ -383,6 +387,41 @@ resource "aws_iam_role_policy" "tf_apply" {
           "ses:ListIdentities",
         ]
         Resource = "*"
+      },
+      # ── EventBridge — scheduler module rules + targets ───────────────
+      {
+        Effect = "Allow"
+        Action = [
+          "events:PutRule",
+          "events:DeleteRule",
+          "events:DescribeRule",
+          "events:EnableRule",
+          "events:DisableRule",
+          "events:PutTargets",
+          "events:RemoveTargets",
+          "events:ListTagsForResource",
+          "events:TagResource",
+          "events:UntagResource",
+          "events:ListTargetsByRule",
+        ]
+        Resource = "arn:aws:events:${var.aws_region}:${local.account_id}:rule/mock-ecommerce-*"
+      },
+      # ── Lambda — permission grants for EventBridge → processor Lambdas
+      {
+        Effect = "Allow"
+        Action = ["lambda:AddPermission", "lambda:RemovePermission", "lambda:GetPolicy"]
+        Resource = "arn:aws:lambda:${var.aws_region}:${local.account_id}:function:mock-ecommerce-*-processor"
+      },
+      # ── SQS — dead-letter queues for background processor Lambdas ─
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:CreateQueue", "sqs:DeleteQueue",
+          "sqs:GetQueueAttributes", "sqs:SetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:ListQueueTags", "sqs:TagQueue", "sqs:UntagQueue",
+        ]
+        Resource = "arn:aws:sqs:${var.aws_region}:${local.account_id}:mock-ecommerce-*-dlq"
       },
       # ── STS — needed for data.aws_caller_identity in modules ─────
       {

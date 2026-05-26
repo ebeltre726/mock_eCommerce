@@ -6,6 +6,8 @@ import env from '../config/env.js';
 
 const TABLE = env.DYNAMODB_TABLE;
 
+function returnGsiPk(status) { return `RETURN#${status}`; }
+
 export async function fetchReturns(userId) {
     const result = await dynamo.send(new QueryCommand({
         TableName: TABLE,
@@ -21,14 +23,18 @@ export async function fetchReturns(userId) {
     return (result.Items || []).map(ret => ({
         returnId:      ret.returnId,
         orderNumber:   ret.orderNumber || ret.orderId,
+        orderId:       ret.orderId,
         status:        ret.status,
         item:          ret.item,
         refundAmount:  parseFloat(ret.refundAmount || '0.00'),
+        refundFailReason: ret.refundFailReason ?? null,
         dateInitiated: ret.dateInitiated || ret.dateRequested,
+        dateApproved:  ret.dateApproved  ?? null,
+        dateRefunded:  ret.dateRefunded  ?? null,
     }));
 }
 
-export async function createReturn(userId, returnData) {
+export async function createReturn(userId, userEmail, returnData, userFullName = '') {
     // Verify the order exists and the submitted item belongs to it.
     const orderResult = await dynamo.send(new GetCommand({
         TableName: TABLE,
@@ -64,7 +70,12 @@ export async function createReturn(userId, returnData) {
                             PK:            `USER#${userId}`,
                             SK:            returnSK,
                             entityType:    'RETURN',
+                            // GSI1PK starts as RETURN#Pending so the background processor
+                            // can query all pending returns without a scan.
+                            GSI1PK:        returnGsiPk('Pending'),
                             userId,
+                            userEmail,
+                            userFullName,
                             // returnId kept for external reference / display; not used as a key
                             returnId:      `${returnData.orderId}-${returnData.itemId}`,
                             orderId:       returnData.orderId,
@@ -74,6 +85,7 @@ export async function createReturn(userId, returnData) {
                             reason:        returnData.reason,
                             notes:         returnData.notes,
                             status:        'Pending',
+                            createdAt:     now, // GSI sort key
                             dateInitiated: now,
                             refundAmount:  '0.00',
                         },

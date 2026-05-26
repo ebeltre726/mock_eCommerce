@@ -9,6 +9,12 @@ import env from '../config/env.js';
 
 const TABLE = env.DYNAMODB_TABLE;
 
+// GSI enables background processors to query by status+age without a full scan.
+// GSI1PK = "ORDER#<status>" so each status bucket is its own partition.
+export const ORDER_GSI = process.env.DYNAMODB_GSI_NAME ?? 'GSI1PK-createdAt-index';
+
+function orderGsiPk(status) { return `ORDER#${status}`; }
+
 /**
  * Utility: fetch address by ID
  */
@@ -270,8 +276,13 @@ export async function createOrder(userId, userEmail, orderData) {
       PK:                    `USER#${userId}`,
       SK:                    `ORDER#${orderId}`,
       entityType:            'ORDER',
+      // GSI1PK is updated to ORDER#confirmed once payment succeeds so the
+      // background processor can query by status without a full table scan.
+      GSI1PK:                orderGsiPk('pending_payment'),
+      createdAt:             now, // GSI sort key — written once, never mutated
       orderId,
       userId,
+      userEmail,
       fullName:              orderData.fullName,
       ...(orderData.addressId
         ? { addressId: orderData.addressId }
@@ -281,7 +292,6 @@ export async function createOrder(userId, userEmail, orderData) {
       status:                'pending_payment',
       paymentMethod:         'pending',
       stripePaymentIntentId: null,
-      createdAt:             now,
       updatedAt:             now,
     },
     ConditionExpression: 'attribute_not_exists(PK)',
@@ -343,13 +353,16 @@ export async function createOrder(userId, userEmail, orderData) {
   // 3. Charge succeeded (or no payment required) — confirm the order.
   //    If this write fails, the pending_payment record + stripePaymentIntentId
   //    is the reconciliation anchor; no phantom charge exists.
+  //    GSI1PK is flipped to ORDER#confirmed so the background order processor
+  //    can immediately pick this up when it queries for stale confirmed orders.
   await dynamo.send(new UpdateCommand({
     TableName: TABLE,
     Key: { PK: `USER#${userId}`, SK: `ORDER#${orderId}` },
-    UpdateExpression: 'SET #status = :status, paymentMethod = :pm, stripePaymentIntentId = :piid, updatedAt = :now',
+    UpdateExpression: 'SET #status = :status, GSI1PK = :gsi, paymentMethod = :pm, stripePaymentIntentId = :piid, updatedAt = :now',
     ExpressionAttributeNames:  { '#status': 'status' },
     ExpressionAttributeValues: {
       ':status': 'confirmed',
+      ':gsi':    orderGsiPk('confirmed'),
       ':pm':     paymentMethod,
       ':piid':   stripePaymentIntentId,
       ':now':    new Date().toISOString(),

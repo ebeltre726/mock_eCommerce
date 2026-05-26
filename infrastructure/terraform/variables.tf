@@ -75,3 +75,17 @@ variable "ses_contact_to_address" {
   description = "Address that receives contact form submissions. Must be verified in SES sandbox (one-time manual step)."
   type        = string
 }
+
+# ── Scheduler / background processors ────────────────────────────────────────
+
+variable "environment" {
+  description = "Deployment environment label passed to the scheduler module (used in resource name prefixes)"
+  type        = string
+  default     = "production"
+}
+
+variable "stripe_ssm_param" {
+  description = "SSM Parameter Store path for the Stripe secret key (read by background processor Lambdas at cold start)"
+  type        = string
+  default     = "/mock-ecommerce/prod/STRIPE_SECRET_KEY"
+}
