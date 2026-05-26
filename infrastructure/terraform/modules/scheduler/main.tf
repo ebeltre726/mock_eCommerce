@@ -128,7 +128,8 @@ locals {
   processor_env = {
     DYNAMODB_TABLE            = var.dynamodb_table_name
     DYNAMODB_GSI_NAME         = var.dynamodb_gsi_name
-    AWS_REGION                = var.aws_region
+    # AWS_REGION is injected automatically by the Lambda runtime — setting it
+    # explicitly is rejected as a reserved key.
     SES_FROM_ADDRESS          = var.ses_from_address
     STRIPE_SECRET_SSM         = var.stripe_ssm_param
     ORDER_PROCESSING_DELAY_MS = tostring(var.order_processing_delay_ms)
