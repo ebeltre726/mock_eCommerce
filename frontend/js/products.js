@@ -112,7 +112,14 @@ function setupObserver() {
     const sentinel = document.getElementById("productMarker");
     const container = document.querySelector(".productsContainer");
     if (!sentinel || !container) return;
-  
+
+    // Disconnect any previously active observer before creating a new one
+    // to prevent multiple observers from firing loadNextBatch simultaneously.
+    if (observer) {
+        observer.disconnect();
+        observer = null;
+    }
+
     observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {

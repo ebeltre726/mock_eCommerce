@@ -126,6 +126,7 @@ resource "aws_cloudwatch_log_group" "return_processor" {
 
 locals {
   processor_env = {
+    NODE_ENV                  = "production"
     DYNAMODB_TABLE            = var.dynamodb_table_name
     DYNAMODB_GSI_NAME         = var.dynamodb_gsi_name
     # AWS_REGION is injected automatically by the Lambda runtime — setting it
