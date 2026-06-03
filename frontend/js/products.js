@@ -11,6 +11,7 @@ let index = 0;
 let observer;
 let nextCursor = null;
 let isFetching = false;
+let isLoadingBatch = false;
 
 export async function initProducts() {
     index = 0;
@@ -88,6 +89,7 @@ export function resetProducts() {
     index = 0;
     nextCursor = null;
     isFetching = false;
+    isLoadingBatch = false;
     if (observer) {
         observer.disconnect();
         observer = null;
@@ -95,9 +97,14 @@ export function resetProducts() {
 }
 
 function loadNextBatch() {
+    if (isLoadingBatch) return;
+    isLoadingBatch = true;
+
     const nextItems = products.slice(index, index + BATCH_SIZE);
     nextItems.forEach(renderProduct);
     index += nextItems.length;
+
+    isLoadingBatch = false;
 
     if (index >= products.length) {
         if (nextCursor) {
