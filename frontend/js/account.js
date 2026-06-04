@@ -349,7 +349,12 @@ function buildOrderProgress(status) {
     if (!ORDER_STEPS.includes(status)) return '';
     const currentIdx = ORDER_STEPS.indexOf(status);
     const steps = ORDER_STEPS.map((step, i) => {
-        const cls = i < currentIdx ? 'step-done' : i === currentIdx ? 'step-active' : 'step-pending';
+        // Terminal state (delivered): fill every dot green.
+        // In-progress states: current dot is step-active, future dots are pending.
+        const cls = i < currentIdx                                           ? 'step-done'
+                  : i === currentIdx && currentIdx === ORDER_STEPS.length - 1 ? 'step-done'
+                  : i === currentIdx                                           ? 'step-active'
+                  : 'step-pending';
         return `<li class="progress-step ${cls}"><span class="step-dot"></span><span class="step-label">${ORDER_STEP_LABELS[step]}</span></li>`;
     }).join('');
     return `<ul class="order-progress">${steps}</ul>`;
@@ -504,7 +509,10 @@ function buildReturnTimeline(ret) {
     const currentIdx = RETURN_STEPS.indexOf(ret.status);
     if (currentIdx === -1) return '';
     const steps = RETURN_STEPS.map((step, i) => {
-        const cls = i < currentIdx ? 'step-done' : i === currentIdx ? 'step-active' : 'step-pending';
+        const cls = i < currentIdx                                            ? 'step-done'
+                  : i === currentIdx && currentIdx === RETURN_STEPS.length - 1 ? 'step-done'
+                  : i === currentIdx                                            ? 'step-active'
+                  : 'step-pending';
         return `<li class="progress-step ${cls}"><span class="step-dot"></span><span class="step-label">${RETURN_STEP_LABELS[step]}</span></li>`;
     }).join('');
     return `<ul class="order-progress return-progress">${steps}</ul>`;
