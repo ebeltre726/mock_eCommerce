@@ -12,12 +12,21 @@ let observer;
 let nextCursor = null;
 let isFetching = false;
 let isLoadingBatch = false;
+let fetchController = null;   // aborts any in-flight fetch when a new init starts
 
 export async function initProducts() {
+    // Cancel any fetch that's still in flight from a previous initProducts() call
+    // (e.g. main.js and overlay.js both calling initProducts() in parallel).
+    if (fetchController) {
+        fetchController.abort();
+    }
+    fetchController = new AbortController();
+
     index = 0;
     products = [];
     nextCursor = null;
     isFetching = false;
+    isLoadingBatch = false;
 
     // Show a spinner immediately so the empty grid doesn't confuse users
     // while the first API page is in flight.
@@ -34,14 +43,16 @@ export async function initProducts() {
 async function fetchProducts() {
     if (isFetching) return;
     isFetching = true;
+    const signal = fetchController?.signal;
     try {
         const url = nextCursor
             ? `products?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(nextCursor)}`
             : `products?limit=${PAGE_SIZE}`;
-        const data = await apiFetch(url);
+        const data = await apiFetch(url, { signal });
         products = products.concat(data.items ?? []);
         nextCursor = data.nextCursor ?? null;
     } catch (err) {
+        if (err.name === 'AbortError') return; // superseded by a newer initProducts() call
         console.error('Failed to fetch products:', err);
     } finally {
         isFetching = false;

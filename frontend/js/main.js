@@ -3,7 +3,6 @@ import { menuModule } from './menu.js';
 import { overlayModule } from './overlay.js';
 import { cartModule } from './cart.js';
 import { productInfoModule } from './productinfo.js';
-import { initProducts } from "./products.js";
 import { loadWishlistState } from './wishlist.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,7 +29,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await loadWishlistState();
-    await initProducts();
     cartModule.init();
     window.cartModule = cartModule;
     productInfoModule.init();
