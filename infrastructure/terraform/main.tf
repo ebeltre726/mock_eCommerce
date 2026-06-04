@@ -74,11 +74,11 @@ module "scheduler" {
   stripe_ssm_param    = var.stripe_ssm_param
   stripe_ssm_param_arn = aws_ssm_parameter.stripe_secret.arn
 
-  # Demo-mode accelerated delays (comment out for production timings)
-  order_processing_delay_ms = 120000   # 2 min
-  order_shipped_delay_ms    = 300000   # 5 min
-  order_delivered_delay_ms  = 600000   # 10 min
-  return_approval_delay_ms  = 180000   # 3 min
+  # Delay overrides omitted — module variable defaults apply:
+  #   order_processing_delay_ms = 1800000   (30 min)
+  #   order_shipped_delay_ms    = 7200000   (2 hours)
+  #   order_delivered_delay_ms  = 21600000  (6 hours)
+  #   return_approval_delay_ms  = 86400000  (24 hours)
 }
 
 module "lambda" {
