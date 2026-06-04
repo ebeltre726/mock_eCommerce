@@ -30,11 +30,6 @@ resource "aws_dynamodb_table" "main" {
   }
 
   attribute {
-    name = "GSI1PK"
-    type = "S"
-  }
-
-  attribute {
     name = "createdAt"
     type = "S"
   }
